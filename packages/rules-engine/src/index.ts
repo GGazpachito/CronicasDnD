@@ -1,4 +1,5 @@
-/** API pública del motor: núcleo matemático y efectos declarativos seguros. */
-export * from "./abilities";
-export * from "./proficiencies";
-export * from "./effects";
+/** API pública: fundamentos, efectos simples y modificadores avanzados. */
+export * from './abilities';
+export * from './proficiencies';
+export * from './effects';
+export * from './modifiers';
