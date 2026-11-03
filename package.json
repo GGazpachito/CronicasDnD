@@ -1,0 +1,14 @@
+{
+  "name": "dnd-character-builder",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "pnpm --filter @dnd/web dev",
+    "build": "pnpm --filter @dnd/web build",
+    "lint": "pnpm --filter @dnd/web lint",
+    "test": "pnpm --filter @dnd/rules-engine test"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
