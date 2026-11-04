@@ -20,6 +20,8 @@ export type FighterCharacterInput = Readonly<{
   effects?: readonly unknown[];
   /** Operaciones numéricas y modos de tirada (modifiers.ts). */
   modifiers?: readonly unknown[];
+  /** Bonificación fija a PG máximos por nivel (p. ej., robustez enana). */
+  bonusHitPointsPerLevel?: number;
   hpMethod: 'fixed' | 'rolled';
   hpRolls?: readonly number[];
   equipment: Readonly<Omit<ArmorClassInput, 'dexterityScore' | 'strengthScore' | 'additionalBonus'>>;
@@ -109,7 +111,10 @@ export function calculateFighterSheet(input: FighterCharacterInput): CalculatedF
     fighterLevel: lvl, constitutionScore: scores.constitution, method: input.hpMethod,
     ...(input.hpRolls === undefined ? {} : { rolls: input.hpRolls }),
   };
-  const hp = calculateFighterHitPoints(hpInput);
+  const baseHp = calculateFighterHitPoints(hpInput);
+  const extraHp = input.bonusHitPointsPerLevel ?? 0;
+  if (!Number.isInteger(extraHp) || extraHp < 0 || extraHp > 10) throw new RangeError('Bonificación de PG por nivel inválida');
+  const hp = {...baseHp, maximum: baseHp.maximum + extraHp * lvl};
   const acBonus = resolveNumericModifiers(0, 'armor_class', modifiers, context).value;
   const ac = calculateArmorClass({
     ...input.equipment, dexterityScore: scores.dexterity, strengthScore: scores.strength,

@@ -6,3 +6,5 @@ export * from './modifiers';
 export * from './defense';
 export * from './resources';
 export * from './sheet';
+
+export * from "./guided";
