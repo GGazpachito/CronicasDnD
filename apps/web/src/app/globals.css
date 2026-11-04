@@ -9,3 +9,10 @@
 .spell-list{display:flex;flex-direction:column;gap:8px}.spell-entry{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;background:#1e2c38;border:1px solid #304354;border-radius:9px}
 .spell-entry div{display:flex;flex-direction:column;gap:4px}.spell-entry strong{font-size:12px}.spell-entry small{font-size:10px;color:var(--muted)}.spell-entry>.mode-chip{white-space:nowrap}
 @media(max-width:660px){.spell-entry{flex-direction:column;align-items:flex-start}}
+
+/* Paso 11: inventario unificado con trazabilidad de procedencia. */
+.inventory-section .money-summary{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px 16px;border:1px solid #66563d;border-radius:10px;background:#2a2825;margin-bottom:13px}
+.money-summary strong{color:var(--gold);font-size:22px;white-space:nowrap}
+.money-summary span{color:var(--muted);font-size:11px;text-align:right}
+.item-origin{display:block;font-size:10px;color:var(--muted);margin-top:2px}
+@media(max-width:660px){.inventory-section .money-summary{align-items:flex-start;flex-direction:column}.money-summary span{text-align:left}}

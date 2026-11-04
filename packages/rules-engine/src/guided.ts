@@ -7,6 +7,7 @@ import { calculateFighterSheet, type CalculatedFighterSheet, type FighterCharact
 import { FIGHTER_PACKAGES, WEAPONS, validateMartialChoices, type MartialChoices } from './martial';
 import { ORIGIN_FEATS, TOOL_NAMES, validateHumanOriginFeat, type OriginFeatId, type HumanFeatDetails, type ToolId } from './origin-feats';
 import { validateMagicInitiate, grantsFromMagicInitiate, elfLineageSpells, type SpellGrant, type MagicInitiateSelection } from './origin-magic';
+import { combineStartingInventory, validateBackgroundEquipment, GAMING_SETS, type BackgroundEquipmentChoice, type StartingInventory } from './background-equipment';
 
 export const FIGHTER_SKILL_OPTIONS: readonly Skill[] = [
   'acrobatics', 'animal_handling', 'athletics', 'history', 'insight',
@@ -50,6 +51,8 @@ export type GuidedFighterInput = Readonly<{
   shield: boolean;
   /** Elecciones explícitas del paso 09; opcionales para no romper los tests y guardados previos. */
   martial?: MartialChoices;
+  /** Elección del equipo del trasfondo; opcional para compatibilidad con pasos anteriores. */
+  backgroundEquipment?: BackgroundEquipmentChoice;
 }>;
 export type GuidedFighterResult = Readonly<{
   sheet: CalculatedFighterSheet;
@@ -58,6 +61,7 @@ export type GuidedFighterResult = Readonly<{
   spells: readonly SpellGrant[];
   pendingAutomation: readonly string[];
   martial?: Readonly<{choices:MartialChoices;gold:number;inventory:readonly {name:string;quantity:number}[];masteries:readonly {weapon:string;property:string}[]}>;
+  startingInventory?: StartingInventory;
 }>;
 
 function fail(message: string): never { throw new RangeError(message); }
@@ -95,7 +99,9 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
     if (skills.has(skill)) fail(`La competencia ${skill} ya la otorga el trasfondo; elige otra`);
     skills.add(skill);
   }
+  const bgEquipment = input.backgroundEquipment===undefined?undefined:validateBackgroundEquipment(input.background,input.backgroundEquipment);
   const pending: string[] = [];
+  if (!bgEquipment) pending.push('Aún no se ha elegido el equipo o dinero del trasfondo');
   let bonusHitPointsPerLevel=0;
   const modifiers: unknown[]=[];
   let size: 'small'|'medium'='medium';
@@ -134,7 +140,7 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
       if (skills.has(skill)) fail(`La dote Competente no puede duplicar ${skill}; elige otra competencia`);
       skills.add(skill);
     }
-    const backgroundToolIds: Partial<Record<BackgroundId,ToolId>>={acolyte:'calligraphers_supplies',criminal:'thieves_tools',sage:'calligraphers_supplies'};
+    const backgroundToolIds: Partial<Record<BackgroundId,ToolId>>={acolyte:'calligraphers_supplies',criminal:'thieves_tools',sage:'calligraphers_supplies',...(bgEquipment?.gamingSet?{soldier:bgEquipment.gamingSet}:{})};
     if (selected.toolProficiencies.includes(backgroundToolIds[input.background] as ToolId)) fail('La dote no debe duplicar la herramienta del trasfondo; elige otra');
     extraTools.push(...selected.toolProficiencies);
     luckPointsMaximum=selected.luckPointsMaximum;
@@ -179,6 +185,9 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
     ...(input.level===3?{subclass:'champion' as const}:{})
   };
   const sheet=calculateFighterSheet(character);
-  return {sheet,origin:{background:input.background,species:input.species,feat:bg.feat,...(extraFeat?{additionalFeat:extraFeat}:{}),size,speedFeet,tools:[bg.tool,...extraTools.map(t=>TOOL_NAMES[t])],...(luckPointsMaximum!==undefined?{luckPointsMaximum}:{})},spells,pendingAutomation:pending,
+  const startingInventory=bgEquipment?combineStartingInventory(martial?.startingPackage,bgEquipment):undefined;
+  const bgTool=bgEquipment?.gamingSet?GAMING_SETS[bgEquipment.gamingSet]:bg.tool;
+  return {sheet,origin:{background:input.background,species:input.species,feat:bg.feat,...(extraFeat?{additionalFeat:extraFeat}:{}),size,speedFeet,tools:[bgTool,...extraTools.map(t=>TOOL_NAMES[t])],...(luckPointsMaximum!==undefined?{luckPointsMaximum}:{})},spells,pendingAutomation:pending,
+    ...(startingInventory?{startingInventory}:{}),
     ...(martial ? {martial:{choices:martial,gold:FIGHTER_PACKAGES[martial.startingPackage].gold,inventory:FIGHTER_PACKAGES[martial.startingPackage].items,masteries:martial.weaponMasteries.map(id=>({weapon:WEAPONS[id].name,property:WEAPONS[id].mastery}))}} : {})};
 }

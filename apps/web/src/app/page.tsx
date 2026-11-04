@@ -8,6 +8,7 @@ import type { ArmorId } from "../../../../packages/rules-engine/src/defense";
 import { FIGHTING_STYLES, WEAPONS, FIGHTER_PACKAGES, type FightingStyleId, type WeaponId, type StartingPackageId } from "../../../../packages/rules-engine/src/martial";
 import { ORIGIN_FEATS, CRAFTER_TOOLS, MUSICAL_INSTRUMENTS, TOOL_NAMES, SKILLED_OPTIONS, type ToolId } from "../../../../packages/rules-engine/src/origin-feats";
 import { SPELL_LISTS, MAGIC_ABILITY_OPTIONS, spellName, type SpellListId, type SpellAbility, type MagicInitiateSelection } from "../../../../packages/rules-engine/src/origin-magic";
+import { BACKGROUND_PACKAGES, GAMING_SETS, ITEM_NAMES, type BackgroundPackageId, type GamingSetId } from "../../../../packages/rules-engine/src/background-equipment";
 
 const NAMES: Record<Ability, string> = {strength:'Fuerza',dexterity:'Destreza',constitution:'Constitución',intelligence:'Inteligencia',wisdom:'Sabiduría',charisma:'Carisma'};
 const SKILL_NAMES: Record<Skill,string> = {
@@ -61,6 +62,8 @@ export default function Home(){
   const [style,setStyle]=useState<FightingStyleId>('defense');
   const [masteries,setMasteries]=useState<WeaponId[]>(['greatsword','flail','javelin']);
   const [starter,setStarter]=useState<StartingPackageId>('a');
+  const [backgroundPackage,setBackgroundPackage]=useState<BackgroundPackageId>('a');
+  const [soldierGamingSet,setSoldierGamingSet]=useState<GamingSetId>('dice_set');
   const bg=BACKGROUNDS[background];
   const allowed=bg.abilities as readonly Ability[];
   function onBackground(next:BackgroundId){const defaults=initialForBackground(next);setBackground(next);setTwo(defaults.plusTwoAbility);setOne(defaults.plusOneAbility);setFighterSkills(defaults.fighterSkills);
@@ -72,8 +75,9 @@ export default function Home(){
     ? {list:'cleric',spellcastingAbility:bgMagicAbility,cantrips:bgClericCantrips,level1Spell:bgClericSpell}
     : background==='sage'?{list:'wizard',spellcastingAbility:bgMagicAbility,cantrips:bgWizardCantrips,level1Spell:bgWizardSpell}:undefined;
   const humanFeatDetails={magicInitiate:{list:humanMagicList,spellcastingAbility:humanMagicAbility,cantrips:humanCantrips,level1Spell:humanSpell},crafterTools,musicianInstruments:instruments,skilledProficiencies:skilled};
-  const input:GuidedFighterInput={name,level,background,species,assignedAbilities:scores,increaseMode:mode,plusTwoAbility:two,plusOneAbility:one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,elfLineage:lineage,elfSenseSkill:elfSkill,elfSpellAbility:elfSpell,armor,shield,martial:{fightingStyle:style,weaponMasteries:masteries,startingPackage:starter}};
-  const output=useMemo(()=>{try{return {result:calculateGuidedFighter(input),error:null};}catch(e){return {result:null,error:e instanceof Error?e.message:'Error al crear el personaje'};}},[name,level,background,species,scores,mode,two,one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,lineage,elfSkill,elfSpell,armor,shield,style,masteries,starter]);
+  const input:GuidedFighterInput={name,level,background,species,assignedAbilities:scores,increaseMode:mode,plusTwoAbility:two,plusOneAbility:one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,elfLineage:lineage,elfSenseSkill:elfSkill,elfSpellAbility:elfSpell,armor,shield,martial:{fightingStyle:style,weaponMasteries:masteries,startingPackage:starter},
+    backgroundEquipment:{startingPackage:backgroundPackage,...(background==='soldier'?{gamingSet:soldierGamingSet}:{})}};
+  const output=useMemo(()=>{try{return {result:calculateGuidedFighter(input),error:null};}catch(e){return {result:null,error:e instanceof Error?e.message:'Error al crear el personaje'};}},[name,level,background,species,scores,mode,two,one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,lineage,elfSkill,elfSpell,armor,shield,style,masteries,starter,backgroundPackage,soldierGamingSet]);
   const sheet=output.result?.sheet;
   const taken=[...bg.skills,...fighterSkills];
   const humanCandidates=SKILLS.filter(s=>!taken.includes(s));
@@ -94,7 +98,7 @@ export default function Home(){
   return <main className="app-shell">
     <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Creador guiado · D&D 2024</span></div></div><div className="status"><span className="status-dot"/> Motor conectado · Sin guardado</div></header>
     <div className="content">
-      <div className="intro"><div><span className="eyebrow">PROTOTIPO 04 / MAGIA DE ORIGEN</span><h1>Da forma a <em>tu aventurero.</em></h1><p>Guerrero de niveles 1–3. Tus decisiones de origen se validan y se reflejan en la hoja calculada.</p></div><span className="edition">PHB 2024 + SRD</span></div>
+      <div className="intro"><div><span className="eyebrow">PROTOTIPO 05 / INVENTARIO INICIAL</span><h1>Da forma a <em>tu aventurero.</em></h1><p>Guerrero de niveles 1–3. Tus decisiones de origen se validan y se reflejan en la hoja calculada.</p></div><span className="edition">PHB 2024 + SRD</span></div>
       <nav className="wizard-tabs" aria-label="Pasos de creación">{STEPS.map((s,i)=><button type="button" key={s} className={step===i?'active':''} aria-current={step===i?'step':undefined} onClick={()=>setStep(i)}><span>{String(i+1).padStart(2,'0')}</span>{s}</button>)}</nav>
       <div className="workspace">
         <aside className="editor panel">
@@ -107,7 +111,8 @@ export default function Home(){
           </>}
           {step===1&&<>
             <label className="field"><span>Trasfondo</span><select value={background} onChange={e=>onBackground(e.target.value as BackgroundId)}>{Object.entries(BACKGROUNDS).map(([id,b])=><option key={id} value={id}>{b.name}</option>)}</select></label>
-            <div className="origin-detail"><strong>Dote: {originFeatName(bg.feat)}</strong><small>Competencias: {bg.skills.map(s=>SKILL_NAMES[s as Skill]).join(', ')}</small><small>Herramienta: {bg.tool}</small></div>
+            <div className="origin-detail"><strong>Dote: {originFeatName(bg.feat)}</strong><small>Competencias: {bg.skills.map(s=>SKILL_NAMES[s as Skill]).join(', ')}</small><small>Herramienta: {background==='soldier'?GAMING_SETS[soldierGamingSet]:bg.tool}</small></div>
+            {background==='soldier'&&<label className="field"><span>Competencia con juego de azar</span><select value={soldierGamingSet} onChange={e=>setSoldierGamingSet(e.target.value as GamingSetId)}>{Object.entries(GAMING_SETS).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label>}
             <label className="field"><span>Especie</span><select value={species} onChange={e=>setSpecies(e.target.value as SpeciesId)}><option value="human">Humano</option><option value="dwarf">Enano</option><option value="elf">Elfo</option></select></label>
             {(background==='acolyte'||background==='sage')&&magicFields('Iniciado en la Magia del trasfondo',background==='acolyte'?'cleric':'wizard',bgMagicAbility,background==='acolyte'?bgClericCantrips:bgWizardCantrips,background==='acolyte'?bgClericSpell:bgWizardSpell,{setAbility:setBgMagicAbility,setCantrips:background==='acolyte'?setBgClericCantrips:setBgWizardCantrips,setSpell:background==='acolyte'?setBgClericSpell:setBgWizardSpell})}
             {species==='human'&&<>
@@ -151,7 +156,15 @@ export default function Home(){
             <label className="field"><span>Equipo inicial de clase</span><select value={starter} onChange={e=>changePackage(e.target.value as StartingPackageId)}>{Object.entries(FIGHTER_PACKAGES).map(([id,pack])=><option key={id} value={id}>{pack.label}</option>)}</select></label>
             <div className="origin-detail"><strong>{FIGHTER_PACKAGES[starter].gold} po · Equipo de clase</strong>{FIGHTER_PACKAGES[starter].items.map((it,i)=><small key={i}>{it.quantity} × {it.name}</small>)}{starter==='c'&&<small>Sin objetos. La compra de equipo se añadirá después.</small>}</div>
             <div className="info-line">Armadura equipada: {starter==='a'?'Cota de malla':starter==='b'?'Cuero tachonado':'Ninguna'} · Sin escudo. El cambio de equipo y las compras llegarán con el inventario.</div>
-            <p className="muted-note">El equipo inicial del trasfondo todavía no está incorporado. Elegir el lote C concede 155 po, pero no permite comprar objetos por ahora.</p>
+            <div className="divider"/>
+            <div className="section-label"><h3>Equipo del trasfondo</h3><span>{bg.name}</span></div>
+            <label className="field"><span>Opción del trasfondo</span><select value={backgroundPackage} onChange={e=>setBackgroundPackage(e.target.value as BackgroundPackageId)}><option value="a">A · Objetos y monedas</option><option value="b">B · 50 piezas de oro, sin objetos</option></select></label>
+            <div className="origin-detail"><strong>{BACKGROUND_PACKAGES[background][backgroundPackage].gold} po · Trasfondo</strong>
+              {backgroundPackage==='a'&&BACKGROUND_PACKAGES[background].a.items.map(it=><small key={it.id}>{it.quantity} × {ITEM_NAMES[it.id]}</small>)}
+              {background==='soldier'&&backgroundPackage==='a'&&<small>1 × {GAMING_SETS[soldierGamingSet]} (juego de azar elegido)</small>}
+              {backgroundPackage==='b'&&<small>Sin objetos de trasfondo; la competencia con herramientas se conserva.</small>}
+            </div>
+            <p className="muted-note">El oro y los objetos del trasfondo se suman a los de clase. Todavía no hay compras, equipamiento libre ni guardado.</p>
           </>}
           <div className="wizard-actions"><button type="button" disabled={step===0} onClick={()=>setStep(x=>Math.max(0,x-1))}>Anterior</button><button type="button" disabled={step===STEPS.length-1} onClick={()=>setStep(x=>Math.min(STEPS.length-1,x+1))}>Siguiente</button></div>
           <div className="editor-footnote">Creación parcial y sin guardado. Los contenidos no automatizados aparecen identificados en la hoja.</div>
@@ -164,6 +177,12 @@ export default function Home(){
             <div className="preview-section"><div className="section-label"><h3>Características finales</h3><span>Competencia {signed(sheet.proficiencyBonus)}</span></div><div className="ability-grid">{ABILITIES.map(a=><div className="ability-stat" key={a}><span>{NAMES[a].slice(0,3).toUpperCase()}</span><strong>{sheet.abilityScores[a]}</strong><small>{signed(sheet.abilityModifiers[a])}</small></div>)}</div></div>
             <div className="two-col"><div className="preview-section"><div className="section-label"><h3>Habilidades</h3><span>Competencias elegidas</span></div><div className="data-list">{SKILLS.map(k=><div className="data-row" key={k}><span>{SKILL_NAMES[k]} {taken.includes(k)||((species==='human'&&humanSkill===k)||(species==='elf'&&elfSkill===k))?'•':''}</span><span><strong>{signed(sheet.skillBonuses[k])}</strong>{sheet.skillRollModes[k]!=='normal'&&<b className="mode-chip">{sheet.skillRollModes[k]==='advantage'?'Ventaja':'Desventaja'}</b>}</span></div>)}</div></div><div className="preview-section"><div className="section-label"><h3>Origen y rasgos</h3><span>PHB 2024</span></div><div className="resource-grid">{Object.entries(sheet.resources).map(([id,r])=>r&&<div className="resource-card" key={id}><span>{id==='second_wind'?'Segundo aliento':'Acción súbita'}</span><strong>{r.current}/{r.maximum}</strong></div>)}</div><p className="muted-note">Tamaño: {output.result.origin.size==='medium'?'Mediano':'Pequeño'} · Velocidad: {output.result.origin.speedFeet} pies</p><p className="muted-note">Dote del trasfondo: {originFeatName(bg.feat)}{output.result.origin.additionalFeat?` · Dote humana: ${FEATS[output.result.origin.additionalFeat]}`:''}</p><p className="muted-note">Herramientas: {output.result.origin.tools.join(', ')}</p>{output.result.origin.luckPointsMaximum!==undefined&&<p className="muted-note">Puntos de suerte máximos: {output.result.origin.luckPointsMaximum} (sin gestión de gasto)</p>}{output.result.martial&&<><p className="muted-note">Estilo: {FIGHTING_STYLES[output.result.martial.choices.fightingStyle]} · Dinero de clase: {output.result.martial.gold} po</p><p className="muted-note">Maestrías: {output.result.martial.masteries.map(m=>`${m.weapon} (${m.property})`).join(', ')}</p></>}
             <ul className="feature-list">{sheet.features.map(f=><li key={f}>{FEATURES[f]??f}</li>)}</ul></div></div>
+            {output.result.startingInventory&&<div className="preview-section inventory-section">
+              <div className="section-label"><h3>Inventario inicial</h3><span>{output.result.startingInventory.items.length} tipos de objetos</span></div>
+              <div className="money-summary"><strong>{output.result.startingInventory.totalGold} po</strong><span>{output.result.startingInventory.classGold} po de clase + {output.result.startingInventory.backgroundGold} po de trasfondo</span></div>
+              <div className="data-list">{output.result.startingInventory.items.length===0&&<p className="muted-note">Sin objetos iniciales. Las compras todavía no están disponibles.</p>}{output.result.startingInventory.items.map(it=><div className="data-row" key={it.id}><span>{it.name}<small className="item-origin">{it.sources.map(src=>src.from==='class'?'Clase':'Trasfondo').join(' + ')}</small></span><strong>×{it.quantity}</strong></div>)}</div>
+              <p className="muted-note">Los paquetes de aventurero se registran como un lote; su contenido individual se desglosará cuando añadamos el inventario editable.</p>
+            </div>}
             {output.result.spells.length>0&&<div className="preview-section"><div className="section-label"><h3>Conjuros de origen</h3><span>{output.result.spells.length} concedidos</span></div><div className="spell-list">{output.result.spells.map((sp,i)=><div className="spell-entry" key={`${sp.source}-${sp.id}-${i}`}><div><strong>{sp.name}</strong><small>{sp.source==='background'?'Trasfondo':sp.source==='human_feat'?'Dote humana':'Linaje élfico'} · {sp.level===0?'Truco':'Nivel 1'} · {NAMES[sp.spellcastingAbility]}</small></div>{sp.freeCastPerLongRest&&<span className="mode-chip">1 gratis / descanso largo</span>}</div>)}</div><p className="muted-note">Los conjuros están validados y registrados; sus tiradas, efectos y usos consumidos aún no se ejecutan.</p></div>}
             <div className="preview-section pending-section"><div className="section-label"><h3>Automatizaciones pendientes</h3><span>{output.result.pendingAutomation.length}</span></div><ul className="feature-list">{output.result.pendingAutomation.map((p,i)=><li key={i}>{p}</li>)}</ul></div>
             {sheet.warnings.length>0&&<div className="warning" role="status">{sheet.warnings.includes('heavy_armor_strength_requirement_unmet')&&<p>La armadura pesada no cumple el requisito de Fuerza.</p>}{sheet.warnings.includes('armor_stealth_disadvantage')&&<p>La armadura impone desventaja en Sigilo.</p>}</div>}
