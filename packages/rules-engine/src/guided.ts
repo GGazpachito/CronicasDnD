@@ -5,6 +5,8 @@ import { ABILITIES, type Ability, type AbilityScores, proficiencyBonus } from '.
 import { SKILLS, type Skill } from './proficiencies';
 import { calculateFighterSheet, type CalculatedFighterSheet, type FighterCharacterInput } from './sheet';
 import { FIGHTER_PACKAGES, WEAPONS, validateMartialChoices, type MartialChoices } from './martial';
+import { ORIGIN_FEATS, TOOL_NAMES, validateHumanOriginFeat, type OriginFeatId, type HumanFeatDetails, type ToolId } from './origin-feats';
+import { validateMagicInitiate, grantsFromMagicInitiate, elfLineageSpells, type SpellGrant, type MagicInitiateSelection } from './origin-magic';
 
 export const FIGHTER_SKILL_OPTIONS: readonly Skill[] = [
   'acrobatics', 'animal_handling', 'athletics', 'history', 'insight',
@@ -19,8 +21,8 @@ export const BACKGROUNDS = {
 export type BackgroundId = keyof typeof BACKGROUNDS;
 export type SpeciesId = 'human' | 'dwarf' | 'elf';
 export type ElfLineage = 'drow' | 'high_elf' | 'wood_elf';
-export type HumanOriginFeat = 'alert' | 'tough' | 'savage_attacker';
-export const HUMAN_FEATS: readonly HumanOriginFeat[] = ['alert','tough','savage_attacker'];
+export type HumanOriginFeat = OriginFeatId;
+export const HUMAN_FEATS: readonly HumanOriginFeat[] = Object.keys(ORIGIN_FEATS) as HumanOriginFeat[];
 export const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8] as const;
 
 export type GuidedFighterInput = Readonly<{
@@ -36,6 +38,10 @@ export type GuidedFighterInput = Readonly<{
   fighterSkills: readonly Skill[];
   humanSkill?: Skill;
   humanFeat?: HumanOriginFeat;
+  /** Elecciones internas de dotes del humano (herramientas, conjuros, habilidades). */
+  humanFeatDetails?: HumanFeatDetails;
+  /** Iniciado en la Magia del trasfondo, con lista fijada por el trasfondo. */
+  backgroundMagicInitiate?: MagicInitiateSelection;
   humanSize?: 'small' | 'medium';
   elfLineage?: ElfLineage;
   elfSenseSkill?: 'insight' | 'perception' | 'survival';
@@ -47,7 +53,9 @@ export type GuidedFighterInput = Readonly<{
 }>;
 export type GuidedFighterResult = Readonly<{
   sheet: CalculatedFighterSheet;
-  origin: Readonly<{background: BackgroundId; species: SpeciesId; feat: string; additionalFeat?: HumanOriginFeat; size: 'small' | 'medium'; speedFeet: number; tools: readonly string[]}>;
+  origin: Readonly<{background: BackgroundId; species: SpeciesId; feat: string; additionalFeat?: HumanOriginFeat; size: 'small' | 'medium'; speedFeet: number; tools: readonly string[]; luckPointsMaximum?:number}>;
+  /** Conjuros concedidos por origen, no una simulación de lanzamiento ni de ranuras. */
+  spells: readonly SpellGrant[];
   pendingAutomation: readonly string[];
   martial?: Readonly<{choices:MartialChoices;gold:number;inventory:readonly {name:string;quantity:number}[];masteries:readonly {weapon:string;property:string}[]}>;
 }>;
@@ -93,8 +101,18 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
   let size: 'small'|'medium'='medium';
   let speedFeet=30;
   let extraFeat: HumanOriginFeat|undefined;
+  const spells: SpellGrant[]=[];
+  const extraTools: ToolId[]=[];
+  let luckPointsMaximum: number|undefined;
   if (bg.feat==='alert') modifiers.push(initiativeBonus('criminal',proficiencyBonus(input.level)));
-  else if (bg.feat==='magic_initiate_cleric' || bg.feat==='magic_initiate_wizard') pending.push('Falta elegir y automatizar los conjuros de Iniciado en la Magia del trasfondo');
+  else if (bg.feat==='magic_initiate_cleric' || bg.feat==='magic_initiate_wizard') {
+    if (!input.backgroundMagicInitiate) pending.push('Falta seleccionar los conjuros de Iniciado en la Magia concedidos por el trasfondo');
+    else {
+      const selected=validateMagicInitiate(input.backgroundMagicInitiate,bg.feat==='magic_initiate_cleric'?'cleric':'wizard');
+      spells.push(...grantsFromMagicInitiate(selected,'background'));
+      pending.push('Lanzamiento, concentración y gasto/recuperación de usos de conjuros pendientes');
+    }
+  }
   else pending.push('Ataque salvaje se registra, pero su efecto en combate todavía no está implementado');
   if (input.species==='human') {
     if (!input.humanSize || !['small','medium'].includes(input.humanSize)) fail('El humano debe elegir tamaño');
@@ -103,11 +121,32 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
     skills.add(input.humanSkill);
     if (!input.humanFeat || !HUMAN_FEATS.includes(input.humanFeat)) fail('El humano debe elegir una dote de origen adicional');
     if (input.humanFeat===bg.feat) fail('No se puede elegir dos veces la misma dote de origen');
-    extraFeat=input.humanFeat;
+    const selected=validateHumanOriginFeat(input.humanFeat,input.humanFeatDetails,input.level);
+    extraFeat=selected.feat;
+    if (selected.feat==='magic_initiate' && selected.magicInitiate) {
+      if (bg.feat.startsWith('magic_initiate_') && selected.magicInitiate.list===input.backgroundMagicInitiate?.list) fail('Iniciado en la Magia repetido debe elegir una lista diferente');
+      if (bg.feat==='magic_initiate_cleric' && selected.magicInitiate.list==='cleric') fail('Iniciado en la Magia repetido debe elegir otra lista distinta de Clérigo');
+      if (bg.feat==='magic_initiate_wizard' && selected.magicInitiate.list==='wizard') fail('Iniciado en la Magia repetido debe elegir otra lista distinta de Mago');
+      spells.push(...grantsFromMagicInitiate(selected.magicInitiate,'human_feat'));
+      pending.push('Lanzamiento, concentración y gasto/recuperación de usos de conjuros pendientes');
+    }
+    for (const skill of selected.skillProficiencies) {
+      if (skills.has(skill)) fail(`La dote Competente no puede duplicar ${skill}; elige otra competencia`);
+      skills.add(skill);
+    }
+    const backgroundToolIds: Partial<Record<BackgroundId,ToolId>>={acolyte:'calligraphers_supplies',criminal:'thieves_tools',sage:'calligraphers_supplies'};
+    if (selected.toolProficiencies.includes(backgroundToolIds[input.background] as ToolId)) fail('La dote no debe duplicar la herramienta del trasfondo; elige otra');
+    extraTools.push(...selected.toolProficiencies);
+    luckPointsMaximum=selected.luckPointsMaximum;
     if (extraFeat==='alert') modifiers.push(initiativeBonus('human',proficiencyBonus(input.level)));
     if (extraFeat==='tough') bonusHitPointsPerLevel+=2;
-    if (extraFeat==='savage_attacker') pending.push('Ataque salvaje adicional: efecto en combate pendiente');
-    pending.push('Inspiración heroica al terminar un descanso largo todavía no se registra');
+    if (extraFeat==='savage_attacker') pending.push('Ataque salvaje: su repetición de dados está pendiente del sistema de ataques');
+    if (extraFeat==='lucky') pending.push('Afortunado: el máximo de puntos está registrado; gastar y recuperar puntos queda pendiente');
+    if (extraFeat==='crafter') pending.push('Artesano: el descuento y la fabricación rápida requieren tienda/inventario');
+    if (extraFeat==='musician') pending.push('Músico: Inspiración heroica a aliados durante descansos aún no automatizada');
+    if (extraFeat==='healer') pending.push('Sanador: curación con botiquín y repetición de dados aún no automatizadas');
+    if (extraFeat==='tavern_brawler') pending.push('Peleador de taberna: efectos de golpes desarmados aún no automatizados');
+    pending.push('Inspiración heroica del Humano al terminar un descanso largo aún no se gestiona');
   } else if (input.species==='dwarf') {
     bonusHitPointsPerLevel+=1;
     pending.push('Enano: visión en la oscuridad, resistencia al veneno y Sentido de la piedra aún no automatizados');
@@ -117,7 +156,9 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
     if (!input.elfSpellAbility || !['intelligence','wisdom','charisma'].includes(input.elfSpellAbility)) fail('Elige característica para conjuros de linaje élfico');
     skills.add(input.elfSenseSkill);
     if (input.elfLineage==='wood_elf') speedFeet=35;
-    pending.push('Elfo: linaje y conjuros, visión en la oscuridad, ascendencia feérica y trance se registran, pero sus efectos especiales están pendientes');
+    spells.push(...elfLineageSpells(input.elfLineage,input.level,input.elfSpellAbility));
+    pending.push('Elfo: visión en la oscuridad, ascendencia feérica y trance no están automatizados');
+    pending.push('Elfo: lanzamiento, usos gratuitos y cambio de truco del Alto elfo tras descanso aún pendientes');
   }
   const martial = input.martial===undefined ? undefined : validateMartialChoices(input.martial);
   if (!martial) pending.push('Estilo de combate, tres maestrías y equipo inicial aún no seleccionados');
@@ -138,6 +179,6 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
     ...(input.level===3?{subclass:'champion' as const}:{})
   };
   const sheet=calculateFighterSheet(character);
-  return {sheet,origin:{background:input.background,species:input.species,feat:bg.feat,...(extraFeat?{additionalFeat:extraFeat}:{}),size,speedFeet,tools:[bg.tool]},pendingAutomation:pending,
+  return {sheet,origin:{background:input.background,species:input.species,feat:bg.feat,...(extraFeat?{additionalFeat:extraFeat}:{}),size,speedFeet,tools:[bg.tool,...extraTools.map(t=>TOOL_NAMES[t])],...(luckPointsMaximum!==undefined?{luckPointsMaximum}:{})},spells,pendingAutomation:pending,
     ...(martial ? {martial:{choices:martial,gold:FIGHTER_PACKAGES[martial.startingPackage].gold,inventory:FIGHTER_PACKAGES[martial.startingPackage].items,masteries:martial.weaponMasteries.map(id=>({weapon:WEAPONS[id].name,property:WEAPONS[id].mastery}))}} : {})};
 }

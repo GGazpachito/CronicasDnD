@@ -10,3 +10,6 @@ export * from './sheet';
 export * from "./guided";
 
 export * from './martial';
+
+export * from "./origin-magic";
+export * from "./origin-feats";

@@ -1,11 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { calculateGuidedFighter, BACKGROUNDS, FIGHTER_SKILL_OPTIONS, HUMAN_FEATS, type BackgroundId, type SpeciesId, type ElfLineage, type GuidedFighterInput } from "../../../../packages/rules-engine/src/guided";
+import { calculateGuidedFighter, BACKGROUNDS, FIGHTER_SKILL_OPTIONS, HUMAN_FEATS, type BackgroundId, type SpeciesId, type ElfLineage, type GuidedFighterInput, type HumanOriginFeat } from "../../../../packages/rules-engine/src/guided";
 import { ABILITIES, type Ability, type AbilityScores } from "../../../../packages/rules-engine/src/abilities";
 import { SKILLS, type Skill } from "../../../../packages/rules-engine/src/proficiencies";
 import type { ArmorId } from "../../../../packages/rules-engine/src/defense";
 import { FIGHTING_STYLES, WEAPONS, FIGHTER_PACKAGES, type FightingStyleId, type WeaponId, type StartingPackageId } from "../../../../packages/rules-engine/src/martial";
+import { ORIGIN_FEATS, CRAFTER_TOOLS, MUSICAL_INSTRUMENTS, TOOL_NAMES, SKILLED_OPTIONS, type ToolId } from "../../../../packages/rules-engine/src/origin-feats";
+import { SPELL_LISTS, MAGIC_ABILITY_OPTIONS, spellName, type SpellListId, type SpellAbility, type MagicInitiateSelection } from "../../../../packages/rules-engine/src/origin-magic";
 
 const NAMES: Record<Ability, string> = {strength:'Fuerza',dexterity:'Destreza',constitution:'Constitución',intelligence:'Inteligencia',wisdom:'Sabiduría',charisma:'Carisma'};
 const SKILL_NAMES: Record<Skill,string> = {
@@ -18,8 +20,8 @@ const ARMOR_OPTIONS: ReadonlyArray<{id:ArmorId|null;name:string}> = [
 {id:'splint',name:'Bandas'},{id:'plate',name:'Placas'}
 ];
 const FEATURES:Record<string,string>={fighting_style:'Estilo de combate (pendiente de elegir)',second_wind:'Segundo aliento',weapon_mastery:'Maestría de armas (pendiente de elegir)',action_surge:'Acción súbita',tactical_mind:'Mente táctica',champion_improved_critical:'Crítico mejorado',champion_remarkable_athlete:'Atleta extraordinario'};
-const FEATS = {alert:'Alerta',tough:'Duro',savage_attacker:'Ataque salvaje'} as const;
-const originFeatName=(x:string)=>({magic_initiate_cleric:'Iniciado en la Magia (Clérigo)',magic_initiate_wizard:'Iniciado en la Magia (Mago)',alert:'Alerta',savage_attacker:'Ataque salvaje'} as Record<string,string>)[x]??x;
+const FEATS = ORIGIN_FEATS;
+const originFeatName=(x:string)=>({magic_initiate_cleric:'Iniciado en la Magia (Clérigo)',magic_initiate_wizard:'Iniciado en la Magia (Mago)',...ORIGIN_FEATS} as Record<string,string>)[x]??x;
 const signed=(n:number)=>n>=0?`+${n}`:String(n);
 const validSkills=(bg:BackgroundId)=>FIGHTER_SKILL_OPTIONS.filter(s=>!(BACKGROUNDS[bg].skills as readonly string[]).includes(s));
 function initialForBackground(bg:BackgroundId):{plusTwoAbility:Ability;plusOneAbility:Ability;fighterSkills:Skill[]}{
@@ -37,7 +39,19 @@ export default function Home(){
   const [one,setOne]=useState<Ability>('dexterity');
   const [fighterSkills,setFighterSkills]=useState<Skill[]>(['perception','survival']);
   const [humanSkill,setHumanSkill]=useState<Skill>('investigation');
-  const [humanFeat,setHumanFeat]=useState<'alert'|'tough'|'savage_attacker'>('tough');
+  const [humanFeat,setHumanFeat]=useState<HumanOriginFeat>('tough');
+  const [bgMagicAbility,setBgMagicAbility]=useState<SpellAbility>('wisdom');
+  const [bgClericCantrips,setBgClericCantrips]=useState<string[]>(['guidance','sacred_flame']);
+  const [bgClericSpell,setBgClericSpell]=useState('bless');
+  const [bgWizardCantrips,setBgWizardCantrips]=useState<string[]>(['fire_bolt','mage_hand']);
+  const [bgWizardSpell,setBgWizardSpell]=useState('magic_missile');
+  const [humanMagicList,setHumanMagicList]=useState<SpellListId>('druid');
+  const [humanMagicAbility,setHumanMagicAbility]=useState<SpellAbility>('wisdom');
+  const [humanCantrips,setHumanCantrips]=useState<string[]>(['druidcraft','guidance']);
+  const [humanSpell,setHumanSpell]=useState('goodberry');
+  const [crafterTools,setCrafterTools]=useState<string[]>(['carpenters_tools','leatherworkers_tools','smiths_tools']);
+  const [instruments,setInstruments]=useState<string[]>(['lute','flute','drum']);
+  const [skilled,setSkilled]=useState<string[]>(['skill:medicine','skill:deception','tool:disguise_kit']);
   const [humanSize,setHumanSize]=useState<'small'|'medium'>('medium');
   const [lineage,setLineage]=useState<ElfLineage>('wood_elf');
   const [elfSkill,setElfSkill]=useState<'insight'|'perception'|'survival'>('insight');
@@ -49,21 +63,38 @@ export default function Home(){
   const [starter,setStarter]=useState<StartingPackageId>('a');
   const bg=BACKGROUNDS[background];
   const allowed=bg.abilities as readonly Ability[];
-  function onBackground(next:BackgroundId){const defaults=initialForBackground(next);setBackground(next);setTwo(defaults.plusTwoAbility);setOne(defaults.plusOneAbility);setFighterSkills(defaults.fighterSkills);}
-  const input:GuidedFighterInput={name,level,background,species,assignedAbilities:scores,increaseMode:mode,plusTwoAbility:two,plusOneAbility:one,fighterSkills,humanSkill,humanFeat,humanSize,elfLineage:lineage,elfSenseSkill:elfSkill,elfSpellAbility:elfSpell,armor,shield,martial:{fightingStyle:style,weaponMasteries:masteries,startingPackage:starter}};
-  const output=useMemo(()=>{try{return {result:calculateGuidedFighter(input),error:null};}catch(e){return {result:null,error:e instanceof Error?e.message:'Error al crear el personaje'};}},[name,level,background,species,scores,mode,two,one,fighterSkills,humanSkill,humanFeat,humanSize,lineage,elfSkill,elfSpell,armor,shield,style,masteries,starter]);
+  function onBackground(next:BackgroundId){const defaults=initialForBackground(next);setBackground(next);setTwo(defaults.plusTwoAbility);setOne(defaults.plusOneAbility);setFighterSkills(defaults.fighterSkills);
+    if(next==='acolyte'){setBgMagicAbility('wisdom');if(humanFeat==='magic_initiate'&&humanMagicList==='cleric')changeHumanMagicList('druid');}
+    if(next==='sage'){setBgMagicAbility('intelligence');if(humanFeat==='magic_initiate'&&humanMagicList==='wizard')changeHumanMagicList('druid');}
+  }
+  function changeHumanMagicList(next:SpellListId){setHumanMagicList(next);setHumanCantrips([...SPELL_LISTS[next].cantrips.slice(0,2)]);setHumanSpell(SPELL_LISTS[next].level1[0]);}
+  const backgroundMagicInitiate:MagicInitiateSelection|undefined=background==='acolyte'
+    ? {list:'cleric',spellcastingAbility:bgMagicAbility,cantrips:bgClericCantrips,level1Spell:bgClericSpell}
+    : background==='sage'?{list:'wizard',spellcastingAbility:bgMagicAbility,cantrips:bgWizardCantrips,level1Spell:bgWizardSpell}:undefined;
+  const humanFeatDetails={magicInitiate:{list:humanMagicList,spellcastingAbility:humanMagicAbility,cantrips:humanCantrips,level1Spell:humanSpell},crafterTools,musicianInstruments:instruments,skilledProficiencies:skilled};
+  const input:GuidedFighterInput={name,level,background,species,assignedAbilities:scores,increaseMode:mode,plusTwoAbility:two,plusOneAbility:one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,elfLineage:lineage,elfSenseSkill:elfSkill,elfSpellAbility:elfSpell,armor,shield,martial:{fightingStyle:style,weaponMasteries:masteries,startingPackage:starter}};
+  const output=useMemo(()=>{try{return {result:calculateGuidedFighter(input),error:null};}catch(e){return {result:null,error:e instanceof Error?e.message:'Error al crear el personaje'};}},[name,level,background,species,scores,mode,two,one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,lineage,elfSkill,elfSpell,armor,shield,style,masteries,starter]);
   const sheet=output.result?.sheet;
   const taken=[...bg.skills,...fighterSkills];
   const humanCandidates=SKILLS.filter(s=>!taken.includes(s));
   const elfCandidates=(['insight','perception','survival'] as const).filter(s=>!taken.includes(s));
   const setSkillAt=(slot:number,skill:Skill)=>setFighterSkills(prev=>prev.map((s,i)=>i===slot?skill:s));
   const STEPS=['Identidad','Origen','Características','Competencias','Equipo'];
+  function selectSlot(values:string[], setter:(v:string[])=>void,index:number,next:string){setter(values.map((s,i)=>i===index?next:s));}
+  function magicFields(title:string,list:SpellListId,ability:SpellAbility,cantrips:string[],spell:string,actions:{setAbility:(v:SpellAbility)=>void;setCantrips:(v:string[])=>void;setSpell:(v:string)=>void}){
+    return <div className="magic-fields"><div className="section-label"><h3>{title}</h3><span>{SPELL_LISTS[list].label}</span></div>
+      <label className="field"><span>Característica de lanzamiento</span><select value={ability} onChange={e=>actions.setAbility(e.target.value as SpellAbility)}>{MAGIC_ABILITY_OPTIONS.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label>
+      {[0,1].map(i=><label className="field" key={i}><span>Truco {i+1}</span><select value={cantrips[i]} onChange={e=>actions.setCantrips(cantrips.map((x,j)=>i===j?e.target.value:x))}>{SPELL_LISTS[list].cantrips.map(id=><option value={id} key={id}>{spellName(id)}</option>)}</select></label>)}
+      <label className="field"><span>Conjuro de nivel 1</span><select value={spell} onChange={e=>actions.setSpell(e.target.value)}>{SPELL_LISTS[list].level1.map(id=><option value={id} key={id}>{spellName(id)}</option>)}</select></label>
+      <p className="muted-note">El conjuro de nivel 1 concede un lanzamiento gratuito por descanso largo. Su uso no se consume aún en esta interfaz.</p>
+    </div>;
+  }
   function changePackage(id:StartingPackageId){setStarter(id);setArmor(FIGHTER_PACKAGES[id].initialArmor);setShield(false);}
   function changeMastery(index:number,value:WeaponId){setMasteries(prev=>prev.map((old,i)=>i===index?value:old));}
   return <main className="app-shell">
     <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Creador guiado · D&D 2024</span></div></div><div className="status"><span className="status-dot"/> Motor conectado · Sin guardado</div></header>
     <div className="content">
-      <div className="intro"><div><span className="eyebrow">PROTOTIPO 03 / OPCIONES MARCIALES</span><h1>Da forma a <em>tu aventurero.</em></h1><p>Guerrero de niveles 1–3. Tus decisiones de origen se validan y se reflejan en la hoja calculada.</p></div><span className="edition">PHB 2024 + SRD</span></div>
+      <div className="intro"><div><span className="eyebrow">PROTOTIPO 04 / MAGIA DE ORIGEN</span><h1>Da forma a <em>tu aventurero.</em></h1><p>Guerrero de niveles 1–3. Tus decisiones de origen se validan y se reflejan en la hoja calculada.</p></div><span className="edition">PHB 2024 + SRD</span></div>
       <nav className="wizard-tabs" aria-label="Pasos de creación">{STEPS.map((s,i)=><button type="button" key={s} className={step===i?'active':''} aria-current={step===i?'step':undefined} onClick={()=>setStep(i)}><span>{String(i+1).padStart(2,'0')}</span>{s}</button>)}</nav>
       <div className="workspace">
         <aside className="editor panel">
@@ -78,7 +109,19 @@ export default function Home(){
             <label className="field"><span>Trasfondo</span><select value={background} onChange={e=>onBackground(e.target.value as BackgroundId)}>{Object.entries(BACKGROUNDS).map(([id,b])=><option key={id} value={id}>{b.name}</option>)}</select></label>
             <div className="origin-detail"><strong>Dote: {originFeatName(bg.feat)}</strong><small>Competencias: {bg.skills.map(s=>SKILL_NAMES[s as Skill]).join(', ')}</small><small>Herramienta: {bg.tool}</small></div>
             <label className="field"><span>Especie</span><select value={species} onChange={e=>setSpecies(e.target.value as SpeciesId)}><option value="human">Humano</option><option value="dwarf">Enano</option><option value="elf">Elfo</option></select></label>
-            {species==='human'&&<><label className="field"><span>Tamaño</span><select value={humanSize} onChange={e=>setHumanSize(e.target.value as 'small'|'medium')}><option value="medium">Mediano</option><option value="small">Pequeño</option></select></label><label className="field"><span>Dote de origen adicional (selección provisional)</span><select value={humanFeat} onChange={e=>setHumanFeat(e.target.value as typeof humanFeat)}>{HUMAN_FEATS.filter(f=>f!==bg.feat).map(f=><option key={f} value={f}>{FEATS[f]}</option>)}</select></label></>}
+            {(background==='acolyte'||background==='sage')&&magicFields('Iniciado en la Magia del trasfondo',background==='acolyte'?'cleric':'wizard',bgMagicAbility,background==='acolyte'?bgClericCantrips:bgWizardCantrips,background==='acolyte'?bgClericSpell:bgWizardSpell,{setAbility:setBgMagicAbility,setCantrips:background==='acolyte'?setBgClericCantrips:setBgWizardCantrips,setSpell:background==='acolyte'?setBgClericSpell:setBgWizardSpell})}
+            {species==='human'&&<>
+              <label className="field"><span>Tamaño</span><select value={humanSize} onChange={e=>setHumanSize(e.target.value as 'small'|'medium')}><option value="medium">Mediano</option><option value="small">Pequeño</option></select></label>
+              <label className="field"><span>Dote de origen adicional</span><select value={humanFeat} onChange={e=>setHumanFeat(e.target.value as HumanOriginFeat)}>{HUMAN_FEATS.filter(f=>f!==bg.feat).map(f=><option key={f} value={f}>{FEATS[f]}</option>)}</select></label>
+              {humanFeat==='magic_initiate'&&<>
+                <label className="field"><span>Lista de conjuros de la dote humana</span><select value={humanMagicList} onChange={e=>changeHumanMagicList(e.target.value as SpellListId)}>{(Object.keys(SPELL_LISTS) as SpellListId[]).filter(id=>!(background==='acolyte'&&id==='cleric')&&!(background==='sage'&&id==='wizard')).map(id=><option value={id} key={id}>{SPELL_LISTS[id].label}</option>)}</select></label>
+                {magicFields('Iniciado en la Magia del Humano',humanMagicList,humanMagicAbility,humanCantrips,humanSpell,{setAbility:setHumanMagicAbility,setCantrips:setHumanCantrips,setSpell:setHumanSpell})}
+              </>}
+              {humanFeat==='crafter'&&<><p className="muted-note">Escoge tres herramientas de artesano distintas.</p>{[0,1,2].map(i=><label className="field" key={i}><span>Herramienta {i+1}</span><select value={crafterTools[i]} onChange={e=>selectSlot(crafterTools,setCrafterTools,i,e.target.value)}>{CRAFTER_TOOLS.map(t=><option value={t} key={t}>{TOOL_NAMES[t]}</option>)}</select></label>)}</>}
+              {humanFeat==='musician'&&<><p className="muted-note">Escoge tres instrumentos musicales distintos.</p>{[0,1,2].map(i=><label className="field" key={i}><span>Instrumento {i+1}</span><select value={instruments[i]} onChange={e=>selectSlot(instruments,setInstruments,i,e.target.value)}>{MUSICAL_INSTRUMENTS.map(t=><option value={t} key={t}>{TOOL_NAMES[t]}</option>)}</select></label>)}</>}
+              {humanFeat==='skilled'&&<><p className="muted-note">Escoge tres habilidades o herramientas distintas, sin repetir competencias existentes.</p>{[0,1,2].map(i=><label className="field" key={i}><span>Competencia {i+1}</span><select value={skilled[i]} onChange={e=>selectSlot(skilled,setSkilled,i,e.target.value)}>{SKILLED_OPTIONS.map(k=><option value={k} key={k}>{k.startsWith('skill:')?`Habilidad: ${SKILL_NAMES[k.slice(6) as Skill]}`:`Herramienta: ${TOOL_NAMES[k.slice(5) as ToolId]}`}</option>)}</select></label>)}</>}
+              {humanFeat==='lucky'&&<div className="info-line">Afortunado: puntos de suerte máximos iguales a tu bonificador de competencia.</div>}
+            </>}
             {species==='elf'&&<><label className="field"><span>Linaje élfico</span><select value={lineage} onChange={e=>setLineage(e.target.value as ElfLineage)}><option value="drow">Drow</option><option value="high_elf">Alto elfo</option><option value="wood_elf">Elfo de los bosques</option></select></label><label className="field"><span>Característica para conjuros del linaje</span><select value={elfSpell} onChange={e=>setElfSpell(e.target.value as typeof elfSpell)}>{(['intelligence','wisdom','charisma'] as const).map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label></>}
             {species==='dwarf'&&<div className="info-line">Robustez enana: +1 PG máximo por nivel (automatizado).</div>}
           </>}
@@ -119,8 +162,9 @@ export default function Home(){
           {sheet&&output.result&&<>
             <div className="stat-cards"><div className="stat-card"><span>PG MÁXIMOS</span><strong>{sheet.maximumHitPoints}</strong><small>{sheet.hitDice.total}d{sheet.hitDice.die} dados de golpe</small></div><div className="stat-card"><span>CLASE DE ARMADURA</span><strong>{sheet.armorClass}</strong><small>{sheet.armorClassDetails.formula}</small></div><div className="stat-card"><span>INICIATIVA</span><strong>{signed(sheet.initiative)}</strong><small>{sheet.initiativeRollMode==='advantage'?'Ventaja':sheet.initiativeRollMode==='disadvantage'?'Desventaja':'Normal'}</small></div></div>
             <div className="preview-section"><div className="section-label"><h3>Características finales</h3><span>Competencia {signed(sheet.proficiencyBonus)}</span></div><div className="ability-grid">{ABILITIES.map(a=><div className="ability-stat" key={a}><span>{NAMES[a].slice(0,3).toUpperCase()}</span><strong>{sheet.abilityScores[a]}</strong><small>{signed(sheet.abilityModifiers[a])}</small></div>)}</div></div>
-            <div className="two-col"><div className="preview-section"><div className="section-label"><h3>Habilidades</h3><span>Competencias elegidas</span></div><div className="data-list">{SKILLS.map(k=><div className="data-row" key={k}><span>{SKILL_NAMES[k]} {taken.includes(k)||((species==='human'&&humanSkill===k)||(species==='elf'&&elfSkill===k))?'•':''}</span><span><strong>{signed(sheet.skillBonuses[k])}</strong>{sheet.skillRollModes[k]!=='normal'&&<b className="mode-chip">{sheet.skillRollModes[k]==='advantage'?'Ventaja':'Desventaja'}</b>}</span></div>)}</div></div><div className="preview-section"><div className="section-label"><h3>Origen y rasgos</h3><span>PHB 2024</span></div><div className="resource-grid">{Object.entries(sheet.resources).map(([id,r])=>r&&<div className="resource-card" key={id}><span>{id==='second_wind'?'Segundo aliento':'Acción súbita'}</span><strong>{r.current}/{r.maximum}</strong></div>)}</div><p className="muted-note">Tamaño: {output.result.origin.size==='medium'?'Mediano':'Pequeño'} · Velocidad: {output.result.origin.speedFeet} pies</p><p className="muted-note">Dote del trasfondo: {originFeatName(bg.feat)}{output.result.origin.additionalFeat?` · Dote humana: ${FEATS[output.result.origin.additionalFeat]}`:''}</p>{output.result.martial&&<><p className="muted-note">Estilo: {FIGHTING_STYLES[output.result.martial.choices.fightingStyle]} · Dinero de clase: {output.result.martial.gold} po</p><p className="muted-note">Maestrías: {output.result.martial.masteries.map(m=>`${m.weapon} (${m.property})`).join(', ')}</p></>}
+            <div className="two-col"><div className="preview-section"><div className="section-label"><h3>Habilidades</h3><span>Competencias elegidas</span></div><div className="data-list">{SKILLS.map(k=><div className="data-row" key={k}><span>{SKILL_NAMES[k]} {taken.includes(k)||((species==='human'&&humanSkill===k)||(species==='elf'&&elfSkill===k))?'•':''}</span><span><strong>{signed(sheet.skillBonuses[k])}</strong>{sheet.skillRollModes[k]!=='normal'&&<b className="mode-chip">{sheet.skillRollModes[k]==='advantage'?'Ventaja':'Desventaja'}</b>}</span></div>)}</div></div><div className="preview-section"><div className="section-label"><h3>Origen y rasgos</h3><span>PHB 2024</span></div><div className="resource-grid">{Object.entries(sheet.resources).map(([id,r])=>r&&<div className="resource-card" key={id}><span>{id==='second_wind'?'Segundo aliento':'Acción súbita'}</span><strong>{r.current}/{r.maximum}</strong></div>)}</div><p className="muted-note">Tamaño: {output.result.origin.size==='medium'?'Mediano':'Pequeño'} · Velocidad: {output.result.origin.speedFeet} pies</p><p className="muted-note">Dote del trasfondo: {originFeatName(bg.feat)}{output.result.origin.additionalFeat?` · Dote humana: ${FEATS[output.result.origin.additionalFeat]}`:''}</p><p className="muted-note">Herramientas: {output.result.origin.tools.join(', ')}</p>{output.result.origin.luckPointsMaximum!==undefined&&<p className="muted-note">Puntos de suerte máximos: {output.result.origin.luckPointsMaximum} (sin gestión de gasto)</p>}{output.result.martial&&<><p className="muted-note">Estilo: {FIGHTING_STYLES[output.result.martial.choices.fightingStyle]} · Dinero de clase: {output.result.martial.gold} po</p><p className="muted-note">Maestrías: {output.result.martial.masteries.map(m=>`${m.weapon} (${m.property})`).join(', ')}</p></>}
             <ul className="feature-list">{sheet.features.map(f=><li key={f}>{FEATURES[f]??f}</li>)}</ul></div></div>
+            {output.result.spells.length>0&&<div className="preview-section"><div className="section-label"><h3>Conjuros de origen</h3><span>{output.result.spells.length} concedidos</span></div><div className="spell-list">{output.result.spells.map((sp,i)=><div className="spell-entry" key={`${sp.source}-${sp.id}-${i}`}><div><strong>{sp.name}</strong><small>{sp.source==='background'?'Trasfondo':sp.source==='human_feat'?'Dote humana':'Linaje élfico'} · {sp.level===0?'Truco':'Nivel 1'} · {NAMES[sp.spellcastingAbility]}</small></div>{sp.freeCastPerLongRest&&<span className="mode-chip">1 gratis / descanso largo</span>}</div>)}</div><p className="muted-note">Los conjuros están validados y registrados; sus tiradas, efectos y usos consumidos aún no se ejecutan.</p></div>}
             <div className="preview-section pending-section"><div className="section-label"><h3>Automatizaciones pendientes</h3><span>{output.result.pendingAutomation.length}</span></div><ul className="feature-list">{output.result.pendingAutomation.map((p,i)=><li key={i}>{p}</li>)}</ul></div>
             {sheet.warnings.length>0&&<div className="warning" role="status">{sheet.warnings.includes('heavy_armor_strength_requirement_unmet')&&<p>La armadura pesada no cumple el requisito de Fuerza.</p>}{sheet.warnings.includes('armor_stealth_disadvantage')&&<p>La armadura impone desventaja en Sigilo.</p>}</div>}
           </>}
