@@ -8,6 +8,7 @@ import { FIGHTER_PACKAGES, WEAPONS, validateMartialChoices, type MartialChoices 
 import { ORIGIN_FEATS, TOOL_NAMES, validateHumanOriginFeat, type OriginFeatId, type HumanFeatDetails, type ToolId } from './origin-feats';
 import { validateMagicInitiate, grantsFromMagicInitiate, elfLineageSpells, type SpellGrant, type MagicInitiateSelection } from './origin-magic';
 import { combineStartingInventory, validateBackgroundEquipment, GAMING_SETS, type BackgroundEquipmentChoice, type StartingInventory } from './background-equipment';
+import { replayInventory, type InventoryAction, type InventoryState } from './inventory';
 
 export const FIGHTER_SKILL_OPTIONS: readonly Skill[] = [
   'acrobatics', 'animal_handling', 'athletics', 'history', 'insight',
@@ -53,6 +54,8 @@ export type GuidedFighterInput = Readonly<{
   martial?: MartialChoices;
   /** Elección del equipo del trasfondo; opcional para compatibilidad con pasos anteriores. */
   backgroundEquipment?: BackgroundEquipmentChoice;
+  /** Diario de compra, venta, hallazgos y equipamiento a partir del lote inicial. */
+  inventoryActions?: readonly InventoryAction[];
 }>;
 export type GuidedFighterResult = Readonly<{
   sheet: CalculatedFighterSheet;
@@ -62,6 +65,7 @@ export type GuidedFighterResult = Readonly<{
   pendingAutomation: readonly string[];
   martial?: Readonly<{choices:MartialChoices;gold:number;inventory:readonly {name:string;quantity:number}[];masteries:readonly {weapon:string;property:string}[]}>;
   startingInventory?: StartingInventory;
+  inventory?: InventoryState;
 }>;
 
 function fail(message: string): never { throw new RangeError(message); }
@@ -170,13 +174,14 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
   if (!martial) pending.push('Estilo de combate, tres maestrías y equipo inicial aún no seleccionados');
   if (martial && martial.fightingStyle !== 'defense') pending.push('El estilo de combate elegido se ha registrado; sus efectos de ataque, reacción o sentidos se implementarán con el motor de combate');
   if (martial) pending.push('Las propiedades de maestría se han registrado; su ejecución durante ataques está pendiente');
-  const fightingStyleModifiers = martial?.fightingStyle==='defense' && input.armor!==null ? [{type:'numeric_modifier',effectId:'fighter_fighting_style_defense',sourceRevisionId:'phb2024:fighter:defense',target:'armor_class',when:{type:'always'},operation:'add',value:1,group:'fighting_style_defense',stacking:'sum',priority:0}] : [];
-  if (martial) {
-    const selected=FIGHTER_PACKAGES[martial.startingPackage];
-    // El inventario inicial A/B/C determina qué armadura se encuentra disponible.
-    // Por ahora no existe compra de equipo ni intercambios: el equipo equipado se deriva del lote.
-    if (input.armor!==selected.initialArmor || input.shield) fail('El equipo equipado debe coincidir con el paquete inicial; compra/equipamiento personalizado pendiente');
-  }
+  const startingInventory=bgEquipment?combineStartingInventory(martial?.startingPackage,bgEquipment):undefined;
+  if (input.inventoryActions!==undefined && (!martial || !startingInventory)) fail('Completa primero el equipo de clase y trasfondo antes de editar el inventario');
+  const inventory=martial && startingInventory ? replayInventory(startingInventory,FIGHTER_PACKAGES[martial.startingPackage].initialArmor,input.inventoryActions??[]) : undefined;
+  const targetArmor=inventory ? inventory.equipped.armor : input.armor;
+  const targetShield=inventory ? inventory.equipped.shield : input.shield;
+  if(inventory && (input.armor!==targetArmor||input.shield!==targetShield)) fail(input.inventoryActions===undefined?'El equipo debe coincidir con el paquete inicial':'El equipo equipado no coincide con el inventario');
+  if(martial && !inventory && (input.armor!==FIGHTER_PACKAGES[martial.startingPackage].initialArmor || input.shield)) fail('El equipo debe coincidir con el paquete inicial');
+  const fightingStyleModifiers = martial?.fightingStyle==='defense' && targetArmor!==null ? [{type:'numeric_modifier',effectId:'fighter_fighting_style_defense',sourceRevisionId:'phb2024:fighter:defense',target:'armor_class',when:{type:'always'},operation:'add',value:1,group:'fighting_style_defense',stacking:'sum',priority:0}] : [];
   const character: FighterCharacterInput = {
     id:'guided-preview',name:input.name.trim(),ruleset:'dnd-2024',fighterLevel:input.level,
     baseAbilities:finalScores,baseProficiencies:{skills:[...skills],savingThrows:['strength','constitution']},
@@ -185,9 +190,9 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
     ...(input.level===3?{subclass:'champion' as const}:{})
   };
   const sheet=calculateFighterSheet(character);
-  const startingInventory=bgEquipment?combineStartingInventory(martial?.startingPackage,bgEquipment):undefined;
   const bgTool=bgEquipment?.gamingSet?GAMING_SETS[bgEquipment.gamingSet]:bg.tool;
   return {sheet,origin:{background:input.background,species:input.species,feat:bg.feat,...(extraFeat?{additionalFeat:extraFeat}:{}),size,speedFeet,tools:[bgTool,...extraTools.map(t=>TOOL_NAMES[t])],...(luckPointsMaximum!==undefined?{luckPointsMaximum}:{})},spells,pendingAutomation:pending,
     ...(startingInventory?{startingInventory}:{}),
+    ...(inventory?{inventory}:{}),
     ...(martial ? {martial:{choices:martial,gold:FIGHTER_PACKAGES[martial.startingPackage].gold,inventory:FIGHTER_PACKAGES[martial.startingPackage].items,masteries:martial.weaponMasteries.map(id=>({weapon:WEAPONS[id].name,property:WEAPONS[id].mastery}))}} : {})};
 }

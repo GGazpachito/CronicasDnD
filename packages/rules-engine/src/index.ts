@@ -14,3 +14,4 @@ export * from './martial';
 export * from "./origin-magic";
 export * from "./origin-feats";
 export * from './background-equipment';
+export * from './inventory';

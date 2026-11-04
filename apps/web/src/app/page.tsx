@@ -8,7 +8,8 @@ import type { ArmorId } from "../../../../packages/rules-engine/src/defense";
 import { FIGHTING_STYLES, WEAPONS, FIGHTER_PACKAGES, type FightingStyleId, type WeaponId, type StartingPackageId } from "../../../../packages/rules-engine/src/martial";
 import { ORIGIN_FEATS, CRAFTER_TOOLS, MUSICAL_INSTRUMENTS, TOOL_NAMES, SKILLED_OPTIONS, type ToolId } from "../../../../packages/rules-engine/src/origin-feats";
 import { SPELL_LISTS, MAGIC_ABILITY_OPTIONS, spellName, type SpellListId, type SpellAbility, type MagicInitiateSelection } from "../../../../packages/rules-engine/src/origin-magic";
-import { BACKGROUND_PACKAGES, GAMING_SETS, ITEM_NAMES, type BackgroundPackageId, type GamingSetId } from "../../../../packages/rules-engine/src/background-equipment";
+import { BACKGROUND_PACKAGES, GAMING_SETS, ITEM_NAMES, combineStartingInventory, validateBackgroundEquipment, type BackgroundPackageId, type GamingSetId } from "../../../../packages/rules-engine/src/background-equipment";
+import { INVENTORY_NAMES, INVENTORY_PRICES_CP, replayInventory, formatCopper, type InventoryAction, type InventoryItemId } from "../../../../packages/rules-engine/src/inventory";
 
 const NAMES: Record<Ability, string> = {strength:'Fuerza',dexterity:'Destreza',constitution:'Constitución',intelligence:'Inteligencia',wisdom:'Sabiduría',charisma:'Carisma'};
 const SKILL_NAMES: Record<Skill,string> = {
@@ -57,13 +58,31 @@ export default function Home(){
   const [lineage,setLineage]=useState<ElfLineage>('wood_elf');
   const [elfSkill,setElfSkill]=useState<'insight'|'perception'|'survival'>('insight');
   const [elfSpell,setElfSpell]=useState<'intelligence'|'wisdom'|'charisma'>('intelligence');
-  const [armor,setArmor]=useState<ArmorId|null>('chain_mail');
-  const [shield,setShield]=useState(false);
   const [style,setStyle]=useState<FightingStyleId>('defense');
   const [masteries,setMasteries]=useState<WeaponId[]>(['greatsword','flail','javelin']);
   const [starter,setStarter]=useState<StartingPackageId>('a');
   const [backgroundPackage,setBackgroundPackage]=useState<BackgroundPackageId>('a');
   const [soldierGamingSet,setSoldierGamingSet]=useState<GamingSetId>('dice_set');
+  const [inventoryEdits,setInventoryEdits]=useState<{key:string;actions:InventoryAction[]}>({key:'',actions:[]});
+  const [inventoryError,setInventoryError]=useState<string|null>(null);
+  const [tradeItem,setTradeItem]=useState<InventoryItemId>('shield');
+  const [tradeCount,setTradeCount]=useState(1);
+  const inventoryKey=[starter,background,backgroundPackage,background==='soldier'&&backgroundPackage==='a'?soldierGamingSet:''].join(':');
+  const starting=useMemo(()=>combineStartingInventory(starter,validateBackgroundEquipment(background,{startingPackage:backgroundPackage,...(background==='soldier'?{gamingSet:soldierGamingSet}:{})})),[starter,background,backgroundPackage,soldierGamingSet]);
+  const activeActions=inventoryEdits.key===inventoryKey?inventoryEdits.actions:[];
+  const inventory=useMemo(()=>replayInventory(starting,FIGHTER_PACKAGES[starter].initialArmor,activeActions),[starting,starter,activeActions]);
+  const armor:ArmorId|null=inventory.equipped.armor;
+  const shield=inventory.equipped.shield;
+  const quotedQty=Number.isInteger(tradeCount)&&tradeCount>=1&&tradeCount<=1000?tradeCount:0;
+  function transact(action:InventoryAction){
+    try{
+      const updated=[...activeActions,action];
+      replayInventory(starting,FIGHTER_PACKAGES[starter].initialArmor,updated);
+      setInventoryEdits({key:inventoryKey,actions:updated});setInventoryError(null);
+    }catch(e){setInventoryError(e instanceof Error?e.message:'Operación no válida');}
+  }
+  function undoTransaction(){if(activeActions.length) {setInventoryEdits({key:inventoryKey,actions:activeActions.slice(0,-1)});setInventoryError(null);}}
+  function resetTransactions(){setInventoryEdits({key:inventoryKey,actions:[]});setInventoryError(null);}
   const bg=BACKGROUNDS[background];
   const allowed=bg.abilities as readonly Ability[];
   function onBackground(next:BackgroundId){const defaults=initialForBackground(next);setBackground(next);setTwo(defaults.plusTwoAbility);setOne(defaults.plusOneAbility);setFighterSkills(defaults.fighterSkills);
@@ -75,9 +94,9 @@ export default function Home(){
     ? {list:'cleric',spellcastingAbility:bgMagicAbility,cantrips:bgClericCantrips,level1Spell:bgClericSpell}
     : background==='sage'?{list:'wizard',spellcastingAbility:bgMagicAbility,cantrips:bgWizardCantrips,level1Spell:bgWizardSpell}:undefined;
   const humanFeatDetails={magicInitiate:{list:humanMagicList,spellcastingAbility:humanMagicAbility,cantrips:humanCantrips,level1Spell:humanSpell},crafterTools,musicianInstruments:instruments,skilledProficiencies:skilled};
-  const input:GuidedFighterInput={name,level,background,species,assignedAbilities:scores,increaseMode:mode,plusTwoAbility:two,plusOneAbility:one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,elfLineage:lineage,elfSenseSkill:elfSkill,elfSpellAbility:elfSpell,armor,shield,martial:{fightingStyle:style,weaponMasteries:masteries,startingPackage:starter},
+  const input:GuidedFighterInput={name,level,background,species,assignedAbilities:scores,increaseMode:mode,plusTwoAbility:two,plusOneAbility:one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,elfLineage:lineage,elfSenseSkill:elfSkill,elfSpellAbility:elfSpell,armor,shield,inventoryActions:activeActions,martial:{fightingStyle:style,weaponMasteries:masteries,startingPackage:starter},
     backgroundEquipment:{startingPackage:backgroundPackage,...(background==='soldier'?{gamingSet:soldierGamingSet}:{})}};
-  const output=useMemo(()=>{try{return {result:calculateGuidedFighter(input),error:null};}catch(e){return {result:null,error:e instanceof Error?e.message:'Error al crear el personaje'};}},[name,level,background,species,scores,mode,two,one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,lineage,elfSkill,elfSpell,armor,shield,style,masteries,starter,backgroundPackage,soldierGamingSet]);
+  const output=useMemo(()=>{try{return {result:calculateGuidedFighter(input),error:null};}catch(e){return {result:null,error:e instanceof Error?e.message:'Error al crear el personaje'};}},[name,level,background,species,scores,mode,two,one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,lineage,elfSkill,elfSpell,armor,shield,style,masteries,starter,backgroundPackage,soldierGamingSet,activeActions]);
   const sheet=output.result?.sheet;
   const taken=[...bg.skills,...fighterSkills];
   const humanCandidates=SKILLS.filter(s=>!taken.includes(s));
@@ -93,12 +112,12 @@ export default function Home(){
       <p className="muted-note">El conjuro de nivel 1 concede un lanzamiento gratuito por descanso largo. Su uso no se consume aún en esta interfaz.</p>
     </div>;
   }
-  function changePackage(id:StartingPackageId){setStarter(id);setArmor(FIGHTER_PACKAGES[id].initialArmor);setShield(false);}
+  function changePackage(id:StartingPackageId){setStarter(id);setInventoryError(null);}
   function changeMastery(index:number,value:WeaponId){setMasteries(prev=>prev.map((old,i)=>i===index?value:old));}
   return <main className="app-shell">
     <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Creador guiado · D&D 2024</span></div></div><div className="status"><span className="status-dot"/> Motor conectado · Sin guardado</div></header>
     <div className="content">
-      <div className="intro"><div><span className="eyebrow">PROTOTIPO 05 / INVENTARIO INICIAL</span><h1>Da forma a <em>tu aventurero.</em></h1><p>Guerrero de niveles 1–3. Tus decisiones de origen se validan y se reflejan en la hoja calculada.</p></div><span className="edition">PHB 2024 + SRD</span></div>
+      <div className="intro"><div><span className="eyebrow">PROTOTIPO 06 / INVENTARIO EDITABLE</span><h1>Da forma a <em>tu aventurero.</em></h1><p>Guerrero de niveles 1–3. Tus decisiones de origen se validan y se reflejan en la hoja calculada.</p></div><span className="edition">PHB 2024 + SRD</span></div>
       <nav className="wizard-tabs" aria-label="Pasos de creación">{STEPS.map((s,i)=><button type="button" key={s} className={step===i?'active':''} aria-current={step===i?'step':undefined} onClick={()=>setStep(i)}><span>{String(i+1).padStart(2,'0')}</span>{s}</button>)}</nav>
       <div className="workspace">
         <aside className="editor panel">
@@ -155,7 +174,7 @@ export default function Home(){
             <div className="divider"/>
             <label className="field"><span>Equipo inicial de clase</span><select value={starter} onChange={e=>changePackage(e.target.value as StartingPackageId)}>{Object.entries(FIGHTER_PACKAGES).map(([id,pack])=><option key={id} value={id}>{pack.label}</option>)}</select></label>
             <div className="origin-detail"><strong>{FIGHTER_PACKAGES[starter].gold} po · Equipo de clase</strong>{FIGHTER_PACKAGES[starter].items.map((it,i)=><small key={i}>{it.quantity} × {it.name}</small>)}{starter==='c'&&<small>Sin objetos. La compra de equipo se añadirá después.</small>}</div>
-            <div className="info-line">Armadura equipada: {starter==='a'?'Cota de malla':starter==='b'?'Cuero tachonado':'Ninguna'} · Sin escudo. El cambio de equipo y las compras llegarán con el inventario.</div>
+            <div className="info-line">El equipo inicial se añade al inventario. Ahora puedes cambiar la armadura, comprar y equipar un escudo, o incorporar objetos hallados.</div>
             <div className="divider"/>
             <div className="section-label"><h3>Equipo del trasfondo</h3><span>{bg.name}</span></div>
             <label className="field"><span>Opción del trasfondo</span><select value={backgroundPackage} onChange={e=>setBackgroundPackage(e.target.value as BackgroundPackageId)}><option value="a">A · Objetos y monedas</option><option value="b">B · 50 piezas de oro, sin objetos</option></select></label>
@@ -164,10 +183,31 @@ export default function Home(){
               {background==='soldier'&&backgroundPackage==='a'&&<small>1 × {GAMING_SETS[soldierGamingSet]} (juego de azar elegido)</small>}
               {backgroundPackage==='b'&&<small>Sin objetos de trasfondo; la competencia con herramientas se conserva.</small>}
             </div>
-            <p className="muted-note">El oro y los objetos del trasfondo se suman a los de clase. Todavía no hay compras, equipamiento libre ni guardado.</p>
+            <p className="muted-note">El oro y los objetos del trasfondo se suman a los de clase. Si cambias un paquete, se reinicia el historial de operaciones del inventario.</p>
+            <div className="divider"/>
+            <div className="section-label"><h3>Inventario editable</h3><span>{activeActions.length} operaciones</span></div>
+            <div className="money-summary inventory-money"><strong>{formatCopper(inventory.coinsCopper)}</strong><small>Saldo disponible</small></div>
+            <label className="field"><span>Objeto del catálogo</span><select value={tradeItem} onChange={e=>setTradeItem(e.target.value as InventoryItemId)}>{Object.entries(INVENTORY_NAMES).sort((a,b)=>a[1].localeCompare(b[1],'es')).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label>
+            <label className="field"><span>Cantidad</span><input type="number" min={1} max={1000} step={1} value={tradeCount} onChange={e=>setTradeCount(Number(e.target.value))}/></label>
+            <p className="muted-note">{INVENTORY_PRICES_CP[tradeItem]===undefined?'Precio no disponible en el catálogo reducido: puedes registrar el objeto como hallazgo.':`Compra: ${formatCopper((INVENTORY_PRICES_CP[tradeItem]??0)*quotedQty)} · Venta: ${formatCopper(Math.floor((INVENTORY_PRICES_CP[tradeItem]??0)*quotedQty/2))}`}</p>
+            <div className="trade-actions">
+              <button type="button" disabled={INVENTORY_PRICES_CP[tradeItem]===undefined} onClick={()=>transact({type:'buy',itemId:tradeItem,quantity:tradeCount})}>Comprar</button>
+              <button type="button" disabled={INVENTORY_PRICES_CP[tradeItem]===undefined} onClick={()=>transact({type:'sell',itemId:tradeItem,quantity:tradeCount})}>Vender</button>
+              <button type="button" onClick={()=>transact({type:'add',itemId:tradeItem,quantity:tradeCount})}>Añadir botín</button>
+              <button type="button" onClick={()=>transact({type:'remove',itemId:tradeItem,quantity:tradeCount})}>Descartar</button>
+            </div>
+            {inventoryError&&<div className="error" role="alert">{inventoryError}</div>}
+            <p className="muted-note">Las tiendas y los hallazgos se confirman con el director de juego. Los objetos sin precio validado solo se pueden añadir como botín.</p>
+            <div className="divider"/>
+            <label className="field"><span>Armadura equipada (solo objetos que posees)</span><select value={armor??'none'} onChange={e=>transact({type:'equip_armor',armor:e.target.value==='none'?null:e.target.value as ArmorId})}>
+              <option value="none">Sin armadura</option>
+              {inventory.items.filter(it=>ARMOR_OPTIONS.some(x=>x.id===it.id)).map(it=><option key={it.id} value={it.id}>{INVENTORY_NAMES[it.id]}</option>)}
+            </select></label>
+            <label className="switch-field"><span><strong>Escudo equipado</strong><small>Debes poseer al menos uno</small></span><input type="checkbox" checked={shield} disabled={!shield&&!inventory.items.some(it=>it.id==='shield')} onChange={e=>transact({type:'equip_shield',equipped:e.target.checked})}/></label>
+            <div className="trade-actions trade-history"><button type="button" disabled={!activeActions.length} onClick={undoTransaction}>Deshacer última</button><button type="button" disabled={!activeActions.length} onClick={resetTransactions}>Reiniciar inventario</button></div>
           </>}
           <div className="wizard-actions"><button type="button" disabled={step===0} onClick={()=>setStep(x=>Math.max(0,x-1))}>Anterior</button><button type="button" disabled={step===STEPS.length-1} onClick={()=>setStep(x=>Math.min(STEPS.length-1,x+1))}>Siguiente</button></div>
-          <div className="editor-footnote">Creación parcial y sin guardado. Los contenidos no automatizados aparecen identificados en la hoja.</div>
+          <div className="editor-footnote">Creación parcial y sin guardado permanente. Los precios se expresan en piezas de cobre y se venden objetos a mitad del valor de catálogo.</div>
         </aside>
         <section className="preview panel" aria-live="polite">
           <div className="panel-heading"><div><span className="eyebrow">HOJA EN VIVO</span><h2>{name.trim()||'Sin nombre'}</h2><p>Guerrero {level}{level===3?' · Campeón':''} · {bg.name} · {species==='human'?'Humano':species==='dwarf'?'Enano':'Elfo'}</p></div><span className="roundel">{level}</span></div>
@@ -177,18 +217,19 @@ export default function Home(){
             <div className="preview-section"><div className="section-label"><h3>Características finales</h3><span>Competencia {signed(sheet.proficiencyBonus)}</span></div><div className="ability-grid">{ABILITIES.map(a=><div className="ability-stat" key={a}><span>{NAMES[a].slice(0,3).toUpperCase()}</span><strong>{sheet.abilityScores[a]}</strong><small>{signed(sheet.abilityModifiers[a])}</small></div>)}</div></div>
             <div className="two-col"><div className="preview-section"><div className="section-label"><h3>Habilidades</h3><span>Competencias elegidas</span></div><div className="data-list">{SKILLS.map(k=><div className="data-row" key={k}><span>{SKILL_NAMES[k]} {taken.includes(k)||((species==='human'&&humanSkill===k)||(species==='elf'&&elfSkill===k))?'•':''}</span><span><strong>{signed(sheet.skillBonuses[k])}</strong>{sheet.skillRollModes[k]!=='normal'&&<b className="mode-chip">{sheet.skillRollModes[k]==='advantage'?'Ventaja':'Desventaja'}</b>}</span></div>)}</div></div><div className="preview-section"><div className="section-label"><h3>Origen y rasgos</h3><span>PHB 2024</span></div><div className="resource-grid">{Object.entries(sheet.resources).map(([id,r])=>r&&<div className="resource-card" key={id}><span>{id==='second_wind'?'Segundo aliento':'Acción súbita'}</span><strong>{r.current}/{r.maximum}</strong></div>)}</div><p className="muted-note">Tamaño: {output.result.origin.size==='medium'?'Mediano':'Pequeño'} · Velocidad: {output.result.origin.speedFeet} pies</p><p className="muted-note">Dote del trasfondo: {originFeatName(bg.feat)}{output.result.origin.additionalFeat?` · Dote humana: ${FEATS[output.result.origin.additionalFeat]}`:''}</p><p className="muted-note">Herramientas: {output.result.origin.tools.join(', ')}</p>{output.result.origin.luckPointsMaximum!==undefined&&<p className="muted-note">Puntos de suerte máximos: {output.result.origin.luckPointsMaximum} (sin gestión de gasto)</p>}{output.result.martial&&<><p className="muted-note">Estilo: {FIGHTING_STYLES[output.result.martial.choices.fightingStyle]} · Dinero de clase: {output.result.martial.gold} po</p><p className="muted-note">Maestrías: {output.result.martial.masteries.map(m=>`${m.weapon} (${m.property})`).join(', ')}</p></>}
             <ul className="feature-list">{sheet.features.map(f=><li key={f}>{FEATURES[f]??f}</li>)}</ul></div></div>
-            {output.result.startingInventory&&<div className="preview-section inventory-section">
-              <div className="section-label"><h3>Inventario inicial</h3><span>{output.result.startingInventory.items.length} tipos de objetos</span></div>
-              <div className="money-summary"><strong>{output.result.startingInventory.totalGold} po</strong><span>{output.result.startingInventory.classGold} po de clase + {output.result.startingInventory.backgroundGold} po de trasfondo</span></div>
-              <div className="data-list">{output.result.startingInventory.items.length===0&&<p className="muted-note">Sin objetos iniciales. Las compras todavía no están disponibles.</p>}{output.result.startingInventory.items.map(it=><div className="data-row" key={it.id}><span>{it.name}<small className="item-origin">{it.sources.map(src=>src.from==='class'?'Clase':'Trasfondo').join(' + ')}</small></span><strong>×{it.quantity}</strong></div>)}</div>
-              <p className="muted-note">Los paquetes de aventurero se registran como un lote; su contenido individual se desglosará cuando añadamos el inventario editable.</p>
+            {output.result.inventory&&<div className="preview-section inventory-section">
+              <div className="section-label"><h3>Inventario actual</h3><span>{output.result.inventory.items.length} tipos</span></div>
+              <div className="money-summary"><strong>{formatCopper(output.result.inventory.coinsCopper)}</strong><span>Saldo inicial: {output.result.startingInventory?.totalGold??0} po · {activeActions.length} operaciones</span></div>
+              <div className="data-list">{output.result.inventory.items.length===0&&<p className="muted-note">No hay objetos en tu inventario.</p>}{output.result.inventory.items.map(it=><div className="data-row" key={it.id}><span>{it.name}<small className="item-origin">{it.sources.map(src=>`${src.from==='class'?'Clase':src.from==='background'?'Trasfondo':src.from==='purchase'?'Comprado':'Botín'} ×${src.quantity}`).join(' + ')}{armor===it.id?' · EQUIPADA':''}{shield&&it.id==='shield'?' · EQUIPADO':''}</small></span><strong>×{it.quantity}</strong></div>)}</div>
+              <p className="muted-note">Equipo: {armor?INVENTORY_NAMES[armor]:'sin armadura'} · Escudo: {shield?'sí':'no'} · La CA se recalcula al equipar o desequipar.</p>
+              <p className="muted-note">Los paquetes de aventurero siguen siendo un único objeto. El inventario solo existe en esta sesión; todavía no se guarda en PostgreSQL.</p>
             </div>}
             {output.result.spells.length>0&&<div className="preview-section"><div className="section-label"><h3>Conjuros de origen</h3><span>{output.result.spells.length} concedidos</span></div><div className="spell-list">{output.result.spells.map((sp,i)=><div className="spell-entry" key={`${sp.source}-${sp.id}-${i}`}><div><strong>{sp.name}</strong><small>{sp.source==='background'?'Trasfondo':sp.source==='human_feat'?'Dote humana':'Linaje élfico'} · {sp.level===0?'Truco':'Nivel 1'} · {NAMES[sp.spellcastingAbility]}</small></div>{sp.freeCastPerLongRest&&<span className="mode-chip">1 gratis / descanso largo</span>}</div>)}</div><p className="muted-note">Los conjuros están validados y registrados; sus tiradas, efectos y usos consumidos aún no se ejecutan.</p></div>}
             <div className="preview-section pending-section"><div className="section-label"><h3>Automatizaciones pendientes</h3><span>{output.result.pendingAutomation.length}</span></div><ul className="feature-list">{output.result.pendingAutomation.map((p,i)=><li key={i}>{p}</li>)}</ul></div>
             {sheet.warnings.length>0&&<div className="warning" role="status">{sheet.warnings.includes('heavy_armor_strength_requirement_unmet')&&<p>La armadura pesada no cumple el requisito de Fuerza.</p>}{sheet.warnings.includes('armor_stealth_disadvantage')&&<p>La armadura impone desventaja en Sigilo.</p>}</div>}
           </>}
         </section>
-      </div><footer className="footer">Prototipo local, sin persistencia. No equivale a una hoja completa y validada de D&D 2024.</footer>
+      </div><footer className="footer">Prototipo local sin guardado permanente. Compras y hallazgos sujetos al director de juego. No equivale a una hoja completa y validada de D&D 2024.</footer>
     </div>
   </main>;
 }

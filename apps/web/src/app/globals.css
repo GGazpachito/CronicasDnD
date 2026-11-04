@@ -16,3 +16,13 @@
 .money-summary span{color:var(--muted);font-size:11px;text-align:right}
 .item-origin{display:block;font-size:10px;color:var(--muted);margin-top:2px}
 @media(max-width:660px){.inventory-section .money-summary{align-items:flex-start;flex-direction:column}.money-summary span{text-align:left}}
+
+/* Paso 12: edición de inventario y equipo. */
+.inventory-money{display:flex;flex-direction:column;gap:3px;padding:12px 14px;margin:8px 0 18px;background:#2a2825;border:1px solid #66563d;border-radius:9px}
+.inventory-money strong{color:var(--gold);font-size:20px}.inventory-money small{color:var(--muted);font-size:11px}
+.trade-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
+.trade-actions button{border:1px solid #826d47;border-radius:9px;background:#273442;color:#efdfc3;min-height:43px;padding:8px 10px;font-size:12px;font-weight:650}
+.trade-actions button:hover:not(:disabled){background:#354558;border-color:var(--gold)}
+.trade-actions button:disabled{opacity:.4;cursor:not-allowed}
+.trade-history{margin-top:14px}.trade-history button{background:transparent;color:var(--gold)}
+@media(max-width:480px){.trade-actions{grid-template-columns:1fr 1fr}.inventory-section .data-row{align-items:flex-start}}
