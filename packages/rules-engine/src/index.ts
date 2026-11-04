@@ -8,3 +8,5 @@ export * from './resources';
 export * from './sheet';
 
 export * from "./guided";
+
+export * from './martial';

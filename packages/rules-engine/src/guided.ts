@@ -4,6 +4,7 @@
 import { ABILITIES, type Ability, type AbilityScores, proficiencyBonus } from './abilities';
 import { SKILLS, type Skill } from './proficiencies';
 import { calculateFighterSheet, type CalculatedFighterSheet, type FighterCharacterInput } from './sheet';
+import { FIGHTER_PACKAGES, WEAPONS, validateMartialChoices, type MartialChoices } from './martial';
 
 export const FIGHTER_SKILL_OPTIONS: readonly Skill[] = [
   'acrobatics', 'animal_handling', 'athletics', 'history', 'insight',
@@ -41,11 +42,14 @@ export type GuidedFighterInput = Readonly<{
   elfSpellAbility?: 'intelligence' | 'wisdom' | 'charisma';
   armor: FighterCharacterInput['equipment']['armor'];
   shield: boolean;
+  /** Elecciones explícitas del paso 09; opcionales para no romper los tests y guardados previos. */
+  martial?: MartialChoices;
 }>;
 export type GuidedFighterResult = Readonly<{
   sheet: CalculatedFighterSheet;
   origin: Readonly<{background: BackgroundId; species: SpeciesId; feat: string; additionalFeat?: HumanOriginFeat; size: 'small' | 'medium'; speedFeet: number; tools: readonly string[]}>;
   pendingAutomation: readonly string[];
+  martial?: Readonly<{choices:MartialChoices;gold:number;inventory:readonly {name:string;quantity:number}[];masteries:readonly {weapon:string;property:string}[]}>;
 }>;
 
 function fail(message: string): never { throw new RangeError(message); }
@@ -115,14 +119,25 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
     if (input.elfLineage==='wood_elf') speedFeet=35;
     pending.push('Elfo: linaje y conjuros, visión en la oscuridad, ascendencia feérica y trance se registran, pero sus efectos especiales están pendientes');
   }
-  pending.push('Estilo de combate, tres maestrías de armas y equipo inicial de clase requieren elecciones guiadas futuras');
+  const martial = input.martial===undefined ? undefined : validateMartialChoices(input.martial);
+  if (!martial) pending.push('Estilo de combate, tres maestrías y equipo inicial aún no seleccionados');
+  if (martial && martial.fightingStyle !== 'defense') pending.push('El estilo de combate elegido se ha registrado; sus efectos de ataque, reacción o sentidos se implementarán con el motor de combate');
+  if (martial) pending.push('Las propiedades de maestría se han registrado; su ejecución durante ataques está pendiente');
+  const fightingStyleModifiers = martial?.fightingStyle==='defense' && input.armor!==null ? [{type:'numeric_modifier',effectId:'fighter_fighting_style_defense',sourceRevisionId:'phb2024:fighter:defense',target:'armor_class',when:{type:'always'},operation:'add',value:1,group:'fighting_style_defense',stacking:'sum',priority:0}] : [];
+  if (martial) {
+    const selected=FIGHTER_PACKAGES[martial.startingPackage];
+    // El inventario inicial A/B/C determina qué armadura se encuentra disponible.
+    // Por ahora no existe compra de equipo ni intercambios: el equipo equipado se deriva del lote.
+    if (input.armor!==selected.initialArmor || input.shield) fail('El equipo equipado debe coincidir con el paquete inicial; compra/equipamiento personalizado pendiente');
+  }
   const character: FighterCharacterInput = {
     id:'guided-preview',name:input.name.trim(),ruleset:'dnd-2024',fighterLevel:input.level,
     baseAbilities:finalScores,baseProficiencies:{skills:[...skills],savingThrows:['strength','constitution']},
-    modifiers,hpMethod:'fixed',equipment:{armor:input.armor,shieldEquipped:input.shield,shieldTrained:true},
+    modifiers:[...modifiers,...fightingStyleModifiers],hpMethod:'fixed',equipment:{armor:input.armor,shieldEquipped:input.shield,shieldTrained:true},
     bonusHitPointsPerLevel,
     ...(input.level===3?{subclass:'champion' as const}:{})
   };
   const sheet=calculateFighterSheet(character);
-  return {sheet,origin:{background:input.background,species:input.species,feat:bg.feat,...(extraFeat?{additionalFeat:extraFeat}:{}),size,speedFeet,tools:[bg.tool]},pendingAutomation:pending};
+  return {sheet,origin:{background:input.background,species:input.species,feat:bg.feat,...(extraFeat?{additionalFeat:extraFeat}:{}),size,speedFeet,tools:[bg.tool]},pendingAutomation:pending,
+    ...(martial ? {martial:{choices:martial,gold:FIGHTER_PACKAGES[martial.startingPackage].gold,inventory:FIGHTER_PACKAGES[martial.startingPackage].items,masteries:martial.weaponMasteries.map(id=>({weapon:WEAPONS[id].name,property:WEAPONS[id].mastery}))}} : {})};
 }
