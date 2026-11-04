@@ -7,3 +7,6 @@ coverage/
 !.env.example
 .DS_Store
 *.log
+
+# Prisma: cliente generado en cada instalacion/build
+apps/web/src/generated/prisma/

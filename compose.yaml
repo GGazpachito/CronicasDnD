@@ -1,0 +1,19 @@
+# Solo para desarrollo local. No utilizar estas credenciales en servidores publicos.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: dnd_dev
+      POSTGRES_PASSWORD: dnd_dev_local
+      POSTGRES_DB: dnd_characters
+    ports:
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dnd_dev -d dnd_characters"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    volumes:
+      - dnd_postgres_data:/var/lib/postgresql/data
+volumes:
+  dnd_postgres_data:

@@ -1,0 +1,25 @@
+// Fase 4.1: persistencia de prototipo local. La biblioteca de reglas se normalizara en etapas posteriores.
+generator client {
+  provider = "prisma-client"
+  output   = "../../../apps/web/src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Character {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String   @db.VarChar(120)
+  ruleset         String   @default("dnd-2024") @db.VarChar(32)
+  characterClass  String   @default("fighter") @db.VarChar(32)
+  level           Int
+  schemaVersion   Int      @default(1)
+  rulesVersion    String   @default("phb-2024-srd-5.2.1") @db.VarChar(80)
+  selection       Json
+  revision        Int      @default(1)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([updatedAt])
+}

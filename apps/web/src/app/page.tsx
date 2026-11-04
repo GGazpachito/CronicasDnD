@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import SaveLoadPanel from "../components/SaveLoadPanel";
 import { calculateGuidedFighter, BACKGROUNDS, FIGHTER_SKILL_OPTIONS, HUMAN_FEATS, type BackgroundId, type SpeciesId, type ElfLineage, type GuidedFighterInput, type HumanOriginFeat } from "../../../../packages/rules-engine/src/guided";
 import { ABILITIES, type Ability, type AbilityScores } from "../../../../packages/rules-engine/src/abilities";
 import { SKILLS, type Skill } from "../../../../packages/rules-engine/src/proficiencies";
@@ -97,6 +98,37 @@ export default function Home(){
   const input:GuidedFighterInput={name,level,background,species,assignedAbilities:scores,increaseMode:mode,plusTwoAbility:two,plusOneAbility:one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,elfLineage:lineage,elfSenseSkill:elfSkill,elfSpellAbility:elfSpell,armor,shield,inventoryActions:activeActions,martial:{fightingStyle:style,weaponMasteries:masteries,startingPackage:starter},
     backgroundEquipment:{startingPackage:backgroundPackage,...(background==='soldier'?{gamingSet:soldierGamingSet}:{})}};
   const output=useMemo(()=>{try{return {result:calculateGuidedFighter(input),error:null};}catch(e){return {result:null,error:e instanceof Error?e.message:'Error al crear el personaje'};}},[name,level,background,species,scores,mode,two,one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,lineage,elfSkill,elfSpell,armor,shield,style,masteries,starter,backgroundPackage,soldierGamingSet,activeActions]);
+  function loadSavedInput(saved:GuidedFighterInput){
+    setName(saved.name);setLevel(saved.level);setBackground(saved.background);setSpecies(saved.species);
+    setScores({...saved.assignedAbilities});setMode(saved.increaseMode);setTwo(saved.plusTwoAbility);setOne(saved.plusOneAbility);
+    setFighterSkills([...saved.fighterSkills]);setHumanSkill(saved.humanSkill??'investigation');
+    setHumanFeat(saved.humanFeat??'tough');setHumanSize(saved.humanSize??'medium');
+    setLineage(saved.elfLineage??'wood_elf');setElfSkill(saved.elfSenseSkill??'insight');setElfSpell(saved.elfSpellAbility??'intelligence');
+    if(saved.backgroundMagicInitiate){
+      setBgMagicAbility(saved.backgroundMagicInitiate.spellcastingAbility);
+      if(saved.backgroundMagicInitiate.list==='cleric'){
+        setBgClericCantrips([...saved.backgroundMagicInitiate.cantrips]);setBgClericSpell(saved.backgroundMagicInitiate.level1Spell);
+      }else if(saved.backgroundMagicInitiate.list==='wizard'){
+        setBgWizardCantrips([...saved.backgroundMagicInitiate.cantrips]);setBgWizardSpell(saved.backgroundMagicInitiate.level1Spell);
+      }
+    }
+    const details=saved.humanFeatDetails;
+    if(details?.magicInitiate){
+      setHumanMagicList(details.magicInitiate.list);setHumanMagicAbility(details.magicInitiate.spellcastingAbility);
+      setHumanCantrips([...details.magicInitiate.cantrips]);setHumanSpell(details.magicInitiate.level1Spell);
+    }
+    if(details?.crafterTools)setCrafterTools([...details.crafterTools]);
+    if(details?.musicianInstruments)setInstruments([...details.musicianInstruments]);
+    if(details?.skilledProficiencies)setSkilled([...details.skilledProficiencies]);
+    const martial=saved.martial;
+    setStyle(martial?.fightingStyle??'defense');setMasteries(martial?[...martial.weaponMasteries]:['greatsword','flail','javelin']);
+    const newStarter=martial?.startingPackage??'a';setStarter(newStarter);
+    const newBackgroundPack=saved.backgroundEquipment?.startingPackage??'a';setBackgroundPackage(newBackgroundPack);
+    const game=saved.backgroundEquipment?.gamingSet??'dice_set';setSoldierGamingSet(game);
+    const key=[newStarter,saved.background,newBackgroundPack,saved.background==='soldier'&&newBackgroundPack==='a'?game:''].join(':');
+    setInventoryEdits({key,actions:[...(saved.inventoryActions??[])]});setInventoryError(null);
+    setTradeCount(1);setStep(0);
+  }
   const sheet=output.result?.sheet;
   const taken=[...bg.skills,...fighterSkills];
   const humanCandidates=SKILLS.filter(s=>!taken.includes(s));
@@ -115,9 +147,10 @@ export default function Home(){
   function changePackage(id:StartingPackageId){setStarter(id);setInventoryError(null);}
   function changeMastery(index:number,value:WeaponId){setMasteries(prev=>prev.map((old,i)=>i===index?value:old));}
   return <main className="app-shell">
-    <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Creador guiado · D&D 2024</span></div></div><div className="status"><span className="status-dot"/> Motor conectado · Sin guardado</div></header>
+    <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Creador guiado · D&D 2024</span></div></div><div className="status"><span className="status-dot"/> Motor conectado · Guardado local</div></header>
     <div className="content">
-      <div className="intro"><div><span className="eyebrow">PROTOTIPO 06 / INVENTARIO EDITABLE</span><h1>Da forma a <em>tu aventurero.</em></h1><p>Guerrero de niveles 1–3. Tus decisiones de origen se validan y se reflejan en la hoja calculada.</p></div><span className="edition">PHB 2024 + SRD</span></div>
+      <div className="intro"><div><span className="eyebrow">PROTOTIPO 07 / GUARDADO LOCAL</span><h1>Da forma a <em>tu aventurero.</em></h1><p>Guerrero de niveles 1–3. Tus decisiones de origen se validan y se reflejan en la hoja calculada.</p></div><span className="edition">PHB 2024 + SRD</span></div>
+      <SaveLoadPanel input={input} valid={Boolean(output.result)} onLoad={loadSavedInput}/>
       <nav className="wizard-tabs" aria-label="Pasos de creación">{STEPS.map((s,i)=><button type="button" key={s} className={step===i?'active':''} aria-current={step===i?'step':undefined} onClick={()=>setStep(i)}><span>{String(i+1).padStart(2,'0')}</span>{s}</button>)}</nav>
       <div className="workspace">
         <aside className="editor panel">
@@ -207,7 +240,7 @@ export default function Home(){
             <div className="trade-actions trade-history"><button type="button" disabled={!activeActions.length} onClick={undoTransaction}>Deshacer última</button><button type="button" disabled={!activeActions.length} onClick={resetTransactions}>Reiniciar inventario</button></div>
           </>}
           <div className="wizard-actions"><button type="button" disabled={step===0} onClick={()=>setStep(x=>Math.max(0,x-1))}>Anterior</button><button type="button" disabled={step===STEPS.length-1} onClick={()=>setStep(x=>Math.min(STEPS.length-1,x+1))}>Siguiente</button></div>
-          <div className="editor-footnote">Creación parcial y sin guardado permanente. Los precios se expresan en piezas de cobre y se venden objetos a mitad del valor de catálogo.</div>
+          <div className="editor-footnote">Creación parcial con guardado manual local. Los precios se expresan en piezas de cobre y se venden objetos a mitad del valor de catálogo.</div>
         </aside>
         <section className="preview panel" aria-live="polite">
           <div className="panel-heading"><div><span className="eyebrow">HOJA EN VIVO</span><h2>{name.trim()||'Sin nombre'}</h2><p>Guerrero {level}{level===3?' · Campeón':''} · {bg.name} · {species==='human'?'Humano':species==='dwarf'?'Enano':'Elfo'}</p></div><span className="roundel">{level}</span></div>
@@ -222,14 +255,14 @@ export default function Home(){
               <div className="money-summary"><strong>{formatCopper(output.result.inventory.coinsCopper)}</strong><span>Saldo inicial: {output.result.startingInventory?.totalGold??0} po · {activeActions.length} operaciones</span></div>
               <div className="data-list">{output.result.inventory.items.length===0&&<p className="muted-note">No hay objetos en tu inventario.</p>}{output.result.inventory.items.map(it=><div className="data-row" key={it.id}><span>{it.name}<small className="item-origin">{it.sources.map(src=>`${src.from==='class'?'Clase':src.from==='background'?'Trasfondo':src.from==='purchase'?'Comprado':'Botín'} ×${src.quantity}`).join(' + ')}{armor===it.id?' · EQUIPADA':''}{shield&&it.id==='shield'?' · EQUIPADO':''}</small></span><strong>×{it.quantity}</strong></div>)}</div>
               <p className="muted-note">Equipo: {armor?INVENTORY_NAMES[armor]:'sin armadura'} · Escudo: {shield?'sí':'no'} · La CA se recalcula al equipar o desequipar.</p>
-              <p className="muted-note">Los paquetes de aventurero siguen siendo un único objeto. El inventario solo existe en esta sesión; todavía no se guarda en PostgreSQL.</p>
+              <p className="muted-note">Los paquetes de aventurero siguen siendo un único objeto. El inventario puede guardarse mediante el panel Mis personajes.</p>
             </div>}
             {output.result.spells.length>0&&<div className="preview-section"><div className="section-label"><h3>Conjuros de origen</h3><span>{output.result.spells.length} concedidos</span></div><div className="spell-list">{output.result.spells.map((sp,i)=><div className="spell-entry" key={`${sp.source}-${sp.id}-${i}`}><div><strong>{sp.name}</strong><small>{sp.source==='background'?'Trasfondo':sp.source==='human_feat'?'Dote humana':'Linaje élfico'} · {sp.level===0?'Truco':'Nivel 1'} · {NAMES[sp.spellcastingAbility]}</small></div>{sp.freeCastPerLongRest&&<span className="mode-chip">1 gratis / descanso largo</span>}</div>)}</div><p className="muted-note">Los conjuros están validados y registrados; sus tiradas, efectos y usos consumidos aún no se ejecutan.</p></div>}
             <div className="preview-section pending-section"><div className="section-label"><h3>Automatizaciones pendientes</h3><span>{output.result.pendingAutomation.length}</span></div><ul className="feature-list">{output.result.pendingAutomation.map((p,i)=><li key={i}>{p}</li>)}</ul></div>
             {sheet.warnings.length>0&&<div className="warning" role="status">{sheet.warnings.includes('heavy_armor_strength_requirement_unmet')&&<p>La armadura pesada no cumple el requisito de Fuerza.</p>}{sheet.warnings.includes('armor_stealth_disadvantage')&&<p>La armadura impone desventaja en Sigilo.</p>}</div>}
           </>}
         </section>
-      </div><footer className="footer">Prototipo local sin guardado permanente. Compras y hallazgos sujetos al director de juego. No equivale a una hoja completa y validada de D&D 2024.</footer>
+      </div><footer className="footer">Guardado manual disponible en desarrollo local. Compras y hallazgos sujetos al director de juego. No equivale a una hoja completa y validada de D&D 2024.</footer>
     </div>
   </main>;
 }

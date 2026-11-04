@@ -4,11 +4,17 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "pnpm --filter @dnd/web dev",
-    "build": "pnpm --filter @dnd/web build",
+    "build": "pnpm db:generate && pnpm --filter @dnd/web build",
     "lint": "pnpm --filter @dnd/web lint",
-    "test": "pnpm --filter @dnd/rules-engine test"
+    "test": "pnpm --filter @dnd/rules-engine test",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev --name init_character",
+    "db:studio": "prisma studio"
   },
   "engines": {
     "node": ">=24"
+  },
+  "devDependencies": {
+    "prisma": "7.10.1"
   }
 }

@@ -26,3 +26,21 @@
 .trade-actions button:disabled{opacity:.4;cursor:not-allowed}
 .trade-history{margin-top:14px}.trade-history button{background:transparent;color:var(--gold)}
 @media(max-width:480px){.trade-actions{grid-template-columns:1fr 1fr}.inventory-section .data-row{align-items:flex-start}}
+
+/* Paso 13: persistencia local. */
+.save-panel{padding:19px 23px;margin:0 0 23px}
+.save-panel-head{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.save-panel-head h2{font-size:23px;margin:2px 0 0}
+.save-label{font-size:11px;color:var(--teal);border:1px solid #446c64;border-radius:99px;padding:4px 11px}
+.save-controls{display:grid;grid-template-columns:minmax(250px,1fr) auto;gap:18px;margin-top:15px;align-items:end}
+.save-controls .field{margin:0}
+.save-buttons{display:flex;flex-wrap:wrap;gap:8px}
+.save-buttons button{border:1px solid #8b744d;color:#f4e4c5;background:#283748;border-radius:8px;font-size:12px;font-weight:650;padding:11px 13px;min-height:43px}
+.save-buttons button:hover:not(:disabled){border-color:var(--gold);background:#35485a}
+.save-buttons button:disabled{opacity:.4;cursor:not-allowed}
+.save-buttons .save-danger{border-color:#986454;color:#ffe1d7;background:transparent}
+.save-success,.save-error{padding:8px 12px;margin:12px 0 0;border-radius:8px;font-size:12px}
+.save-success{background:#20382f;color:#b9ebd2;border:1px solid #426f58}
+.save-error{background:#3b2627;color:#f2c1b8;border:1px solid #9b635c}
+@media(max-width:950px){.save-controls{grid-template-columns:1fr}}
+@media(max-width:660px){.save-panel{padding:17px}.save-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.save-buttons button{font-size:11px}}
