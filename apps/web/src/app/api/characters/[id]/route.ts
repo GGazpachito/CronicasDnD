@@ -35,7 +35,7 @@ export async function PUT(request:Request,context:Context){
     const snapshot=validateCharacterSnapshot(item.snapshot);
     const result=await db().character.updateMany({
       where:{id,revision},
-      data:{name:snapshot.input.name.trim(),level:snapshot.input.level,selection:snapshot as unknown as Prisma.InputJsonValue,revision:{increment:1}}
+      data:{name:snapshot.input.name.trim(),level:snapshot.input.level,schemaVersion:snapshot.schemaVersion,selection:snapshot as unknown as Prisma.InputJsonValue,revision:{increment:1}}
     });
     if(result.count===0)return Response.json({error:'Este personaje ha cambiado o no existe. Vuelve a cargarlo antes de sobrescribir.'},{status:409});
     const current=await db().character.findUnique({where:{id},select:{id:true,name:true,level:true,revision:true,updatedAt:true}});

@@ -20,3 +20,5 @@ export * from "./persistence";
 export * from './adventure';
 
 export * from "./attacks";
+
+export * from './combat';

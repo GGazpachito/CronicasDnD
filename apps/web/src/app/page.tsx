@@ -4,6 +4,9 @@ import { useMemo, useState } from "react";
 import SaveLoadPanel from "../components/SaveLoadPanel";
 import PlayPanel from "../components/PlayPanel";
 import AttacksPanel from "../components/AttacksPanel";
+import CombatPanel from "../components/CombatPanel";
+import { recordWeaponAttack } from "../../../../packages/rules-engine/src/combat";
+import type { WeaponAttackProfile,AttackResolution } from "../../../../packages/rules-engine/src/attacks";
 import { initialAdventureState, validateAdventureState, type AdventureState } from "../../../../packages/rules-engine/src/adventure";
 import type { CharacterSnapshot } from "../../../../packages/rules-engine/src/persistence";
 import { calculateGuidedFighter, BACKGROUNDS, FIGHTER_SKILL_OPTIONS, HUMAN_FEATS, type BackgroundId, type SpeciesId, type ElfLineage, type GuidedFighterInput, type HumanOriginFeat } from "../../../../packages/rules-engine/src/guided";
@@ -141,6 +144,16 @@ export default function Home(){
     try{return {state:validateAdventureState(adventure,sheet),outOfSync:false};}
     catch{return {state:adventure,outOfSync:true};}
   },[sheet,adventure]);
+  function confirmWeaponAttack(profile:WeaponAttackProfile,resolution:AttackResolution){
+    if(!sheet||!sessionCheck.state||sessionCheck.outOfSync||!output.result?.inventory)throw new RangeError('Primero valida y sincroniza el personaje');
+    if(sessionCheck.state.fighter.hitPoints.current===0)throw new RangeError('A 0 PG no se pueden registrar ataques: revisa el estado del personaje');
+    const result=recordWeaponAttack(sessionCheck.state.combat,output.result.inventory,profile,resolution);
+    const nextActions=result.inventoryAction?[...activeActions,result.inventoryAction]:activeActions;
+    replayInventory(starting,FIGHTER_PACKAGES[starter].initialArmor,nextActions);
+    if(result.inventoryAction)setInventoryEdits({key:inventoryKey,actions:nextActions});
+    setAdventure({...sessionCheck.state,combat:result.combat});
+    setInventoryError(null);
+  }
   function loadSavedSnapshot(snapshot:CharacterSnapshot){loadSavedInput(snapshot.input);setAdventure(snapshot.adventure);}
   const taken=[...bg.skills,...fighterSkills];
   const humanCandidates=SKILLS.filter(s=>!taken.includes(s));
@@ -161,10 +174,11 @@ export default function Home(){
   return <main className="app-shell">
     <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Creador guiado · D&D 2024</span></div></div><div className="status"><span className="status-dot"/> Motor conectado · Guardado local</div></header>
     <div className="content">
-      <div className="intro"><div><span className="eyebrow">PROTOTIPO 15 / ATAQUES Y COMBATE</span><h1>Da forma a <em>tu aventurero.</em></h1><p>Guerrero de niveles 1–3. Tus decisiones de origen se validan y se reflejan en la hoja calculada.</p></div><span className="edition">PHB 2024 + SRD</span></div>
+      <div className="intro"><div><span className="eyebrow">PROTOTIPO 16 / DIARIO DE COMBATE</span><h1>Da forma a <em>tu aventurero.</em></h1><p>Guerrero de niveles 1–3. Tus decisiones de origen se validan y se reflejan en la hoja calculada.</p></div><span className="edition">PHB 2024 + SRD</span></div>
       <SaveLoadPanel input={input} adventure={sessionCheck.outOfSync?null:sessionCheck.state} valid={Boolean(output.result&&!sessionCheck.outOfSync)} onLoad={loadSavedSnapshot}/>
       <PlayPanel sheet={sheet??null} state={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
-      <AttacksPanel sheet={sheet??null} inventory={output.result?.inventory??null} martial={input.martial??null}/>
+      <AttacksPanel sheet={sheet??null} inventory={output.result?.inventory??null} martial={input.martial??null} onRecord={confirmWeaponAttack} canRecord={Boolean(sheet&&!sessionCheck.outOfSync&&sessionCheck.state&&sessionCheck.state.fighter.hitPoints.current>0)}/>
+      <CombatPanel combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} outOfSync={sessionCheck.outOfSync} onChange={combat=>{if(sessionCheck.state&&!sessionCheck.outOfSync)setAdventure({...sessionCheck.state,combat});}}/>
       <nav className="wizard-tabs" aria-label="Pasos de creación">{STEPS.map((s,i)=><button type="button" key={s} className={step===i?'active':''} aria-current={step===i?'step':undefined} onClick={()=>setStep(i)}><span>{String(i+1).padStart(2,'0')}</span>{s}</button>)}</nav>
       <div className="workspace">
         <aside className="editor panel">

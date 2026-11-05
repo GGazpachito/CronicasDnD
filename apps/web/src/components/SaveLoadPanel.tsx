@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import type { GuidedFighterInput } from '../../../../packages/rules-engine/src/guided';
+import type { AdventureState } from '../../../../packages/rules-engine/src/adventure';
+import type { CharacterSnapshot } from '../../../../packages/rules-engine/src/persistence';
 import { makeCharacterSnapshot } from '../../../../packages/rules-engine/src/persistence';
 
 type Summary={id:string;name:string;level:number;revision:number;updatedAt:string};
-type Detail=Summary&{snapshot:{schemaVersion:1;ruleset:'dnd-2024';input:GuidedFighterInput}};
-type Props={input:GuidedFighterInput;valid:boolean;onLoad:(input:GuidedFighterInput)=>void};
+type Detail=Summary&{snapshot:CharacterSnapshot};
+type Props={input:GuidedFighterInput;adventure:AdventureState|null;valid:boolean;onLoad:(snapshot:CharacterSnapshot)=>void};
 
 async function jsonOrThrow<T>(response:Response):Promise<T>{
   const value=await response.json().catch(()=>({})) as {error?:string};
@@ -14,7 +16,7 @@ async function jsonOrThrow<T>(response:Response):Promise<T>{
   return value as T;
 }
 
-export default function SaveLoadPanel({input,valid,onLoad}:Props){
+export default function SaveLoadPanel({input,adventure,valid,onLoad}:Props){
   const [entries,setEntries]=useState<Summary[]>([]);
   const [selected,setSelected]=useState<string>('');
   const [active,setActive]=useState<{id:string;revision:number}|null>(null);
@@ -46,7 +48,7 @@ export default function SaveLoadPanel({input,valid,onLoad}:Props){
   }
   async function saveNew(){
     await act(async()=>{
-      const snapshot=makeCharacterSnapshot(input);
+      const snapshot=makeCharacterSnapshot(input,adventure??undefined);
       const response=await fetch('/api/characters',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({snapshot})});
       const d=await jsonOrThrow<{character:Summary}>(response);
       setActive({id:d.character.id,revision:d.character.revision});setSelected(d.character.id);
@@ -57,7 +59,7 @@ export default function SaveLoadPanel({input,valid,onLoad}:Props){
   async function update(){
     if(!active)return;
     await act(async()=>{
-      const snapshot=makeCharacterSnapshot(input);
+      const snapshot=makeCharacterSnapshot(input,adventure??undefined);
       const response=await fetch(`/api/characters/${encodeURIComponent(active.id)}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision:active.revision,snapshot})});
       const d=await jsonOrThrow<{character:Summary}>(response);
       setActive({id:d.character.id,revision:d.character.revision});
@@ -71,7 +73,7 @@ export default function SaveLoadPanel({input,valid,onLoad}:Props){
     await act(async()=>{
       const response=await fetch(`/api/characters/${encodeURIComponent(selected)}`,{cache:'no-store'});
       const d=await jsonOrThrow<{character:Detail}>(response);
-      onLoad(d.character.snapshot.input);
+      onLoad(d.character.snapshot);
       setActive({id:d.character.id,revision:d.character.revision});
       setMessage(`Personaje «${d.character.name}» recuperado.`);
     });
@@ -90,7 +92,7 @@ export default function SaveLoadPanel({input,valid,onLoad}:Props){
 
   return <section className="save-panel panel" aria-label="Guardar y recuperar personajes">
     <div className="save-panel-head"><div><span className="eyebrow">BASE DE DATOS LOCAL</span><h2>Mis personajes</h2></div><span className="save-label">PostgreSQL</span></div>
-    <p className="muted-note">Guarda las elecciones, los conjuros y el historial del inventario. Los valores de la hoja se recalculan al cargar.</p>
+    <p className="muted-note">Guarda las elecciones, inventario y estado de partida (PG, recursos y dados). Las estadísticas máximas se recalculan al cargar.</p>
     <div className="save-controls">
       <label className="field"><span>Personajes guardados</span><select value={selected} onChange={e=>setSelected(e.target.value)} disabled={busy}>
         <option value="">Selecciona un personaje</option>

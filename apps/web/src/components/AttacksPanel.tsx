@@ -1,16 +1,16 @@
 'use client';
 
-import {useState} from 'react';
+import {useRef,useState} from 'react';
 import type {CalculatedFighterSheet} from '../../../../packages/rules-engine/src/sheet';
 import type {InventoryState} from '../../../../packages/rules-engine/src/inventory';
 import type {MartialChoices,WeaponId} from '../../../../packages/rules-engine/src/martial';
 import {WEAPONS} from '../../../../packages/rules-engine/src/martial';
-import {calculateWeaponAttack,ownedWeapons,resolveWeaponAttack,WEAPON_STATS,type AttackResolution} from '../../../../packages/rules-engine/src/attacks';
+import {calculateWeaponAttack,ownedWeapons,resolveWeaponAttack,WEAPON_STATS,type AttackResolution,type WeaponAttackProfile} from '../../../../packages/rules-engine/src/attacks';
 
-type Props={sheet:CalculatedFighterSheet|null;inventory:InventoryState|null;martial:MartialChoices|null};
+type Props={sheet:CalculatedFighterSheet|null;inventory:InventoryState|null;martial:MartialChoices|null;onRecord:(profile:WeaponAttackProfile,resolution:AttackResolution)=>void;canRecord:boolean};
 const signed=(n:number)=>n>=0?`+${n}`:`${n}`;
 const DAMAGE_LABELS={bludgeoning:'contundente',piercing:'perforante',slashing:'cortante'};
-export default function AttacksPanel({sheet,inventory,martial}:Props){
+export default function AttacksPanel({sheet,inventory,martial,onRecord,canRecord}:Props){
   const [wanted,setWanted]=useState<WeaponId|null>(null);
   const [useDex,setUseDex]=useState(false);
   const [thrown,setThrown]=useState(false);
@@ -25,6 +25,8 @@ export default function AttacksPanel({sheet,inventory,martial}:Props){
   const [otherD20,setOtherD20]=useState(14);
   const [dice,setDice]=useState('');
   const [computed,setComputed]=useState<{key:string;value:AttackResolution}|null>(null);
+  const confirmedRef=useRef(false);
+  const [confirmation,setConfirmation]=useState('');
   const [error,setError]=useState('');
   const owned=inventory?ownedWeapons(inventory):[];
   const id=wanted&&owned.includes(wanted)?wanted:owned[0];
@@ -39,8 +41,9 @@ export default function AttacksPanel({sheet,inventory,martial}:Props){
       ...(distance.trim()?{targetDistanceFeet:Number(distance)}:{}),
     });}catch(e){profileError=e instanceof Error?e.message:'Ataque inválido';}
   }
-  const resolved=computed?.key===JSON.stringify(profile)?computed.value:null;
-  const setResolved=(value:AttackResolution|null)=>setComputed(value?{key:JSON.stringify(profile),value}:null);
+  const rollKey=JSON.stringify({profile,d20,otherD20,ac,dice});
+  const resolved=computed?.key===rollKey?computed.value:null;
+  const setResolved=(value:AttackResolution|null)=>{setComputed(value?{key:rollKey,value}:null);if(!value){confirmedRef.current=false;setConfirmation('');}};
   const incompatibleShield=Boolean(inventory?.equipped.shield&&profile?.twoHanded);
   const ammoCount=profile?.ammunition?inventory?.items.find(i=>i.id===profile!.ammunition)?.quantity??0:null;
   function onChangeWeapon(next:WeaponId){setWanted(next);setUseDex(false);setThrown(false);setTwoHands(false);setOtherWeapon(false);setLightExtra(false);setResolved(null);setError('');setDice('');}
@@ -54,12 +57,17 @@ export default function AttacksPanel({sheet,inventory,martial}:Props){
         ...(ac.trim()?{targetAC:Number(ac)}:{}),
         ...(raw?{damageRolls:raw}:{}),
       });
-      setResolved(result);setError('');
+      confirmedRef.current=false;setResolved(result);setError('');setConfirmation('');
     }catch(e){setResolved(null);setError(e instanceof Error?e.message:'Error en la tirada');}
   }
+  function confirm(){
+    if(!profile||!resolved||!canRecord||confirmedRef.current)return;
+    try{onRecord(profile,resolved);confirmedRef.current=true;setComputed(null);setError('');setConfirmation('Ataque anotado y munición descontada cuando corresponde. Guarda el personaje para conservarlo.');}
+    catch(e){setError(e instanceof Error?e.message:'No se pudo registrar el ataque');}
+  }
   return <section className="attack-panel panel" aria-label="Ataques con armas">
-    <div className="save-panel-head"><div><span className="eyebrow">FASE 4.3 · COMBATE</span><h2>Ataques con armas</h2></div><span className="save-label">Cálculo local</span></div>
-    <p className="muted-note">Solo aparecen las armas que posee el personaje. Introduce las tiradas de dados para comprobar ataque y daño. No afecta a los PG de criaturas ni consume munición o acciones.</p>
+    <div className="save-panel-head"><div><span className="eyebrow">FASE 4.4 · COMBATE</span><h2>Ataques con armas</h2></div><span className="save-label">Cálculo local</span></div>
+    <p className="muted-note">Solo aparecen armas que posees. «Calcular tirada» no altera el personaje; «Confirmar ataque» registra el resultado y consume una unidad de munición si corresponde.</p>
     {!sheet&&<p className="save-error" role="alert">Completa primero la creación del personaje.</p>}
     {sheet&&!martial&&<p className="save-error" role="alert">Selecciona un estilo de combate y tres maestrías en el apartado Equipo.</p>}
     {sheet&&martial&&owned.length===0&&<p className="muted-note">No tienes armas. Adquiere o añade alguna desde el inventario para mostrar ataques.</p>}
@@ -89,7 +97,7 @@ export default function AttacksPanel({sheet,inventory,martial}:Props){
           <div><span>Maestría</span><strong>{profile.mastery??'No elegida'}</strong></div>
         </div>
         {profile.masterySaveDC!==null&&<p className="info-line">Derribar (Topple): CD {profile.masterySaveDC} de salvación de Constitución del objetivo.</p>}
-        {profile.ammunition&&<p className={ammoCount===0?'save-error':'muted-note'}>{`Munición de tipo «${profile.ammunition}» en inventario: ${ammoCount??0}. El disparo no la consume automáticamente.`}{ammoCount===0?' No puedes disparar sin la munición correspondiente.':''}</p>}
+        {profile.ammunition&&<p className={ammoCount===0?'save-error':'muted-note'}>{`Munición de tipo «${profile.ammunition}» en inventario: ${ammoCount??0}. Se gastará una unidad al confirmar.`}{ammoCount===0?' No puedes disparar sin la munición correspondiente.':''}</p>}
         <div className="divider"/>
         <h3>Resolver tirada manual</h3>
         <div className="attack-form-grid">
@@ -101,9 +109,11 @@ export default function AttacksPanel({sheet,inventory,martial}:Props){
         <button type="button" className="attack-resolve" disabled={incompatibleShield||Boolean(profile.ammunition&&ammoCount===0)} onClick={calculate}>Calcular tirada</button>
         {error&&<p className="save-error" role="alert">{error}</p>}
         {resolved&&<div className="attack-result" role="status"><strong>Resultado: {resolved.attackTotal} {resolved.critical?'· ¡Crítico!':''}</strong><span>{resolved.hit===null?'Impacto no determinado (sin CA)':resolved.hit?'Impacta':'Falla'} · Dados de daño requeridos: {resolved.damageDiceNeeded}</span><span>{resolved.damageTotal!==null?`Daño: ${resolved.damageTotal} (${DAMAGE_LABELS[profile.damageType]})`:'Introduce los dados de daño para obtener el total.'}</span>{resolved.grazeDamage!==null&&<span>Rozar: posible daño por fallo {resolved.grazeDamage}.</span>}</div>}
+        {resolved&&<button type="button" className="attack-confirm" disabled={!canRecord||incompatibleShield||Boolean(profile.ammunition&&ammoCount===0)} onClick={confirm}>Confirmar ataque y registrar</button>}
+        {confirmation&&<p role="status" className="save-success">{confirmation}</p>}
         <ul className="attack-notes">{profile.notes.map((n,i)=><li key={`${id}-${i}`}>{n}</li>)}</ul>
       </>}
     </>}
-    <p className="muted-note">Esta fase no gestiona turnos, munición consumida, ataques contra enemigos individuales, condiciones ni recursos de Ataque salvaje. El director resuelve los efectos de maestría situacionales.</p>
+    <p className="muted-note">La confirmación registra el ataque y descuenta proyectiles disponibles; no aplica daño a enemigos ni simula turnos. Armas arrojadizas, efectos de maestría, salvaciones y munición recuperada se resuelven manualmente con el director.</p>
   </section>;
 }

@@ -81,3 +81,17 @@
 .attack-result{display:flex;flex-direction:column;gap:5px;padding:12px 14px;background:#20382f;border:1px solid #426f58;border-radius:10px;margin-top:12px;font-size:13px}
 .attack-result strong{color:#c6f4db}.attack-notes{padding:0 0 0 18px;color:var(--muted);font-size:12px;line-height:1.6;margin:16px 0 0}
 @media(max-width:680px){.attack-panel{padding:16px}.attack-form-grid{grid-template-columns:1fr}.attack-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.attack-options{flex-direction:column;align-items:flex-start;gap:9px}}
+
+
+/* Paso 16: diario de ataques y control manual de efectos temporales. */
+.attack-confirm,.combat-primary,.combat-round-heading button,.combat-row button{background:#284439;color:#d5f4e2;border:1px solid #518a72;border-radius:9px;padding:10px 13px;min-height:41px;font-size:12px;font-weight:700;cursor:pointer}
+.attack-confirm{margin:12px 0 0;width:100%}
+.attack-confirm:disabled,.combat-primary:disabled{opacity:.45;cursor:not-allowed}
+.combat-panel{padding:22px 24px;margin:0 0 23px}.combat-panel h2{font-size:23px;margin:2px 0 0}.combat-panel h3{font-size:15px;margin:0 0 11px;color:var(--gold)}
+.combat-round-heading{display:flex;justify-content:space-between;align-items:center;gap:15px;margin:18px 0}.combat-round-heading strong{font-size:16px}
+.combat-columns{display:grid;grid-template-columns:1fr 1fr;gap:14px}.combat-column{border:1px solid var(--line);background:#141e2a;border-radius:11px;padding:15px;min-width:0}
+.combat-column .field{margin:12px 0}.combat-list{margin-top:14px;display:flex;flex-direction:column;gap:8px}
+.combat-row{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 12px;background:#1e2b38;border:1px solid #344657;border-radius:9px}
+.combat-row div{min-width:0}.combat-row strong{display:block;font-size:12px;overflow-wrap:anywhere}.combat-row small{display:block;color:var(--muted);font-size:11px;line-height:1.5;margin-top:3px;overflow-wrap:anywhere}
+.combat-row button{flex-shrink:0;background:transparent;border-color:#8f6256;color:#f5c5b6;min-height:34px}
+@media(max-width:780px){.combat-columns{grid-template-columns:1fr}.combat-panel{padding:16px}.combat-round-heading{align-items:flex-start;flex-direction:column}}

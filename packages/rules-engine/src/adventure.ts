@@ -3,6 +3,7 @@
  * No resuelve muerte, salvaciones de muerte, turnos ni lanzamientos de conjuros.
  */
 import type { CalculatedFighterSheet } from './sheet';
+import { initialCombatState,validateCombatState,type CombatState } from './combat';
 import { finishFighterRest, initialFighterState, spendFighterResource, useSecondWind, useTacticalMind,
   validateFighterState, type FighterState, type FighterResourceId } from './resources';
 
@@ -10,6 +11,7 @@ export type AdventureState = Readonly<{
   fighter: FighterState;
   temporaryHitPoints: number;
   spentHitDice: number;
+  combat: CombatState;
 }>;
 
 export type AdventureAction =
@@ -40,13 +42,13 @@ function onlyKeys(value:Record<string,unknown>,keys:readonly string[],label:stri
 }
 
 export function initialAdventureState(sheet:CalculatedFighterSheet):AdventureState{
-  return {fighter:initialFighterState(sheet.level,sheet.maximumHitPoints),temporaryHitPoints:0,spentHitDice:0};
+  return {fighter:initialFighterState(sheet.level,sheet.maximumHitPoints),temporaryHitPoints:0,spentHitDice:0,combat:initialCombatState()};
 }
 
 /** Comprueba que el estado pertenece a esta hoja; no se remapea silenciosamente. */
 export function validateAdventureState(value:unknown,sheet:CalculatedFighterSheet):AdventureState{
   if(!isRecord(value))throw new RangeError('Estado de partida inválido');
-  onlyKeys(value,['fighter','temporaryHitPoints','spentHitDice'],'Estado de partida');
+  onlyKeys(value,['fighter','temporaryHitPoints','spentHitDice','combat'],'Estado de partida');
   if(!isRecord(value.fighter))throw new RangeError('Estado del Guerrero inválido');
   onlyKeys(value.fighter,['fighterLevel','hitPoints','resources'],'Estado del Guerrero');
   if(!isRecord(value.fighter.hitPoints))throw new RangeError('PG inválidos');
@@ -66,7 +68,7 @@ export function validateAdventureState(value:unknown,sheet:CalculatedFighterShee
   return {fighter:{fighterLevel:fighter.fighterLevel,hitPoints:{...fighter.hitPoints},resources:{
     second_wind:{current:fighter.resources.second_wind!.current},
     ...(fighter.fighterLevel>=2?{action_surge:{current:fighter.resources.action_surge!.current}}:{})
-  }},temporaryHitPoints,spentHitDice};
+  }},temporaryHitPoints,spentHitDice,combat:value.combat===undefined?initialCombatState():validateCombatState(value.combat)};
 }
 
 function withHp(state:AdventureState,current:number):AdventureState{
@@ -145,7 +147,7 @@ export function applyAdventureAction(source:AdventureState,action:AdventureActio
       onlyKeys(action,['type'],'Descanso largo');
       requireConscious(state,'Descanso largo');
       const restored=finishFighterRest(withHp(state,state.fighter.hitPoints.maximum).fighter,'long_rest');
-      return {state:{fighter:restored,temporaryHitPoints:0,spentHitDice:0},description:'Descanso largo: PG y dados de golpe restaurados; recursos recuperados y PG temporales eliminados.'};
+      return {state:{fighter:restored,temporaryHitPoints:0,spentHitDice:0,combat:{...state.combat,effects:state.combat.effects.filter(e=>e.remainingRounds===null)}},description:'Descanso largo: PG y dados de golpe restaurados; recursos recuperados y PG temporales eliminados.'};
     }
     default:throw new RangeError('Acción de partida no admitida');
   }

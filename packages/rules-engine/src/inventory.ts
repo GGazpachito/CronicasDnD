@@ -5,8 +5,9 @@
  */
 import { ARMORS, type ArmorId } from './defense';
 import { ITEM_NAMES, type CatalogItemId, type StartingInventory } from './background-equipment';
+import { WEAPONS, type WeaponId } from './martial';
 
-export type InventoryItemId = CatalogItemId | ArmorId | 'shield';
+export type InventoryItemId = CatalogItemId | ArmorId | WeaponId | 'shield' | 'bolt' | 'bullet' | 'needle' | 'sling_bullet';
 export type InventorySource = 'class' | 'background' | 'purchase' | 'loot';
 export type InventoryLine = Readonly<{
   id: InventoryItemId;
@@ -28,7 +29,9 @@ const ARMOR_NAMES:Readonly<Record<ArmorId,string>> = {
 };
 /** Catálogo local. Los IDs anteriores siguen siendo válidos. */
 export const INVENTORY_NAMES: Readonly<Record<InventoryItemId,string>> = {
+  ...Object.fromEntries(Object.entries(WEAPONS).map(([id,w])=>[id,w.name])) as Record<WeaponId,string>,
   ...ITEM_NAMES,...ARMOR_NAMES,shield:'Escudo',
+  bolt:'Virote de ballesta',bullet:'Bala de arma de fuego',needle:'Aguja de cerbatana',sling_bullet:'Bala de honda',
 };
 
 /** Precios exactos en piezas de cobre. Ausente = precio no normalizado en este MVP.
@@ -40,7 +43,7 @@ export const INVENTORY_PRICES_CP:Readonly<Partial<Record<InventoryItemId,number>
   chain_mail:7500,splint:20000,plate:150000,shield:1000,
   greatsword:5000,flail:1000,javelin:50,scimitar:2500,shortsword:1000,
   longbow:5000,shortbow:2500,quarterstaff:20,spear:100,dagger:200,
-  arrow:5,quiver:100,dungeoneers_pack:1200,parchment:10,robe:100,
+  arrow:5,bolt:5,bullet:30,needle:2,quiver:100,dungeoneers_pack:1200,parchment:10,robe:100,
   crowbar:200,pouch:50,travelers_clothes:200,healers_kit:500,
 };
 
