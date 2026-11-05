@@ -95,3 +95,29 @@
 .combat-row div{min-width:0}.combat-row strong{display:block;font-size:12px;overflow-wrap:anywhere}.combat-row small{display:block;color:var(--muted);font-size:11px;line-height:1.5;margin-top:3px;overflow-wrap:anywhere}
 .combat-row button{flex-shrink:0;background:transparent;border-color:#8f6256;color:#f5c5b6;min-height:34px}
 @media(max-width:780px){.combat-columns{grid-template-columns:1fr}.combat-panel{padding:16px}.combat-round-heading{align-items:flex-start;flex-direction:column}}
+
+/* Paso 17: condiciones D&D 2024, diseño adaptable sin dependencias externas. */
+.condition-panel{padding:22px 24px;margin:0 0 23px}
+.condition-panel h2{font-size:23px;margin:2px 0 0}
+.condition-panel h3{color:var(--gold);font-size:15px;margin:0 0 14px}
+.condition-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0}
+.condition-block{min-width:0;background:#141e2a;border:1px solid var(--line);border-radius:11px;padding:17px}
+.condition-block .field{margin:10px 0}
+.condition-block .switch-field{margin:13px 0}
+.condition-exhaustion{margin-top:21px;padding-top:15px;border-top:1px solid var(--line)}
+.condition-exhaustion strong{display:block;font-size:14px;color:var(--gold)}
+.condition-exhaustion-actions{display:flex;gap:8px;margin:12px 0}
+.condition-exhaustion-actions button{border:1px solid #8b744d;border-radius:8px;background:#27394a;color:#f4e4c5;padding:10px 12px;cursor:pointer;font-size:12px}
+.condition-exhaustion-actions button:disabled{opacity:.45;cursor:not-allowed}
+.condition-summary,.condition-results{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:15px 0}
+.condition-summary>div,.condition-results>div{display:flex;flex-direction:column;gap:5px;background:#1e2b38;border:1px solid #344657;padding:10px;border-radius:9px;min-width:0}
+.condition-summary span,.condition-results span{color:var(--muted);font-size:11px}
+.condition-summary strong,.condition-results strong{color:var(--text);font-size:13px;overflow-wrap:anywhere}
+.condition-context{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:end;margin-bottom:15px}
+.condition-context>label:not(.field),.condition-attack-summary>label{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--text)}
+.condition-context .field{flex:1 1 150px;min-width:130px;max-width:240px;margin:0}
+.condition-attack-summary{padding:13px 15px;background:#202c39;border:1px solid #45617b;border-radius:10px;margin:10px 0;display:flex;flex-direction:column;gap:8px}
+.condition-attack-summary strong{font-size:13px;color:var(--gold)}
+.condition-attack-summary .muted-note{margin:0}
+@media(max-width:800px){.condition-grid{grid-template-columns:1fr}.condition-results{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:500px){.condition-panel{padding:16px}.condition-summary{grid-template-columns:1fr 1fr}.condition-context .field{max-width:unset}}

@@ -5,6 +5,7 @@
 import { WEAPON_STATS, type AttackResolution, type WeaponAttackProfile, type DamageType } from './attacks';
 import { WEAPONS, type WeaponId } from './martial';
 import { applyInventoryAction, type InventoryAction, type InventoryItemId, type InventoryState } from './inventory';
+import {advanceConditionRound,initialConditionLedger,validateConditionLedger,type ConditionId,type ConditionLedger} from './conditions';
 
 type AmmoId = NonNullable<WeaponAttackProfile['ammunition']>;
 export type CombatAttackEntry = Readonly<{
@@ -32,6 +33,8 @@ export type CombatState = Readonly<{
   nextId:number;
   attacks:readonly CombatAttackEntry[];
   effects:readonly TrackedEffect[];
+  /** Opcional para compatibilidad con los guardados anteriores a la actualización 17. */
+  conditions?:ConditionLedger;
 }>;
 const MAX_ATTACKS=100;
 const MAX_EFFECTS=30;
@@ -54,13 +57,23 @@ function weapon(value:unknown):value is WeaponId{return typeof value==='string'&
 function optionalDamage(value:unknown,label:string):number|null{
   return value===null?null:bounded(value,0,10_000,label);
 }
+/** Inconsciente incluye Derribado y al terminar deja al personaje Derribado (PHB 2024). */
+function preserveProneAfterUnconscious(before:ConditionLedger,after:ConditionLedger,nextId:number):
+  Readonly<{ledger:ConditionLedger;nextId:number}>{
+  const wasUnconscious=before.instances.some(x=>x.kind==='unconscious');
+  const stillUnconscious=after.instances.some(x=>x.kind==='unconscious');
+  if(!wasUnconscious||stillUnconscious||after.instances.some(x=>x.kind==='prone'))return {ledger:after,nextId};
+  if(after.instances.length>=30||nextId>=MAX_ID)fail('No se puede conservar Derribado: límite de condiciones');
+  return {ledger:{...after,instances:[...after.instances,{id:nextId,kind:'prone',source:'Tras terminar Inconsciente',remainingRounds:null}]},nextId:nextId+1};
+}
+
 
 export function initialCombatState():CombatState{return {round:1,nextId:1,attacks:[],effects:[]};}
 
 /** Valida y clona estados cargados de PostgreSQL (no confia en el JSON recibido). */
 export function validateCombatState(value:unknown):CombatState{
   if(!record(value))fail('Estado de combate inválido');
-  exactKeys(value,['round','nextId','attacks','effects'],'Combate');
+  exactKeys(value,value.conditions===undefined?['round','nextId','attacks','effects']:['round','nextId','attacks','effects','conditions'],'Combate');
   const round=bounded(value.round,1,MAX_ROUNDS,'Ronda');
   const nextId=bounded(value.nextId,1,MAX_ID,'Siguiente ID');
   if(!Array.isArray(value.attacks)||value.attacks.length>MAX_ATTACKS)fail('Historial de ataques demasiado largo');
@@ -95,7 +108,9 @@ export function validateCombatState(value:unknown):CombatState{
       remainingRounds:raw.remainingRounds===null?null:bounded(raw.remainingRounds,1,100,'Duración'),
       notes:textValue(raw.notes,200,'Notas del efecto',true)};
   });
-  return {round,nextId,attacks,effects};
+  const conditions=value.conditions===undefined?undefined:validateConditionLedger(value.conditions,nextId);
+  if(conditions){for(const c of conditions.instances){if(seen.has(c.id))fail('ID de evento duplicado');seen.add(c.id);}}
+  return {round,nextId,attacks,effects,...(conditions?{conditions}:{})};
 }
 
 /** Registrar un ataque y descontar su municion forman una sola operacion logica.
@@ -142,5 +157,38 @@ export function removeTrackedEffect(state:CombatState,id:number):CombatState{
 export function advanceCombatRound(state:CombatState):CombatState{
   const s=validateCombatState(state);
   if(s.round>=MAX_ROUNDS)fail('Límite de rondas alcanzado');
-  return {...s,round:s.round+1,effects:s.effects.flatMap(e=>e.remainingRounds===null?[e]:e.remainingRounds<=1?[]:[{...e,remainingRounds:e.remainingRounds-1}])};
+  const updated=s.conditions?preserveProneAfterUnconscious(s.conditions,advanceConditionRound(s.conditions),s.nextId):null;
+  return {...s,nextId:updated?.nextId??s.nextId,round:s.round+1,
+    effects:s.effects.flatMap(e=>e.remainingRounds===null?[e]:e.remainingRounds<=1?[]:[{...e,remainingRounds:e.remainingRounds-1}]),
+    ...(updated?{conditions:updated.ledger}:{})};
+}
+
+/** Nueva condición con fuente propia. Dos fuentes del mismo tipo mantienen duraciones independientes. */
+export function addCharacterCondition(state:CombatState,kind:ConditionId,source:string,remainingRounds:number|null):CombatState{
+  const s=validateCombatState(state);
+  const ledger=s.conditions??initialConditionLedger();
+  if(s.nextId>=MAX_ID)fail('Límite de eventos alcanzado');
+  if(ledger.instances.length>=30)fail('Demasiadas condiciones activas');
+  const instance={id:s.nextId,kind,source,remainingRounds};
+  const conditions=validateConditionLedger({...ledger,instances:[...ledger.instances,instance]},s.nextId+1);
+  return {...s,nextId:s.nextId+1,conditions};
+}
+/** Retira solo la fuente indicada, sin cancelar las restantes. */
+export function removeCharacterCondition(state:CombatState,id:number):CombatState{
+  const s=validateCombatState(state);
+  const ledger=s.conditions??initialConditionLedger();
+  bounded(id,1,MAX_ID,'ID de condición');
+  if(!ledger.instances.some(c=>c.id===id))fail('Condición desconocida');
+  const next={...ledger,instances:ledger.instances.filter(c=>c.id!==id)};
+  const updated=preserveProneAfterUnconscious(ledger,next,s.nextId);
+  return {...s,nextId:updated.nextId,conditions:updated.ledger};
+}
+/** El agotamiento no es una condición binaria: registra niveles acumulados entre 0 y 6. */
+export function changeExhaustion(state:CombatState,delta:number):CombatState{
+  const s=validateCombatState(state);
+  bounded(delta,-6,6,'Cambio de agotamiento');
+  const ledger=s.conditions??initialConditionLedger();
+  const exhaustion=ledger.exhaustion+delta;
+  bounded(exhaustion,0,6,'Agotamiento final');
+  return {...s,conditions:{...ledger,exhaustion}};
 }

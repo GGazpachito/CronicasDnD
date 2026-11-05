@@ -23,7 +23,7 @@ export default function CombatPanel({combat,onChange,outOfSync}:Props){
     if(perform(c=>addTrackedEffect(c,name,indefinite?null:rounds,notes))){setName('');setNotes('');}
   }
   return <section className="combat-panel panel" aria-label="Historial de combate y efectos temporales">
-    <div className="save-panel-head"><div><span className="eyebrow">FASE 4.4 · ESTADO DE COMBATE</span><h2>Registro y efectos temporales</h2></div><span className="save-label">Guardado manual</span></div>
+    <div className="save-panel-head"><div><span className="eyebrow">FASE 4.5 · ESTADO DE COMBATE</span><h2>Registro y efectos temporales</h2></div><span className="save-label">Guardado manual</span></div>
     {!combat||outOfSync?<p className="play-warning" role="alert">El estado del personaje no está disponible o está desincronizado. Resuelve ese problema antes de registrar acciones.</p>:<>
       <div className="combat-round-heading"><div><strong>Ronda indicada: {combat.round}</strong><p className="muted-note">Solo un contador manual; el director decide cuándo termina cada ronda.</p></div><button type="button" onClick={()=>perform(advanceCombatRound)}>Avanzar ronda</button></div>
       <div className="combat-columns">
@@ -45,6 +45,6 @@ export default function CombatPanel({combat,onChange,outOfSync}:Props){
     </>}
     {message&&<p role="status" className="save-success">{message}</p>}
     {error&&<p role="alert" className="save-error">{error}</p>}
-    <p className="muted-note">El historial y los efectos se guardan al pulsar «Actualizar guardado» en Mis personajes. Avanzar una ronda reduce las duraciones temporales registradas, pero no gestiona iniciativa, turnos o concentración.</p>
+    <p className="muted-note">El historial y los efectos se guardan al pulsar «Actualizar guardado» en Mis personajes. Avanzar una ronda reduce las duraciones de efectos y condiciones registradas, pero no simula iniciativa ni turnos completos.</p>
   </section>;
 }

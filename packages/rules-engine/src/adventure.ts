@@ -4,6 +4,7 @@
  */
 import type { CalculatedFighterSheet } from './sheet';
 import { initialCombatState,validateCombatState,type CombatState } from './combat';
+import {longRestConditionUpdate,initialConditionLedger,conditionCapabilities} from './conditions';
 import { finishFighterRest, initialFighterState, spendFighterResource, useSecondWind, useTacticalMind,
   validateFighterState, type FighterState, type FighterResourceId } from './resources';
 
@@ -79,6 +80,7 @@ function withFighter(state:AdventureState,fighter:FighterState):AdventureState{
 }
 function requireConscious(state:AdventureState,activity:string):void{
   if(state.fighter.hitPoints.current===0)throw new RangeError(`${activity}: el personaje está a 0 PG; las reglas de muerte aún se gestionan manualmente`);
+  if(conditionCapabilities(state.combat.conditions??initialConditionLedger()).deadByExhaustion)throw new RangeError(`${activity}: agotamiento 6 equivale a muerte`);
 }
 
 /** Ejecuta una acción de partida. Jamás modifica ni el estado ni la hoja recibidos. */
@@ -147,7 +149,7 @@ export function applyAdventureAction(source:AdventureState,action:AdventureActio
       onlyKeys(action,['type'],'Descanso largo');
       requireConscious(state,'Descanso largo');
       const restored=finishFighterRest(withHp(state,state.fighter.hitPoints.maximum).fighter,'long_rest');
-      return {state:{fighter:restored,temporaryHitPoints:0,spentHitDice:0,combat:{...state.combat,effects:state.combat.effects.filter(e=>e.remainingRounds===null)}},description:'Descanso largo: PG y dados de golpe restaurados; recursos recuperados y PG temporales eliminados.'};
+      return {state:{fighter:restored,temporaryHitPoints:0,spentHitDice:0,combat:{...state.combat,effects:state.combat.effects.filter(e=>e.remainingRounds===null),...(state.combat.conditions?{conditions:longRestConditionUpdate(state.combat.conditions)}:{})}},description:'Descanso largo: PG y dados de golpe restaurados; recursos recuperados y PG temporales eliminados.'};
     }
     default:throw new RangeError('Acción de partida no admitida');
   }

@@ -78,6 +78,11 @@ export type WeaponAttackOptions = Readonly<{
   /** Contexto situacional, no se infiere de la hoja. */
   adjacentEnemy?: boolean;
   advantage?: boolean;
+  /** Fuentes externas identificadas por el motor de condiciones. */
+  conditionAdvantage?: boolean;
+  conditionDisadvantage?: boolean;
+  /** Penalización al test d20 por agotamiento (0 a -12). */
+  conditionD20Penalty?: number;
   targetDistanceFeet?: number;
 }>;
 export type WeaponAttackProfile = Readonly<{
@@ -109,8 +114,9 @@ export function calculateWeaponAttack(
   if(typeof style!=='string'||!['archery','blind_fighting','defense','dueling','great_weapon_fighting','interception','protection','thrown_weapon_fighting','two_weapon_fighting','unarmed_fighting'].includes(style))throw new RangeError('Estilo desconocido');
   if(!Array.isArray(masteries)||masteries.length!==3||new Set(masteries).size!==3||masteries.some(x=>!isWeapon(x)))throw new RangeError('Tres maestrías válidas requeridas');
   if(!options||typeof options!=='object'||Array.isArray(options))throw new RangeError('Opciones de ataque inválidas');
-  for(const key of Object.keys(options))if(!['ability','thrown','twoHanded','lightExtraAttack','otherWeaponHeld','adjacentEnemy','advantage','targetDistanceFeet'].includes(key))throw new RangeError('Opción de ataque desconocida');
-  for(const key of ['thrown','twoHanded','lightExtraAttack','otherWeaponHeld','adjacentEnemy','advantage'] as const)if(options[key]!==undefined&&typeof options[key]!=='boolean')throw new RangeError(`${key} debe ser booleano`);
+  for(const key of Object.keys(options))if(!['ability','thrown','twoHanded','lightExtraAttack','otherWeaponHeld','adjacentEnemy','advantage','conditionAdvantage','conditionDisadvantage','conditionD20Penalty','targetDistanceFeet'].includes(key))throw new RangeError('Opción de ataque desconocida');
+  for(const key of ['thrown','twoHanded','lightExtraAttack','otherWeaponHeld','adjacentEnemy','advantage','conditionAdvantage','conditionDisadvantage'] as const)if(options[key]!==undefined&&typeof options[key]!=='boolean')throw new RangeError(`${key} debe ser booleano`);
+  if(options.conditionD20Penalty!==undefined&&(typeof options.conditionD20Penalty!=='number'||!Number.isSafeInteger(options.conditionD20Penalty)||options.conditionD20Penalty>0||options.conditionD20Penalty< -12||options.conditionD20Penalty%2!==0))throw new RangeError('Penalización d20 de condición inválida');
   const w=WEAPON_STATS[weaponId];
   const thrown=options.thrown===true || (w.kind==='ranged'&&!w.rangedRange&&Boolean(w.thrownRange));
   const twoHanded=w.twoHanded===true||(options.twoHanded===true&&w.versatileSides!==undefined);
@@ -133,6 +139,7 @@ export function calculateWeaponAttack(
   const notes:string[]=[];
   let attackBonus=modifier+sheet.proficiencyBonus; // Guerrero: competencia con armas simples y marciales.
   if(style==='archery'&&w.kind==='ranged')attackBonus+=2;
+  attackBonus+=options.conditionD20Penalty??0;
   let damageModifier=options.lightExtraAttack&&style!=='two_weapon_fighting'?Math.min(0,modifier):modifier;
   if(style==='dueling'&&w.kind==='melee'&&!twoHanded&&!options.otherWeaponHeld&&!thrown)damageModifier+=2;
   if(style==='thrown_weapon_fighting'&&thrown)damageModifier+=2;
@@ -150,7 +157,9 @@ export function calculateWeaponAttack(
       if(options.targetDistanceFeet>range[0]){disadvantage=true;notes.push('Objetivo más allá del alcance normal: desventaja.');}}
     else if(options.targetDistanceFeet>(w.reach?10:5))throw new RangeError('Objetivo fuera del alcance cuerpo a cuerpo');
   }
-  const mode=options.advantage===true&&disadvantage?'normal':disadvantage?'disadvantage':options.advantage?'advantage':'normal';
+  const adv=options.advantage===true||options.conditionAdvantage===true;
+  const dis=disadvantage||options.conditionDisadvantage===true;
+  const mode=adv&&dis?'normal':dis?'disadvantage':adv?'advantage':'normal';
   const mastery=masteries.includes(weaponId)?WEAPONS[weaponId].mastery:null;
   const masterySaveDC=mastery==='Topple'?8+sheet.proficiencyBonus+modifier:null;
   const grazeOnMiss=mastery==='Graze'?Math.max(0,modifier):null;
