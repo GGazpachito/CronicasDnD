@@ -44,3 +44,40 @@
 .save-error{background:#3b2627;color:#f2c1b8;border:1px solid #9b635c}
 @media(max-width:950px){.save-controls{grid-template-columns:1fr}}
 @media(max-width:660px){.save-panel{padding:17px}.save-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.save-buttons button{font-size:11px}}
+
+/* Paso 14: controles de juego, separados del creador. */
+.play-panel{padding:22px 24px;margin:0 0 23px}
+.play-panel h2{font-size:23px;margin:2px 0 0}
+.play-panel h3{font-size:15px;margin:0 0 13px;color:var(--gold)}
+.play-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin:18px 0}
+.play-stats>div{background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:12px 10px;min-width:0;display:flex;flex-direction:column;gap:5px}
+.play-stats span{font-size:11px;color:var(--muted)}.play-stats strong{font-size:19px;color:var(--text)}
+.play-actions-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.play-action-group{border:1px solid var(--line);padding:16px;background:#141e2a;border-radius:11px;min-width:0}
+.play-rest-group{grid-column:1/-1}.play-action-group .field{margin-bottom:10px}
+.play-buttons{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+.play-buttons button,.play-mind button,.play-warning button{background:#27394a;border:1px solid #8b744d;border-radius:8px;color:#f4e4c5;padding:10px 14px;font-size:12px;min-height:42px;cursor:pointer;font-weight:650}
+.play-buttons button:disabled,.play-mind button:disabled{opacity:.4;cursor:not-allowed}
+.play-buttons button:hover:not(:disabled),.play-mind button:hover:not(:disabled){background:#35485a}
+.play-warning{padding:13px 14px;background:#3c2e23;color:#f1d7ad;border:1px solid #99754a;border-radius:9px;margin:12px 0}
+.play-warning p{margin:7px 0}.play-check-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.play-mind{margin-top:14px;padding-top:13px;border-top:1px solid var(--line)}
+@media(max-width:1020px){.play-stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:670px){.play-panel{padding:16px}.play-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.play-actions-grid{grid-template-columns:1fr}.play-buttons button{flex:1}}
+
+
+/* Paso 15: consulta y resolución de ataques con armas. */
+.attack-panel{padding:22px 24px;margin:0 0 23px}
+.attack-panel h2{font-size:23px;margin:2px 0 0}.attack-panel h3{font-size:15px;color:var(--gold);margin:0 0 13px}
+.attack-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:19px}
+.attack-form-grid .field{min-width:0;margin-bottom:7px}
+.attack-options{display:flex;gap:11px 22px;flex-wrap:wrap;padding:12px;background:#111d2a;border:1px solid var(--line);border-radius:10px;margin:10px 0 15px}
+.attack-options label{display:flex;align-items:center;gap:7px;font-size:12px;color:#d6e2ec;cursor:pointer}
+.attack-options input{accent-color:var(--gold)}
+.attack-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:15px 0}
+.attack-summary>div{display:flex;flex-direction:column;gap:5px;background:#101b27;border:1px solid var(--line);border-radius:10px;padding:11px;min-width:0}
+.attack-summary span{font-size:11px;color:var(--muted)}.attack-summary strong{font-size:17px;color:var(--text);overflow-wrap:anywhere}
+.attack-resolve{background:var(--gold);color:#17202c;padding:11px 18px;border:0;border-radius:9px;font-weight:800;min-height:43px}
+.attack-resolve:disabled{opacity:.4;cursor:not-allowed}
+.attack-result{display:flex;flex-direction:column;gap:5px;padding:12px 14px;background:#20382f;border:1px solid #426f58;border-radius:10px;margin-top:12px;font-size:13px}
+.attack-result strong{color:#c6f4db}.attack-notes{padding:0 0 0 18px;color:var(--muted);font-size:12px;line-height:1.6;margin:16px 0 0}
+@media(max-width:680px){.attack-panel{padding:16px}.attack-form-grid{grid-template-columns:1fr}.attack-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.attack-options{flex-direction:column;align-items:flex-start;gap:9px}}

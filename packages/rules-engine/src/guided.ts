@@ -172,8 +172,8 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
   }
   const martial = input.martial===undefined ? undefined : validateMartialChoices(input.martial);
   if (!martial) pending.push('Estilo de combate, tres maestrías y equipo inicial aún no seleccionados');
-  if (martial && martial.fightingStyle !== 'defense') pending.push('El estilo de combate elegido se ha registrado; sus efectos de ataque, reacción o sentidos se implementarán con el motor de combate');
-  if (martial) pending.push('Las propiedades de maestría se han registrado; su ejecución durante ataques está pendiente');
+  if (martial && martial.fightingStyle !== 'defense') pending.push('El estilo de combate se utiliza en el panel de ataques cuando corresponde; las reacciones y sentidos especiales siguen pendientes');
+  if (martial) pending.push('Las maestrías se muestran en el panel de ataques; las que requieren control de turnos, posición o estados enemigos se resuelven manualmente');
   const startingInventory=bgEquipment?combineStartingInventory(martial?.startingPackage,bgEquipment):undefined;
   if (input.inventoryActions!==undefined && (!martial || !startingInventory)) fail('Completa primero el equipo de clase y trasfondo antes de editar el inventario');
   const inventory=martial && startingInventory ? replayInventory(startingInventory,FIGHTER_PACKAGES[martial.startingPackage].initialArmor,input.inventoryActions??[]) : undefined;
