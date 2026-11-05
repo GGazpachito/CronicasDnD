@@ -3,13 +3,14 @@
 import { useMemo, useState } from "react";
 import SaveLoadPanel from "../components/SaveLoadPanel";
 import PlayPanel from "../components/PlayPanel";
+import SurvivalPanel from "../components/SurvivalPanel";
 import AttacksPanel from "../components/AttacksPanel";
 import CombatPanel from "../components/CombatPanel";
 import ConditionsPanel from "../components/ConditionsPanel";
 import { recordWeaponAttack } from "../../../../packages/rules-engine/src/combat";
 import {conditionCapabilities,initialConditionLedger} from "../../../../packages/rules-engine/src/conditions";
 import type { WeaponAttackProfile,AttackResolution } from "../../../../packages/rules-engine/src/attacks";
-import { initialAdventureState, validateAdventureState, type AdventureState } from "../../../../packages/rules-engine/src/adventure";
+import { initialAdventureState, validateAdventureState, updateAdventureCombat, type AdventureState } from "../../../../packages/rules-engine/src/adventure";
 import type { CharacterSnapshot } from "../../../../packages/rules-engine/src/persistence";
 import { calculateGuidedFighter, BACKGROUNDS, FIGHTER_SKILL_OPTIONS, HUMAN_FEATS, type BackgroundId, type SpeciesId, type ElfLineage, type GuidedFighterInput, type HumanOriginFeat } from "../../../../packages/rules-engine/src/guided";
 import { ABILITIES, type Ability, type AbilityScores } from "../../../../packages/rules-engine/src/abilities";
@@ -157,6 +158,10 @@ export default function Home(){
     setAdventure({...sessionCheck.state,combat:result.combat});
     setInventoryError(null);
   }
+  function handleCombatChange(combat:import('../../../../packages/rules-engine/src/combat').CombatState){
+    if(!sheet||!sessionCheck.state||sessionCheck.outOfSync)return;
+    setAdventure(updateAdventureCombat(sessionCheck.state,combat,sheet));
+  }
   function loadSavedSnapshot(snapshot:CharacterSnapshot){loadSavedInput(snapshot.input);setAdventure(snapshot.adventure);}
   const taken=[...bg.skills,...fighterSkills];
   const humanCandidates=SKILLS.filter(s=>!taken.includes(s));
@@ -177,12 +182,13 @@ export default function Home(){
   return <main className="app-shell">
     <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Creador guiado · D&D 2024</span></div></div><div className="status"><span className="status-dot"/> Motor conectado · Guardado local</div></header>
     <div className="content">
-      <div className="intro"><div><span className="eyebrow">PROTOTIPO 17 / CONDICIONES Y AGOTAMIENTO</span><h1>Da forma a <em>tu aventurero.</em></h1><p>Guerrero de niveles 1–3. Tus decisiones de origen se validan y se reflejan en la hoja calculada.</p></div><span className="edition">PHB 2024 + SRD</span></div>
+      <div className="intro"><div><span className="eyebrow">PROTOTIPO 18 / MUERTE Y CONCENTRACIÓN</span><h1>Da forma a <em>tu aventurero.</em></h1><p>Guerrero de niveles 1–3. Tus decisiones de origen se validan y se reflejan en la hoja calculada.</p></div><span className="edition">PHB 2024 + SRD</span></div>
       <SaveLoadPanel input={input} adventure={sessionCheck.outOfSync?null:sessionCheck.state} valid={Boolean(output.result&&!sessionCheck.outOfSync)} onLoad={loadSavedSnapshot}/>
       <PlayPanel sheet={sheet??null} state={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
-      <ConditionsPanel combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} outOfSync={sessionCheck.outOfSync} onChange={combat=>{if(sessionCheck.state&&!sessionCheck.outOfSync)setAdventure({...sessionCheck.state,combat});}} baseSpeed={output.result?.origin.speedFeet??30}/>
+      <SurvivalPanel sheet={sheet??null} state={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
+      <ConditionsPanel combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} outOfSync={sessionCheck.outOfSync} onChange={handleCombatChange} baseSpeed={output.result?.origin.speedFeet??30}/>
       <AttacksPanel combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} sheet={sheet??null} inventory={output.result?.inventory??null} martial={input.martial??null} onRecord={confirmWeaponAttack} canRecord={Boolean(sheet&&!sessionCheck.outOfSync&&sessionCheck.state&&sessionCheck.state.fighter.hitPoints.current>0&&conditionCapabilities(sessionCheck.state.combat.conditions??initialConditionLedger()).canTakeAction)}/>
-      <CombatPanel combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} outOfSync={sessionCheck.outOfSync} onChange={combat=>{if(sessionCheck.state&&!sessionCheck.outOfSync)setAdventure({...sessionCheck.state,combat});}}/>
+      <CombatPanel combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} outOfSync={sessionCheck.outOfSync} onChange={handleCombatChange}/>
       <nav className="wizard-tabs" aria-label="Pasos de creación">{STEPS.map((s,i)=><button type="button" key={s} className={step===i?'active':''} aria-current={step===i?'step':undefined} onClick={()=>setStep(i)}><span>{String(i+1).padStart(2,'0')}</span>{s}</button>)}</nav>
       <div className="workspace">
         <aside className="editor panel">

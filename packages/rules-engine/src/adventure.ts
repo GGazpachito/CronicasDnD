@@ -1,10 +1,13 @@
-/** Paso 14. Estado de partida del Guerrero 1-3 (PHB 2024).
- * Operaciones puras: la hoja calculada es la fuente de los maximos.
- * No resuelve muerte, salvaciones de muerte, turnos ni lanzamientos de conjuros.
+/** Paso 18. Estado de partida del Guerrero 1-3 (PHB 2024).
+ * Operaciones puras con seguimiento de PG, muerte y concentración.
+ * Los dados los proporciona el jugador; no se simula combate contra enemigos.
  */
 import type { CalculatedFighterSheet } from './sheet';
 import { initialCombatState,validateCombatState,type CombatState } from './combat';
 import {longRestConditionUpdate,initialConditionLedger,conditionCapabilities} from './conditions';
+import {advanceSurvivalRound,concentrationDC,damageAtZero,deathSavingThrow,initialSurvivalState,
+  recordConcentrationDamage,recoverFromStable,resetDeathTrack,resolveConcentration,startConcentration,
+  stabilize,validateSurvivalState,type SurvivalState} from './survival';
 import { finishFighterRest, initialFighterState, spendFighterResource, useSecondWind, useTacticalMind,
   validateFighterState, type FighterState, type FighterResourceId } from './resources';
 
@@ -13,17 +16,25 @@ export type AdventureState = Readonly<{
   temporaryHitPoints: number;
   spentHitDice: number;
   combat: CombatState;
+  /** Ausente en guardados v2 anteriores a esta actualización. */
+  survival?: SurvivalState;
 }>;
 
 export type AdventureAction =
-  | Readonly<{type:'damage'; amount:number}>
+  | Readonly<{type:'damage'; amount:number; critical?:boolean}>
   | Readonly<{type:'heal'; amount:number}>
   | Readonly<{type:'temporary_hp'; amount:number}>
   | Readonly<{type:'second_wind'; d10:number}>
   | Readonly<{type:'action_surge'}>
   | Readonly<{type:'tactical_mind'; originalTotal:number; difficultyClass:number; d10:number}>
   | Readonly<{type:'short_rest'; hitDieRolls:readonly number[]}>
-  | Readonly<{type:'long_rest'}>;
+  | Readonly<{type:'long_rest'}>
+  | Readonly<{type:'death_save';d20:number}>
+  | Readonly<{type:'stabilize';medicineTotal:number}>
+  | Readonly<{type:'recover_stable';d4:number;hoursElapsed:number}>
+  | Readonly<{type:'start_concentration';name:string;rounds:number|null}>
+  | Readonly<{type:'end_concentration'}>
+  | Readonly<{type:'concentration_save';d20:number;extraBonus?:number}>;
 
 export type AdventureResult = Readonly<{
   state: AdventureState;
@@ -43,13 +54,13 @@ function onlyKeys(value:Record<string,unknown>,keys:readonly string[],label:stri
 }
 
 export function initialAdventureState(sheet:CalculatedFighterSheet):AdventureState{
-  return {fighter:initialFighterState(sheet.level,sheet.maximumHitPoints),temporaryHitPoints:0,spentHitDice:0,combat:initialCombatState()};
+  return {fighter:initialFighterState(sheet.level,sheet.maximumHitPoints),temporaryHitPoints:0,spentHitDice:0,combat:initialCombatState(),survival:initialSurvivalState()};
 }
 
 /** Comprueba que el estado pertenece a esta hoja; no se remapea silenciosamente. */
 export function validateAdventureState(value:unknown,sheet:CalculatedFighterSheet):AdventureState{
   if(!isRecord(value))throw new RangeError('Estado de partida inválido');
-  onlyKeys(value,['fighter','temporaryHitPoints','spentHitDice','combat'],'Estado de partida');
+  onlyKeys(value,['fighter','temporaryHitPoints','spentHitDice','combat','survival'],'Estado de partida');
   if(!isRecord(value.fighter))throw new RangeError('Estado del Guerrero inválido');
   onlyKeys(value.fighter,['fighterLevel','hitPoints','resources'],'Estado del Guerrero');
   if(!isRecord(value.fighter.hitPoints))throw new RangeError('PG inválidos');
@@ -66,10 +77,14 @@ export function validateAdventureState(value:unknown,sheet:CalculatedFighterShee
     throw new RangeError('La hoja ha cambiado: reinicia explícitamente el estado de partida antes de continuar o guardar');
   const temporaryHitPoints=requireInteger(value.temporaryHitPoints,'PG temporales',0,100_000);
   const spentHitDice=requireInteger(value.spentHitDice,'Dados de golpe gastados',0,sheet.hitDice.total);
+  const combat=value.combat===undefined?initialCombatState():validateCombatState(value.combat);
+  const survival=value.survival===undefined?initialSurvivalState():validateSurvivalState(value.survival,fighter.hitPoints.current);
+  if(survival.concentration&&!conditionCapabilities(combat.conditions??initialConditionLedger()).canConcentrate)
+    throw new RangeError('No puedes mantener concentración mientras estás incapacitado');
   return {fighter:{fighterLevel:fighter.fighterLevel,hitPoints:{...fighter.hitPoints},resources:{
     second_wind:{current:fighter.resources.second_wind!.current},
     ...(fighter.fighterLevel>=2?{action_surge:{current:fighter.resources.action_surge!.current}}:{})
-  }},temporaryHitPoints,spentHitDice,combat:value.combat===undefined?initialCombatState():validateCombatState(value.combat)};
+  }},temporaryHitPoints,spentHitDice,combat,survival};
 }
 
 function withHp(state:AdventureState,current:number):AdventureState{
@@ -79,8 +94,22 @@ function withFighter(state:AdventureState,fighter:FighterState):AdventureState{
   return {...state,fighter};
 }
 function requireConscious(state:AdventureState,activity:string):void{
-  if(state.fighter.hitPoints.current===0)throw new RangeError(`${activity}: el personaje está a 0 PG; las reglas de muerte aún se gestionan manualmente`);
-  if(conditionCapabilities(state.combat.conditions??initialConditionLedger()).deadByExhaustion)throw new RangeError(`${activity}: agotamiento 6 equivale a muerte`);
+  if(state.survival?.death.dead)throw new RangeError(`${activity}: el personaje está muerto`);
+  if(state.fighter.hitPoints.current===0)throw new RangeError(`${activity}: el personaje está a 0 PG`);
+  const caps=conditionCapabilities(state.combat.conditions??initialConditionLedger());
+  if(caps.deadByExhaustion)throw new RangeError(`${activity}: agotamiento 6 equivale a muerte`);
+}
+/** Fusiona cambios de ronda y condición sin borrar la concentración silenciosamente. */
+export function updateAdventureCombat(source:AdventureState,updated:CombatState,sheet:CalculatedFighterSheet):AdventureState{
+  const state=validateAdventureState(source,sheet);
+  const combat=validateCombatState(updated);
+  if(combat.round!==state.combat.round&&combat.round!==state.combat.round+1)
+    throw new RangeError('Solo se puede avanzar una ronda a la vez');
+  let survival=state.survival!;
+  if(combat.round>state.combat.round)survival=advanceSurvivalRound(survival);
+  if(!conditionCapabilities(combat.conditions??initialConditionLedger()).canConcentrate)
+    survival={...survival,concentration:null};
+  return {...state,combat,survival};
 }
 
 /** Ejecuta una acción de partida. Jamás modifica ni el estado ni la hoja recibidos. */
@@ -89,36 +118,62 @@ export function applyAdventureAction(source:AdventureState,action:AdventureActio
   if(!isRecord(action))throw new RangeError('Acción inválida');
   switch(action.type){
     case 'damage':{
-      onlyKeys(action,['type','amount'],'Daño');
+      onlyKeys(action,['type','amount','critical'],'Daño');
       const amount=requireInteger(action.amount,'Daño',1,100_000);
-      if(state.fighter.hitPoints.current===0)
-        throw new RangeError('A 0 PG el daño puede causar fallos de salvación de muerte o muerte instantánea; gestión manual pendiente');
+      if(action.critical!==undefined&&typeof action.critical!=='boolean')throw new RangeError('Crítico debe ser booleano');
+      if(state.survival!.death.dead)throw new RangeError('El personaje ya está muerto');
       const absorbed=Math.min(amount,state.temporaryHitPoints);
-      const hpLoss=Math.min(state.fighter.hitPoints.current,amount-absorbed);
-      const next=withHp({...state,temporaryHitPoints:state.temporaryHitPoints-absorbed},state.fighter.hitPoints.current-hpLoss);
-      return {state:next,description:`Daño ${amount}: ${absorbed} absorbido por PG temporales, ${hpLoss} PG perdidos${next.fighter.hitPoints.current===0?' · A 0 PG: comprueba las reglas de muerte manualmente':''}.`};
+      const damageTaken=amount-absorbed;
+      const currentHP=state.fighter.hitPoints.current;
+      const hpLoss=Math.min(currentHP,damageTaken);
+      const nextHP=currentHP-hpLoss;
+      let survival=state.survival!;
+      let detail='';
+      if(currentHP===0){
+        // A 0 PG, cualquier daño recibido añade fallos, incluso si hay PG temporales.
+        const outcome=damageAtZero(survival.death,amount,sheet.maximumHitPoints,action.critical===true);
+        survival={...survival,death:outcome.death,concentration:null};
+        detail=outcome.message;
+      } else if(nextHP===0){
+        // Solo el daño que sobrepasa los PG actuales puede causar muerte masiva.
+        const overkill=damageTaken-currentHP;
+        const dead=overkill>=sheet.maximumHitPoints;
+        survival={...survival,death:{...resetDeathTrack(),dead},concentration:null};
+        detail=dead?'Muerte instantánea por daño masivo.':'Queda inconsciente a 0 PG; comienza a realizar salvaciones de muerte.';
+      }else if(survival.concentration){
+        // La salvación se resuelve después. Cada fuente de daño se anota por separado.
+        survival=recordConcentrationDamage(survival,amount);
+        detail=`Concentración: salvación de Constitución pendiente (CD ${concentrationDC(amount)}).`;
+      }
+      return {state:{...withHp({...state,temporaryHitPoints:state.temporaryHitPoints-absorbed},nextHP),survival},
+        description:`Daño ${amount}: ${absorbed} PG temporales absorbidos, ${hpLoss} PG perdidos. ${detail}`};
     }
     case 'heal':{
       onlyKeys(action,['type','amount'],'Curación');
       const amount=requireInteger(action.amount,'Curación',1,100_000);
+      if(state.survival!.death.dead)throw new RangeError('Un personaje muerto requiere un efecto de resurrección, no curación normal');
       const current=Math.min(state.fighter.hitPoints.maximum,state.fighter.hitPoints.current+amount);
-      return {state:withHp(state,current),description:`Curación efectiva: ${current-state.fighter.hitPoints.current} PG.`};
+      const survival=state.fighter.hitPoints.current===0&&current>0?{...state.survival!,death:resetDeathTrack()}:state.survival!;
+      return {state:{...withHp(state,current),survival},description:`Curación efectiva: ${current-state.fighter.hitPoints.current} PG.`};
     }
     case 'temporary_hp':{
       onlyKeys(action,['type','amount'],'PG temporales');
       const amount=requireInteger(action.amount,'PG temporales',1,100_000);
+      if(state.survival!.death.dead)throw new RangeError('El personaje está muerto');
       // El receptor puede mantener los anteriores; aquí conservamos el mayor, nunca se suman.
       return {state:{...state,temporaryHitPoints:Math.max(state.temporaryHitPoints,amount)},description:'PG temporales actualizados (no se acumulan).'};
     }
     case 'second_wind':{
       onlyKeys(action,['type','d10'],'Segundo aliento');
       requireConscious(state,'Segundo aliento');
+      if(!conditionCapabilities(state.combat.conditions??initialConditionLedger()).canTakeBonusAction)throw new RangeError('Una condición impide usar Segundo aliento');
       const applied=useSecondWind(state.fighter,requireInteger(action.d10,'d10',1,10));
       return {state:withFighter(state,applied.state),description:`Segundo aliento: +${applied.healed} PG efectivos y un uso gastado.`};
     }
     case 'action_surge':{
       onlyKeys(action,['type'],'Acción súbita');
       requireConscious(state,'Acción súbita');
+      if(!conditionCapabilities(state.combat.conditions??initialConditionLedger()).canTakeAction)throw new RangeError('Una condición impide usar Acción súbita');
       const fighter=spendFighterResource(state.fighter,'action_surge');
       return {state:withFighter(state,fighter),description:'Acción súbita consumida. La acción adicional no puede ser Magia.'};
     }
@@ -149,7 +204,49 @@ export function applyAdventureAction(source:AdventureState,action:AdventureActio
       onlyKeys(action,['type'],'Descanso largo');
       requireConscious(state,'Descanso largo');
       const restored=finishFighterRest(withHp(state,state.fighter.hitPoints.maximum).fighter,'long_rest');
-      return {state:{fighter:restored,temporaryHitPoints:0,spentHitDice:0,combat:{...state.combat,effects:state.combat.effects.filter(e=>e.remainingRounds===null),...(state.combat.conditions?{conditions:longRestConditionUpdate(state.combat.conditions)}:{})}},description:'Descanso largo: PG y dados de golpe restaurados; recursos recuperados y PG temporales eliminados.'};
+      return {state:{fighter:restored,temporaryHitPoints:0,spentHitDice:0,
+        survival:{...state.survival!,concentration:null},
+        combat:{...state.combat,effects:state.combat.effects.filter(e=>e.remainingRounds===null),...(state.combat.conditions?{conditions:longRestConditionUpdate(state.combat.conditions)}:{})}},
+        description:'Descanso largo: PG y dados de golpe restaurados; recursos recuperados, concentración finalizada y PG temporales eliminados.'};
+    }
+    case 'death_save':{
+      onlyKeys(action,['type','d20'],'Salvación de muerte');
+      if(state.fighter.hitPoints.current!==0)throw new RangeError('Las salvaciones de muerte solo se realizan a 0 PG');
+      const result=deathSavingThrow(state.survival!.death,requireInteger(action.d20,'d20',1,20),-2*(state.combat.conditions?.exhaustion??0));
+      const next=result.regainHP?withHp(state,1):state;
+      return {state:{...next,survival:{...state.survival!,death:result.death}},description:result.message};
+    }
+    case 'stabilize':{
+      onlyKeys(action,['type','medicineTotal'],'Estabilización');
+      if(state.fighter.hitPoints.current!==0)throw new RangeError('Solo se estabiliza a 0 PG');
+      const r=stabilize(state.survival!.death,action.medicineTotal);
+      return {state:{...state,survival:{...state.survival!,death:r.death}},description:r.message};
+    }
+    case 'recover_stable':{
+      onlyKeys(action,['type','d4','hoursElapsed'],'Recuperación estable');
+      if(state.fighter.hitPoints.current!==0)throw new RangeError('El personaje ya tiene PG');
+      recoverFromStable(state.survival!.death,action.d4,action.hoursElapsed);
+      return {state:{...withHp(state,1),survival:{...state.survival!,death:resetDeathTrack()}},description:'Tras el tiempo indicado por 1d4 horas, recupera 1 PG.'};
+    }
+    case 'start_concentration':{
+      onlyKeys(action,['type','name','rounds'],'Iniciar concentración');
+      requireConscious(state,'Concentración');
+      if(!conditionCapabilities(state.combat.conditions??initialConditionLedger()).canConcentrate)throw new RangeError('No puedes concentrarte estando incapacitado');
+      const survival=startConcentration(state.survival!,action.name,action.rounds);
+      return {state:{...state,survival},description:`Concentración iniciada: ${survival.concentration!.name}. Sustituye la concentración previa.`};
+    }
+    case 'end_concentration':{
+      onlyKeys(action,['type'],'Terminar concentración');
+      return {state:{...state,survival:{...state.survival!,concentration:null}},description:'Concentración finalizada voluntariamente.'};
+    }
+    case 'concentration_save':{
+      onlyKeys(action,['type','d20','extraBonus'],'Salvación de concentración');
+      const d20=requireInteger(action.d20,'d20 seleccionado',1,20);
+      const extra=action.extraBonus===undefined?0:requireInteger(action.extraBonus,'Modificador adicional',-100,100);
+      const exhaustion=state.combat.conditions?.exhaustion??0;
+      const total=d20+sheet.savingThrowBonuses.constitution-2*exhaustion+extra;
+      const r=resolveConcentration(state.survival!,total);
+      return {state:{...state,survival:r.state},description:`Concentración CD ${r.dc}: ${d20} + ${sheet.savingThrowBonuses.constitution} por salvación de Constitución ${exhaustion?`− ${2*exhaustion} por agotamiento`:''} ${extra?`${extra>=0?'+':''}${extra} situacional`:''} = ${total}. ${r.passed?'Se mantiene.':'Se pierde.'}`};
     }
     default:throw new RangeError('Acción de partida no admitida');
   }

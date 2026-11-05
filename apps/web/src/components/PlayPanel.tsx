@@ -9,6 +9,7 @@ type Props={sheet:CalculatedFighterSheet|null;state:AdventureState|null;outOfSyn
 
 export default function PlayPanel({sheet,state,outOfSync,onChange}:Props){
   const [amount,setAmount]=useState(5);
+  const [criticalDamage,setCriticalDamage]=useState(false);
   const [d10,setD10]=useState(6);
   const [hitDieRolls,setHitDieRolls]=useState('');
   const [check,setCheck]=useState(11);
@@ -49,11 +50,12 @@ export default function PlayPanel({sheet,state,outOfSync,onChange}:Props){
         <div><span>Segundo aliento</span><strong>{resources?.second_wind?.current ?? 0} / 2</strong></div>
         {sheet.level>=2&&<div><span>Acción súbita</span><strong>{resources?.action_surge?.current ?? 0} / 1</strong></div>}
       </div>
-      {state.fighter.hitPoints.current===0&&<p className="play-warning" role="alert">El personaje está a 0 PG. Las salvaciones de muerte, la muerte instantánea y la estabilización aún no están automatizadas. Regístralas con el director de juego. No se puede descansar ni usar rasgos de acción a 0 PG.</p>}
+      {state.fighter.hitPoints.current===0&&<p className="play-warning" role="alert">El personaje está a 0 PG. Gestiona sus salvaciones contra muerte y estabilización en el panel siguiente. No puede descansar ni utilizar acciones de clase.</p>}
       <div className="play-actions-grid">
         <div className="play-action-group"><h3>PG y daño</h3>
           <label className="field"><span>Cantidad (entero positivo)</span><input type="number" min="1" max="100000" step="1" value={amount} onChange={e=>setAmount(Number(e.target.value))}/></label>
-          <div className="play-buttons"><button type="button" disabled={!ready} onClick={()=>act({type:'damage',amount})}>Aplicar daño</button><button type="button" disabled={!ready} onClick={()=>act({type:'heal',amount})}>Curar PG</button><button type="button" disabled={!ready} onClick={()=>act({type:'temporary_hp',amount})}>Recibir PG temporales</button></div>
+          <label className="switch-field"><span>Daño por impacto crítico (dos fallos si ya está a 0 PG)</span><input type="checkbox" checked={criticalDamage} onChange={e=>setCriticalDamage(e.target.checked)}/></label>
+          <div className="play-buttons"><button type="button" disabled={!ready} onClick={()=>act({type:'damage',amount,critical:criticalDamage})}>Aplicar daño</button><button type="button" disabled={!ready} onClick={()=>act({type:'heal',amount})}>Curar PG</button><button type="button" disabled={!ready} onClick={()=>act({type:'temporary_hp',amount})}>Recibir PG temporales</button></div>
         </div>
         <div className="play-action-group"><h3>Rasgos del Guerrero</h3>
           <label className="field"><span>Resultado del d10</span><input type="number" min="1" max="10" step="1" value={d10} onChange={e=>setD10(Number(e.target.value))}/></label>
@@ -73,6 +75,6 @@ export default function PlayPanel({sheet,state,outOfSync,onChange}:Props){
     </>}
     {note&&<p className="save-success" role="status">{note}</p>}
     {error&&<p className="save-error" role="alert">{error}</p>}
-    <p className="muted-note">Esta fase no gestiona las salvaciones de muerte, reglas de turnos, efectos de conjuros, concentración ni condiciones prolongadas. Los dados se introducen manualmente.</p>
+    <p className="muted-note">Las salvaciones contra muerte y la concentración se gestionan en el panel siguiente. No se simulan enemigos ni lanzamiento completo de conjuros. Los dados se introducen manualmente.</p>
   </section>;
 }

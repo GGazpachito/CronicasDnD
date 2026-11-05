@@ -76,11 +76,11 @@ describe('Estado de partida v2, D&D 2024',()=>{
     expect(r.fighter.resources.second_wind?.current).toBe(2);
     expect(r.fighter.resources.action_surge?.current).toBe(1);
   });
-  it('a 0 PG no permite descansar y advierte si recibe nuevo daño',()=>{
+  it('a 0 PG no permite descansar y el nuevo daño añade fallos de muerte',()=>{
     const s=run(start(),{type:'damage',amount:sheet().maximumHitPoints});
     expect(()=>run(s,{type:'short_rest',hitDieRolls:[]})).toThrow();
     expect(()=>run(s,{type:'long_rest'})).toThrow();
-    expect(()=>run(s,{type:'damage',amount:1})).toThrow();
+    expect(run(s,{type:'damage',amount:1}).survival?.death.failures).toBe(1);
     expect(run(s,{type:'heal',amount:1}).fighter.hitPoints.current).toBe(1);
   });
   it('el estado original no se muta al aplicar acciones',()=>{
