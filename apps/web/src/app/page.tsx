@@ -22,7 +22,7 @@ import { FIGHTING_STYLES, WEAPONS, FIGHTER_PACKAGES, type FightingStyleId, type 
 import { ORIGIN_FEATS, CRAFTER_TOOLS, MUSICAL_INSTRUMENTS, TOOL_NAMES, SKILLED_OPTIONS, type ToolId } from "../../../../packages/rules-engine/src/origin-feats";
 import { SPELL_LISTS, MAGIC_ABILITY_OPTIONS, spellName, type SpellListId, type SpellAbility, type MagicInitiateSelection } from "../../../../packages/rules-engine/src/origin-magic";
 import { BACKGROUND_PACKAGES, GAMING_SETS, ITEM_NAMES, combineStartingInventory, validateBackgroundEquipment, type BackgroundPackageId, type GamingSetId } from "../../../../packages/rules-engine/src/background-equipment";
-import { INVENTORY_NAMES, INVENTORY_PRICES_CP, replayInventory, equippedArmor, hasEquippedShield, importLegacyMagicWards, formatCopper, type InventoryAction, type InventoryItemId } from "../../../../packages/rules-engine/src/inventory";
+import { INVENTORY_NAMES, INVENTORY_PRICES_CP, replayInventory, equippedArmor, hasEquippedShield, importLegacyMagicWards, nextMagicInstanceId, formatCopper, type InventoryAction, type InventoryItemId } from "../../../../packages/rules-engine/src/inventory";
 import {MAGIC_WARD_CATALOG} from "../../../../packages/rules-engine/src/magic-wards";
 
 const NAMES: Record<Ability, string> = {strength:'Fuerza',dexterity:'Destreza',constitution:'Constitución',intelligence:'Inteligencia',wisdom:'Sabiduría',charisma:'Carisma'};
@@ -91,7 +91,8 @@ export default function Home(){
   const quotedQty=Number.isInteger(tradeCount)&&tradeCount>=1&&tradeCount<=1000?tradeCount:0;
   function transact(action:InventoryAction){
     try{
-      const updated=[...activeActions,action];
+      const registered:InventoryAction=action.type==='magic_grant'?{...action,instanceId:nextMagicInstanceId(activeActions)}:action;
+      const updated=[...activeActions,registered];
       replayInventory(starting,FIGHTER_PACKAGES[starter].initialArmor,updated);
       setInventoryEdits({key:inventoryKey,actions:updated});setInventoryError(null);return null;
     }catch(e){const message=e instanceof Error?e.message:'Operación no válida';setInventoryError(message);return message;}
@@ -311,7 +312,7 @@ export default function Home(){
               <div className="money-summary"><strong>{formatCopper(output.result.inventory.coinsCopper)}</strong><span>Saldo inicial: {output.result.startingInventory?.totalGold??0} po · {activeActions.length} operaciones</span></div>
               <div className="data-list">{output.result.inventory.items.length===0&&<p className="muted-note">No hay objetos en tu inventario.</p>}{output.result.inventory.items.map(it=><div className="data-row" key={it.id}><span>{it.name}<small className="item-origin">{it.sources.map(src=>`${src.from==='class'?'Clase':src.from==='background'?'Trasfondo':src.from==='purchase'?'Comprado':'Botín'} ×${src.quantity}`).join(' + ')}{inventory.equipped.armor===it.id?' · EQUIPADA':''}{inventory.equipped.shield&&it.id==='shield'?' · EQUIPADO':''}</small></span><strong>×{it.quantity}</strong></div>)}</div>
               {output.result.inventory.magicItems.length>0&&<div className="data-list">{output.result.inventory.magicItems.map(it=><div className="data-row" key={it.instanceId}>
-                <span>{MAGIC_WARD_CATALOG[it.itemId].label}{it.armorId?` (${INVENTORY_NAMES[it.armorId]})`:''}{it.enhancement?` +${it.enhancement}`:''}{it.damageType?` (${it.damageType})`:''}<small className="item-origin">Objeto mágico recibido del DM · {it.worn?'Puesto':'Guardado'} · {it.attuned?'Vinculado':MAGIC_WARD_CATALOG[it.itemId].attunement?'Sin vincular':'Sin vinculación requerida'}</small></span><strong>×1</strong>
+                <span>{MAGIC_WARD_CATALOG[it.itemId].label}{it.armorId?` (${INVENTORY_NAMES[it.armorId]})`:''}{it.weaponId?` (${WEAPONS[it.weaponId].name})`:''}{it.enhancement?` +${it.enhancement}`:''}{it.damageType?` (${it.damageType})`:''}<small className="item-origin">Objeto mágico recibido del DM · {it.worn?(it.itemId==='weapon_enhancement'?'Preparada':'Puesto'):'Guardado'} · {it.attuned?'Vinculado':MAGIC_WARD_CATALOG[it.itemId].attunement?'Sin vincular':'Sin vinculación requerida'}</small></span><strong>×1</strong>
               </div>)}</div>}
               <p className="muted-note">Equipo efectivo: {armor?INVENTORY_NAMES[armor]:'sin armadura'} · Escudo: {shield?'sí':'no'} · La CA se recalcula al equipar o desequipar. Los objetos mágicos reemplazan la pieza mundana correspondiente.</p>
               <p className="muted-note">Los paquetes de aventurero siguen siendo un único objeto. El inventario puede guardarse mediante el panel Mis personajes.</p>

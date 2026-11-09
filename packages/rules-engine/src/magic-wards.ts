@@ -1,4 +1,4 @@
-/** Fase 4.9. Registro de objetos defensivos mágicos del SRD 5.2.1 (D&D 2024).
+/** Fases 4.9–4.12. Catálogo de objetos mágicos del SRD 5.2.1 (D&D 2024).
  * Datos y operaciones propios; jamás se ejecutan scripts procedentes de homebrew.
  * El catálogo se utiliza desde el inventario único; AdventureState conserva
  * una vía de lectura para guardados anteriores a la fase 4.10.
@@ -6,6 +6,7 @@
 import type {DeclaredDamageDefense} from './damage-defenses';
 import type {IncomingDamageType} from './incoming';
 import {ARMORS,type ArmorId} from './defense';
+import {WEAPONS,type WeaponId} from './martial';
 
 export const RING_RESISTANCE_TYPES = [
   'acid','cold','fire','force','lightning','necrotic','poison','psychic','radiant','thunder'
@@ -39,6 +40,10 @@ export const MAGIC_WARD_CATALOG = {
   shield_enhancement: {
     label:'Escudo mágico', attunement:false,
     note:'Escudo +1, +2 o +3. Da +2 de escudo entrenado y añade el bonificador mágico a CA.'
+  },
+  weapon_enhancement: {
+    label:'Arma mágica',attunement:false,
+    note:'Arma simple o marcial +1, +2 o +3: bonificación a ataques y daño hechos con ESTA instancia, no con todas las armas.'
   }
 } as const;
 export type MagicWardItemId=keyof typeof MAGIC_WARD_CATALOG;
@@ -50,12 +55,13 @@ export type MagicWardEntry=Readonly<{
   damageType?:RingResistanceType;
   /** Variante del catálogo: tipo de armadura base y nivel del encantamiento. */
   armorId?:ArmorId;
+  weaponId?:WeaponId;
   enhancement?:EnhancementBonus;
   worn:boolean;
   attuned:boolean;
 }>;
 export type MagicWardAction =
-  | Readonly<{type:'grant';itemId:MagicWardItemId;damageType?:RingResistanceType;armorId?:ArmorId;enhancement?:EnhancementBonus}>
+  | Readonly<{type:'grant';itemId:MagicWardItemId;damageType?:RingResistanceType;armorId?:ArmorId;weaponId?:WeaponId;enhancement?:EnhancementBonus}>
   | Readonly<{type:'wear';instanceId:string;worn:boolean}>
   | Readonly<{type:'attune';instanceId:string;attuned:boolean}>
   | Readonly<{type:'remove';instanceId:string}>;
@@ -79,15 +85,19 @@ function validEnhancement(value:unknown):value is EnhancementBonus{return value=
 function validArmor(value:unknown):value is ArmorId{return typeof value==='string'&&Object.hasOwn(ARMORS,value);}
 function isMagicArmor(id:MagicWardItemId):boolean{return id==='armor_enhancement';}
 function isMagicShield(id:MagicWardItemId):boolean{return id==='shield_enhancement';}
+function isMagicWeapon(id:MagicWardItemId):boolean{return id==='weapon_enhancement';}
+function validWeapon(value:unknown):value is WeaponId{return typeof value==='string'&&Object.hasOwn(WEAPONS,value);}
 /** Validación única de variantes parametrizadas; no inventar combinaciones de objetos. */
-function validateVariant(itemId:MagicWardItemId,damageType:unknown,armorId:unknown,enhancement:unknown):void{
+function validateVariant(itemId:MagicWardItemId,damageType:unknown,armorId:unknown,weaponId:unknown,enhancement:unknown):void{
   if(itemId==='ring_resistance'){
-    if(!validRingType(damageType)||armorId!==undefined||enhancement!==undefined)fail('El anillo requiere un tipo de daño válido y no admite armadura');
+    if(!validRingType(damageType)||armorId!==undefined||weaponId!==undefined||enhancement!==undefined)fail('El anillo requiere un tipo de daño válido y no admite otras variantes');
   }else if(isMagicArmor(itemId)){
-    if(!validArmor(armorId)||!validEnhancement(enhancement)||damageType!==undefined)fail('Armadura mágica: elige tipo y bonificador +1, +2 o +3');
+    if(!validArmor(armorId)||!validEnhancement(enhancement)||damageType!==undefined||weaponId!==undefined)fail('Armadura mágica: elige tipo y bonificador +1, +2 o +3');
   }else if(isMagicShield(itemId)){
-    if(armorId!==undefined||!validEnhancement(enhancement)||damageType!==undefined)fail('Escudo mágico: elige bonificador +1, +2 o +3');
-  }else if(damageType!==undefined||armorId!==undefined||enhancement!==undefined)fail('El objeto no admite propiedades de armadura o daño');
+    if(armorId!==undefined||weaponId!==undefined||!validEnhancement(enhancement)||damageType!==undefined)fail('Escudo mágico: elige bonificador +1, +2 o +3');
+  }else if(isMagicWeapon(itemId)){
+    if(!validWeapon(weaponId)||!validEnhancement(enhancement)||damageType!==undefined||armorId!==undefined)fail('Arma mágica: elige arma y bonificador +1, +2 o +3');
+  }else if(damageType!==undefined||armorId!==undefined||weaponId!==undefined||enhancement!==undefined)fail('Este objeto no admite variantes adicionales');
 }
 
 
@@ -101,14 +111,14 @@ export function validateMagicWards(value:unknown):readonly MagicWardEntry[]{
   let attunedCount=0;
   return value.map(raw=>{
     if(!record(raw))fail('Objeto mágico inválido');
-    only(raw,['instanceId','itemId','damageType','armorId','enhancement','worn','attuned'],'Objeto mágico');
-    const {instanceId,itemId,damageType,armorId,enhancement,worn,attuned}=raw;
+    only(raw,['instanceId','itemId','damageType','armorId','weaponId','enhancement','worn','attuned'],'Objeto mágico');
+    const {instanceId,itemId,damageType,armorId,weaponId,enhancement,worn,attuned}=raw;
     if(typeof instanceId!=='string'||!/^ward-[1-9]\d{0,4}$/.test(instanceId)||seen.has(instanceId))fail('Identificador de objeto mágico inválido o duplicado');
     seen.add(instanceId);
     if(!validTemplate(itemId))fail('Objeto mágico desconocido');
     if(typeof worn!=='boolean'||typeof attuned!=='boolean')fail('Estado de equipo o vinculación inválido');
     const template=MAGIC_WARD_CATALOG[itemId];
-    validateVariant(itemId,damageType,armorId,enhancement);
+    validateVariant(itemId,damageType,armorId,weaponId,enhancement);
     if(worn && isMagicArmor(itemId)){if(wornArmor)fail('Solo puedes llevar una armadura mágica');wornArmor=true;}
     if(worn && isMagicShield(itemId)){if(wornShield)fail('Solo puedes llevar un escudo mágico');wornShield=true;}
     if(!template.attunement&&attuned)fail('Este objeto no requiere vinculación');
@@ -120,7 +130,8 @@ export function validateMagicWards(value:unknown):readonly MagicWardEntry[]{
     }
     return {instanceId,itemId,...(itemId==='ring_resistance'?{damageType:damageType as RingResistanceType}:{}),
       ...(isMagicArmor(itemId)?{armorId:armorId as ArmorId,enhancement:enhancement as EnhancementBonus}:{}),
-      ...(isMagicShield(itemId)?{enhancement:enhancement as EnhancementBonus}:{}),worn,attuned};
+      ...(isMagicShield(itemId)?{enhancement:enhancement as EnhancementBonus}:{}),
+      ...(isMagicWeapon(itemId)?{weaponId:weaponId as WeaponId,enhancement:enhancement as EnhancementBonus}:{}),worn,attuned};
   });
 }
 
@@ -131,17 +142,18 @@ export function applyMagicWardAction(source:readonly MagicWardEntry[],action:Mag
   let result:readonly MagicWardEntry[];
   switch(action.type){
     case 'grant':{
-      only(action,['type','itemId','damageType','armorId','enhancement'],'Concesión de objeto mágico');
+      only(action,['type','itemId','damageType','armorId','weaponId','enhancement'],'Concesión de objeto mágico');
       if(!validTemplate(action.itemId))fail('Objeto mágico desconocido');
       if(current.length>=MAX_ITEMS)fail('Límite de doce objetos mágicos alcanzado');
-      validateVariant(action.itemId,action.damageType,action.armorId,action.enhancement);
+      validateVariant(action.itemId,action.damageType,action.armorId,action.weaponId,action.enhancement);
       const used=new Set(current.map(x=>x.instanceId));
       let nextNumber=1;
       while(used.has(`ward-${nextNumber}`))nextNumber++;
       result=[...current,{instanceId:`ward-${nextNumber}`,itemId:action.itemId,
         ...(action.itemId==='ring_resistance'?{damageType:action.damageType}:{}),
         ...(action.itemId==='armor_enhancement'?{armorId:action.armorId,enhancement:action.enhancement}:{}),
-        ...(action.itemId==='shield_enhancement'?{enhancement:action.enhancement}:{}),worn:false,attuned:false}];
+        ...(action.itemId==='shield_enhancement'?{enhancement:action.enhancement}:{}),
+        ...(action.itemId==='weapon_enhancement'?{weaponId:action.weaponId,enhancement:action.enhancement}:{}),worn:false,attuned:false}];
       break;
     }
     case 'wear':{
@@ -178,7 +190,7 @@ export function applyMagicWardAction(source:readonly MagicWardEntry[],action:Mag
 export function collectMagicWardDefenses(entries:readonly MagicWardEntry[]):readonly DeclaredDamageDefense[]{
   return validateMagicWards(entries).flatMap(item=>{
     if(!item.worn || (MAGIC_WARD_CATALOG[item.itemId].attunement&&!item.attuned))return [];
-    if(item.itemId==='cloak_protection'||item.itemId==='ring_protection'||isMagicArmor(item.itemId)||isMagicShield(item.itemId))return [];
+    if(item.itemId==='cloak_protection'||item.itemId==='ring_protection'||isMagicArmor(item.itemId)||isMagicShield(item.itemId)||isMagicWeapon(item.itemId))return [];
     const kind=item.itemId==='periapt_proof_poison'?'immunity':'resistance';
     const damageType:IncomingDamageType=item.itemId==='ring_resistance'?item.damageType!:item.itemId==='brooch_shielding'?'force':'poison';
     return [{id:`srd521:magic:${item.instanceId}`,source:`${MAGIC_WARD_CATALOG[item.itemId].label} (${item.instanceId})`,damageType,kind}];
@@ -194,6 +206,7 @@ export function collectMagicWardBonuses(entries:readonly MagicWardEntry[]):reado
 }>[]{
   return validateMagicWards(entries).flatMap(item=>{
     if(!item.worn)return [];
+    if(isMagicWeapon(item.itemId))return []; // El arma mejora ataques, nunca CA o salvaciones.
     if(isMagicArmor(item.itemId)||isMagicShield(item.itemId)){
       return [{id:item.instanceId,source:`${MAGIC_WARD_CATALOG[item.itemId].label} +${item.enhancement}`,
         armorClass:Number(item.enhancement),savingThrows:0}];

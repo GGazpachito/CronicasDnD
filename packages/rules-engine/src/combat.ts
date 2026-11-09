@@ -13,6 +13,8 @@ export type CombatAttackEntry = Readonly<{
   id:number;
   round:number;
   weaponId:WeaponId;
+  /** Ausentes en ataques anteriores a la actualización 24. */
+  magicWeaponInstanceId?:string; magicEnhancement?:1|2|3;
   naturalRoll:number;
   attackTotal:number;
   critical:boolean;
@@ -90,7 +92,9 @@ export function validateCombatState(value:unknown):CombatState{
   const seen=new Set<number>();let previous=0;
   const attacks:CombatAttackEntry[]=value.attacks.map((raw:unknown)=>{
     if(!record(raw))fail('Ataque registrado inválido');
-    exactKeys(raw,['id','round','weaponId','naturalRoll','attackTotal','critical','hit','damageTotal','grazeDamage','damageType','ammunitionSpent'],'Ataque');
+    exactKeys(raw,['id','round','weaponId','naturalRoll','attackTotal','critical','hit','damageTotal','grazeDamage','damageType','ammunitionSpent',
+      ...(raw.magicWeaponInstanceId===undefined?[]:['magicWeaponInstanceId']),
+      ...(raw.magicEnhancement===undefined?[]:['magicEnhancement'])],'Ataque');
     const id=bounded(raw.id,1,nextId-1,'ID de ataque');
     if(seen.has(id)||id<=previous)fail('Historial de ataques desordenado o duplicado');
     seen.add(id);previous=id;
@@ -98,6 +102,8 @@ export function validateCombatState(value:unknown):CombatState{
     if(!weapon(raw.weaponId))fail('Arma registrada desconocida');
     const stats=WEAPON_STATS[raw.weaponId];
     if(raw.damageType!==stats.damageType)fail('Tipo de daño incompatible con el arma');
+    if((raw.magicWeaponInstanceId===undefined)!==(raw.magicEnhancement===undefined))fail('Identidad del arma mágica incompleta');
+    if(raw.magicWeaponInstanceId!==undefined && (typeof raw.magicWeaponInstanceId!=='string'||!/^ward-[1-9]\d{0,4}$/.test(raw.magicWeaponInstanceId)||![1,2,3].includes(raw.magicEnhancement as number)))fail('Arma mágica registrada inválida');
     const ammo=raw.ammunitionSpent;
     if(ammo!==null&&ammo!==stats.ammunition)fail('Munición incompatible con el arma');
     if(stats.ammunition&&ammo!==stats.ammunition)fail('Falta el consumo de munición');
@@ -106,7 +112,8 @@ export function validateCombatState(value:unknown):CombatState{
     const grazeDamage=optionalDamage(raw.grazeDamage,'Daño de Rozar');
     return {id,round:eventRound,weaponId:raw.weaponId,naturalRoll:bounded(raw.naturalRoll,1,20,'d20'),
       attackTotal:bounded(raw.attackTotal,-1000,1000,'Total de ataque'),critical:raw.critical,hit:raw.hit,
-      damageTotal,grazeDamage,damageType:stats.damageType,ammunitionSpent:ammo as AmmoId|null};
+      damageTotal,grazeDamage,damageType:stats.damageType,ammunitionSpent:ammo as AmmoId|null,
+      ...(raw.magicWeaponInstanceId===undefined?{}:{magicWeaponInstanceId:raw.magicWeaponInstanceId as string,magicEnhancement:raw.magicEnhancement as 1|2|3})};
   });
   const effects:TrackedEffect[]=value.effects.map((raw:unknown)=>{
     if(!record(raw))fail('Efecto registrado inválido');
@@ -174,7 +181,14 @@ export function recordWeaponAttack(
   if(!profile||!resolution||!weapon(profile.weaponId))fail('Perfil de ataque inválido');
   const stats=WEAPON_STATS[profile.weaponId];
   if(profile.ammunition!==stats.ammunition||profile.damageType!==stats.damageType)fail('Perfil de arma incompatible');
-  if(!inventory||!Array.isArray(inventory.items)||!(inventory.items.some(i=>i.id===profile.weaponId&&i.quantity>=1)))fail('El personaje no posee esta arma');
+  if(!inventory||!Array.isArray(inventory.items))fail('El inventario es obligatorio');
+  const magic=profile.magicWeaponInstanceId;
+  if(magic!==undefined){
+    const found=inventory.magicItems?.find(x=>x.instanceId===magic);
+    if(!found||found.itemId!=='weapon_enhancement'||!found.worn||found.weaponId!==profile.weaponId||found.enhancement!==profile.magicEnhancement)
+      fail('El arma mágica ya no está disponible o su instancia no coincide');
+  }else if(profile.magicEnhancement!==undefined)fail('Bonificador mágico sin arma identificada');
+  else if(!inventory.items.some(i=>i.id===profile.weaponId&&i.quantity>=1))fail('El personaje no posee esta arma');
   if(typeof resolution.critical!=='boolean'||(resolution.hit!==null&&typeof resolution.hit!=='boolean'))fail('Resultado de ataque inválido');
   const damageTotal=optionalDamage(resolution.damageTotal,'Daño');
   const grazeDamage=optionalDamage(resolution.grazeDamage,'Rozar');
@@ -185,7 +199,8 @@ export function recordWeaponAttack(
   const entry:CombatAttackEntry={id:combat.nextId,round:combat.round,weaponId:profile.weaponId,
     naturalRoll:bounded(resolution.naturalRoll,1,20,'d20'),attackTotal:bounded(resolution.attackTotal,-1000,1000,'Total de ataque'),
     critical:resolution.critical,hit:resolution.hit,damageTotal,grazeDamage,
-    damageType:stats.damageType,ammunitionSpent:ammo};
+    damageType:stats.damageType,ammunitionSpent:ammo,
+    ...(magic===undefined?{}:{magicWeaponInstanceId:magic,magicEnhancement:profile.magicEnhancement})};
   return {inventoryAction,combat:{...combat,nextId:combat.nextId+1,attacks:[...combat.attacks,entry].slice(-MAX_ATTACKS)}};
 }
 

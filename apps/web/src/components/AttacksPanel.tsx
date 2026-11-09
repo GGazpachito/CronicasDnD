@@ -2,18 +2,17 @@
 
 import {useRef,useState} from 'react';
 import type {CalculatedFighterSheet} from '../../../../packages/rules-engine/src/sheet';
-import type {InventoryState} from '../../../../packages/rules-engine/src/inventory';
+import {hasEquippedShield,type InventoryState} from '../../../../packages/rules-engine/src/inventory';
 import type {CombatState} from '../../../../packages/rules-engine/src/combat';
 import {conditionKinds,evaluateConditionRoll,initialConditionLedger} from '../../../../packages/rules-engine/src/conditions';
-import type {MartialChoices,WeaponId} from '../../../../packages/rules-engine/src/martial';
-import {WEAPONS} from '../../../../packages/rules-engine/src/martial';
-import {calculateWeaponAttack,ownedWeapons,resolveWeaponAttack,WEAPON_STATS,type AttackResolution,type WeaponAttackProfile} from '../../../../packages/rules-engine/src/attacks';
+import type {MartialChoices} from '../../../../packages/rules-engine/src/martial';
+import {calculateOwnedWeaponAttack,ownedWeaponChoices,resolveWeaponAttack,WEAPON_STATS,type AttackResolution,type WeaponAttackProfile} from '../../../../packages/rules-engine/src/attacks';
 
 type Props={sheet:CalculatedFighterSheet|null;inventory:InventoryState|null;martial:MartialChoices|null;combat:CombatState|null;onRecord:(profile:WeaponAttackProfile,resolution:AttackResolution)=>void;canRecord:boolean};
 const signed=(n:number)=>n>=0?`+${n}`:`${n}`;
 const DAMAGE_LABELS={bludgeoning:'contundente',piercing:'perforante',slashing:'cortante'};
 export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,canRecord}:Props){
-  const [wanted,setWanted]=useState<WeaponId|null>(null);
+  const [wanted,setWanted]=useState<string|null>(null);
   const [useDex,setUseDex]=useState(false);
   const [thrown,setThrown]=useState(false);
   const [twoHands,setTwoHands]=useState(false);
@@ -40,13 +39,14 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
     targetIsGrappler:targetGrappler,targetIsCharmer:targetCharmer,
     otherCreatureCanSeeInvisible:otherCanSeeInvisible});
   const blockedByConditions=conditionRoll.actionForbidden;
-  const owned=inventory?ownedWeapons(inventory):[];
-  const id=wanted&&owned.includes(wanted)?wanted:owned[0];
+  const owned=inventory?ownedWeaponChoices(inventory):[];
+  const choice=owned.find(item=>item.selectionId===wanted)??owned[0];
+  const id=choice?.weaponId;
   const w=id?WEAPON_STATS[id]:null;
-  let profile:ReturnType<typeof calculateWeaponAttack>|null=null;
+  let profile:WeaponAttackProfile|null=null;
   let profileError='';
-  if(sheet&&martial&&id){
-    try{profile=calculateWeaponAttack(sheet,id,martial.fightingStyle,martial.weaponMasteries,{
+  if(sheet&&martial&&choice&&inventory){
+    try{profile=calculateOwnedWeaponAttack(sheet,inventory,choice.selectionId,martial.fightingStyle,martial.weaponMasteries,{
       ...(w?.finesse?{ability:useDex?'dexterity':'strength'}:{}),
       thrown:thrown&&Boolean(w?.thrownRange),twoHanded:twoHands&&Boolean(w?.versatileSides),
       lightExtraAttack:lightExtra&&Boolean(w?.light),otherWeaponHeld:otherWeapon,adjacentEnemy:adjacent,advantage,
@@ -59,9 +59,9 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
   const rollKey=JSON.stringify({profile,d20,otherD20,ac,dice});
   const resolved=computed?.key===rollKey?computed.value:null;
   const setResolved=(value:AttackResolution|null)=>{setComputed(value?{key:rollKey,value}:null);if(!value){confirmedRef.current=false;setConfirmation('');}};
-  const incompatibleShield=Boolean(inventory?.equipped.shield&&profile?.twoHanded);
+  const incompatibleShield=Boolean(inventory&&hasEquippedShield(inventory)&&profile?.twoHanded);
   const ammoCount=profile?.ammunition?inventory?.items.find(i=>i.id===profile!.ammunition)?.quantity??0:null;
-  function onChangeWeapon(next:WeaponId){setWanted(next);setUseDex(false);setThrown(false);setTwoHands(false);setOtherWeapon(false);setLightExtra(false);setResolved(null);setError('');setDice('');}
+  function onChangeWeapon(next:string){setWanted(next);setUseDex(false);setThrown(false);setTwoHands(false);setOtherWeapon(false);setLightExtra(false);setResolved(null);setError('');setDice('');}
   function calculate(){
     if(!profile||incompatibleShield||blockedByConditions)return;
     try{
@@ -86,9 +86,9 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
     {!sheet&&<p className="save-error" role="alert">Completa primero la creación del personaje.</p>}
     {sheet&&!martial&&<p className="save-error" role="alert">Selecciona un estilo de combate y tres maestrías en el apartado Equipo.</p>}
     {sheet&&martial&&owned.length===0&&<p className="muted-note">No tienes armas. Adquiere o añade alguna desde el inventario para mostrar ataques.</p>}
-    {sheet&&martial&&id&&<>
+    {sheet&&martial&&choice&&<>
       <div className="attack-form-grid">
-        <label className="field"><span>Arma disponible</span><select value={id} onChange={e=>onChangeWeapon(e.target.value as WeaponId)}>{owned.map(k=><option key={k} value={k}>{WEAPONS[k].name}</option>)}</select></label>
+        <label className="field"><span>Arma disponible</span><select value={choice.selectionId} onChange={e=>onChangeWeapon(e.target.value)}>{owned.map(k=><option key={k.selectionId} value={k.selectionId}>{k.label}</option>)}</select></label>
         <label className="field"><span>Distancia objetivo (pies, opcional)</span><input type="number" min="0" step="1" value={distance} placeholder="Sin distancia" onChange={e=>{setDistance(e.target.value);setResolved(null);}}/></label>
       </div>
       <div className="attack-options">
@@ -114,8 +114,8 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
       {incompatibleShield&&<p className="play-warning" role="alert">No puedes utilizar dos manos con un escudo equipado. Desequipa el escudo en el inventario.</p>}
       {profile&&<>
         <div className="attack-summary">
-          <div><span>Ataque</span><strong>{signed(profile.attackBonus)}</strong></div>
-          <div><span>Daño</span><strong>{profile.damageDice?`${profile.damageDice.count}d${profile.damageDice.sides}`:String(profile.fixedDamage)} {signed(profile.damageModifier)}</strong></div>
+          <div><span>Ataque{profile.magicEnhancement?` (+${profile.magicEnhancement} mágico)`:''}</span><strong>{signed(profile.attackBonus)}</strong></div>
+          <div><span>Daño{profile.magicEnhancement?` (+${profile.magicEnhancement} mágico)`:''}</span><strong>{profile.damageDice?`${profile.damageDice.count}d${profile.damageDice.sides}`:String(profile.fixedDamage)} {signed(profile.damageModifier)}</strong></div>
           <div><span>Tipo</span><strong>{DAMAGE_LABELS[profile.damageType]}</strong></div>
           <div><span>Tirada</span><strong>{profile.mode==='normal'?'Normal':profile.mode==='advantage'?'Ventaja':'Desventaja'}</strong></div>
           <div><span>Crítico natural</span><strong>{profile.criticalMinimum}–20</strong></div>
@@ -139,6 +139,7 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
         <ul className="attack-notes">{profile.notes.map((n,i)=><li key={`${id}-${i}`}>{n}</li>)}</ul>
       </>}
     </>}
+    <p className="muted-note">Una misma arma mágica conserva su identificador en el historial. Si la retiras o deja de estar preparada, no se podrá confirmar un ataque con ella.</p>
     <p className="muted-note">La confirmación registra el ataque y descuenta proyectiles disponibles; no aplica daño a enemigos ni simula turnos. Armas arrojadizas, efectos de maestría, salvaciones y munición recuperada se resuelven manualmente con el director.</p>
   </section>;
 }

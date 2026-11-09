@@ -5,6 +5,7 @@
 import type { CalculatedFighterSheet } from './sheet';
 import { WEAPONS, type WeaponId, type MasteryId, type FightingStyleId } from './martial';
 import type { InventoryState } from './inventory';
+import {validateMagicWards,type EnhancementBonus} from './magic-wards';
 
 export type DamageType = 'bludgeoning' | 'piercing' | 'slashing';
 export type DamageDice = Readonly<{ count: number; sides: number }>;
@@ -87,6 +88,8 @@ export type WeaponAttackOptions = Readonly<{
 }>;
 export type WeaponAttackProfile = Readonly<{
   weaponId: WeaponId; weaponName: string; ability:'strength'|'dexterity'; abilityModifier:number;
+  /** Identidad de la instancia: nunca se mejora otra copia de la misma arma. */
+  magicWeaponInstanceId?:string; magicEnhancement?:EnhancementBonus;
   attackBonus:number; damageModifier:number; damageDice:DamageDice|null; fixedDamage:number;
   damageType:DamageType; mode:'normal'|'advantage'|'disadvantage';
   criticalMinimum:19|20; mastery:MasteryId|null; masterySaveDC:number|null;
@@ -224,4 +227,37 @@ export function adjustGreatWeaponDice(raw:readonly number[],style:FightingStyleI
   for(const value of raw)integerBetween(value,1,profile.damageDice?.sides??1,'Dado de daño');
   if(style!=='great_weapon_fighting'||!profile.twoHanded||!WEAPON_STATS[profile.weaponId].twoHanded&&!WEAPON_STATS[profile.weaponId].versatileSides||WEAPON_STATS[profile.weaponId].kind!=='melee')return [...raw];
   return raw.map(v=>Math.max(3,v));
+}
+
+/** Diferencia las armas comunes de CADA instancia mágica del inventario.
+ * Una espada mundana y dos espadas mágicas siempre dan tres opciones distintas.
+ */
+export type OwnedWeaponChoice=Readonly<{
+  selectionId:string; weaponId:WeaponId; label:string;
+  magicWeaponInstanceId?:string; enhancement?:EnhancementBonus;
+}>;
+export function ownedWeaponChoices(inventory:InventoryState):OwnedWeaponChoice[]{
+  const mundane=ownedWeapons(inventory).map(weaponId=>({selectionId:`normal:${weaponId}`,weaponId,label:WEAPONS[weaponId].name}));
+  const magical=validateMagicWards(inventory.magicItems??[]).filter(x=>x.itemId==='weapon_enhancement'&&x.worn).map(item=>({
+    selectionId:`magic:${item.instanceId}`,weaponId:item.weaponId!,
+    label:`${WEAPONS[item.weaponId!].name} +${item.enhancement} (${item.instanceId})`,
+    magicWeaponInstanceId:item.instanceId,enhancement:item.enhancement,
+  }));
+  return [...mundane,...magical];
+}
+/** Calcula el bonificador mágico UNA sola vez, para la instancia seleccionada.
+ * No modifica maestrías, cantidad de dados del crítico, ni daño de Rozar en un fallo.
+ */
+export function calculateOwnedWeaponAttack(sheet:CalculatedFighterSheet,inventory:InventoryState,
+  selectionId:string,style:FightingStyleId,masteries:readonly WeaponId[],options:WeaponAttackOptions={}
+):WeaponAttackProfile{
+  const choice=ownedWeaponChoices(inventory).find(c=>c.selectionId===selectionId);
+  if(!choice)throw new RangeError('No posees o no tienes preparada esa arma');
+  const base=calculateWeaponAttack(sheet,choice.weaponId,style,masteries,options);
+  if(!choice.magicWeaponInstanceId)return base;
+  const improvement=choice.enhancement!;
+  return {...base,weaponName:choice.label,attackBonus:base.attackBonus+improvement,
+    damageModifier:base.damageModifier+improvement,
+    magicWeaponInstanceId:choice.magicWeaponInstanceId,magicEnhancement:improvement,
+    notes:[...base.notes,`Bonificador +${improvement} por esta arma mágica. No se duplica en críticos ni en Rozar.`]};
 }

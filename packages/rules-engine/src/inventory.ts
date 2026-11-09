@@ -57,7 +57,7 @@ export type InventoryAction =
   | Readonly<{type:'remove';itemId:InventoryItemId;quantity:number}>
   | Readonly<{type:'equip_armor';armor:ArmorId|null}>
   | Readonly<{type:'equip_shield';equipped:boolean}>
-  | Readonly<{type:'magic_grant';itemId:MagicWardItemId;damageType?:RingResistanceType;armorId?:ArmorId;enhancement?:EnhancementBonus}>
+  | Readonly<{type:'magic_grant';itemId:MagicWardItemId;damageType?:RingResistanceType;armorId?:ArmorId;weaponId?:WeaponId;enhancement?:EnhancementBonus;instanceId?:string}>
   | Readonly<{type:'magic_wear';instanceId:string;worn:boolean}>
   | Readonly<{type:'magic_attune';instanceId:string;attuned:boolean}>
   | Readonly<{type:'magic_remove';instanceId:string}>;
@@ -157,11 +157,17 @@ export function applyInventoryAction(state:InventoryState, action:InventoryActio
       break;
     }
     case 'magic_grant':{
-      if(Object.keys(action).some(k=>!['type','itemId','damageType','armorId','enhancement'].includes(k)))error('Campos inesperados en concesión mágica');
-      next.magicItems=[...applyMagicWardAction(next.magicItems,{type:'grant',itemId:action.itemId,
+      if(Object.keys(action).some(k=>!['type','itemId','damageType','armorId','weaponId','enhancement','instanceId'].includes(k)))error('Campos inesperados en concesión mágica');
+      const created=applyMagicWardAction(next.magicItems,{type:'grant',itemId:action.itemId,
         ...(action.damageType===undefined?{}:{damageType:action.damageType}),
         ...(action.armorId===undefined?{}:{armorId:action.armorId}),
-        ...(action.enhancement===undefined?{}:{enhancement:action.enhancement})})];break;
+        ...(action.weaponId===undefined?{}:{weaponId:action.weaponId}),
+        ...(action.enhancement===undefined?{}:{enhancement:action.enhancement})});
+      // Las concesiones anteriores no guardaban ID explícito: siguen usando su regla original.
+      // Las nuevas conservan un ID único incluso si los objetos anteriores se descartaron.
+      next.magicItems=action.instanceId===undefined?[...created]:[...validateMagicWards(created.map((item,index)=>
+        index===created.length-1?{...item,instanceId:action.instanceId!}:item))];
+      break;
     }
     case 'magic_wear':{
       if(Object.keys(action).some(k=>!['type','instanceId','worn'].includes(k)))error('Campos inesperados en acción mágica');
@@ -195,6 +201,24 @@ export function hasEquippedShield(state:InventoryState):boolean{
   return state.equipped.shield||validateMagicWards(state.magicItems??[]).some(m=>m.itemId==='shield_enhancement'&&m.worn);
 }
 
+/** Reserva un identificador que no reutiliza otro concedido antes, incluso si fue retirado.
+ * Los diarios antiguos sin ID explícito conservan su semántica al reproducirse.
+ */
+export function nextMagicInstanceId(actions:readonly InventoryAction[]):string{
+  if(!Array.isArray(actions))error('Historial de inventario inválido');
+  let grants=0,highest=0;
+  for(const action of actions){
+    if(action.type==='magic_grant')grants++;
+    if('instanceId' in action && typeof action.instanceId==='string'){
+      const match=/^ward-([1-9]\d{0,4})$/.exec(action.instanceId);
+      if(match)highest=Math.max(highest,Number(match[1]));
+    }
+  }
+  const next=Math.max(grants,highest)+1;
+  if(next>99_999)error('Se ha alcanzado el límite de identificadores mágicos');
+  return `ward-${next}`;
+}
+
 /** El diario de acciones permite reconstruir el estado sin modificar el equipo de origen. */
 export function replayInventory(starting:StartingInventory,initialArmor:ArmorId|null,actions:readonly InventoryAction[]=[]):InventoryState {
   if(!Array.isArray(actions)||actions.length>MAX_ACTIONS)error('Historial de inventario inválido o demasiado largo');
@@ -217,15 +241,20 @@ export function importLegacyMagicWards(actions:readonly InventoryAction[],legacy
   let existing:readonly MagicWardEntry[]=[];
   for(const action of actions){
     switch(action.type){
-      case 'magic_grant':existing=applyMagicWardAction(existing,{type:'grant',itemId:action.itemId,...(action.damageType===undefined?{}:{damageType:action.damageType}),
-          ...(action.armorId===undefined?{}:{armorId:action.armorId}),...(action.enhancement===undefined?{}:{enhancement:action.enhancement})});break;
+      case 'magic_grant':{
+        const generated=applyMagicWardAction(existing,{type:'grant',itemId:action.itemId,...(action.damageType===undefined?{}:{damageType:action.damageType}),
+          ...(action.armorId===undefined?{}:{armorId:action.armorId}),...(action.weaponId===undefined?{}:{weaponId:action.weaponId}),...(action.enhancement===undefined?{}:{enhancement:action.enhancement})});
+        existing=action.instanceId===undefined?generated:validateMagicWards(generated.map((item,index)=>
+          index===generated.length-1?{...item,instanceId:action.instanceId!}:item));
+        break;
+      }
       case 'magic_wear':existing=applyMagicWardAction(existing,{type:'wear',instanceId:action.instanceId,worn:action.worn});break;
       case 'magic_attune':existing=applyMagicWardAction(existing,{type:'attune',instanceId:action.instanceId,attuned:action.attuned});break;
       case 'magic_remove':existing=applyMagicWardAction(existing,{type:'remove',instanceId:action.instanceId});break;
     }
   }
   for(const item of old){
-    const variant={...(item.damageType?{damageType:item.damageType}:{}),...(item.armorId?{armorId:item.armorId}:{}),
+    const variant={...(item.damageType?{damageType:item.damageType}:{}),...(item.armorId?{armorId:item.armorId}:{}),...(item.weaponId?{weaponId:item.weaponId}:{}),
       ...(item.enhancement?{enhancement:item.enhancement}:{})};
     const grant:InventoryAction={type:'magic_grant',itemId:item.itemId,...variant};
     existing=applyMagicWardAction(existing,{type:'grant',itemId:item.itemId,...variant});
