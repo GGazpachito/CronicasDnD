@@ -28,8 +28,13 @@ describe('Guardado de personajes v1',()=>{
     expect(restored.inventory?.equipped.shield).toBe(true);
     expect(restored.sheet.armorClass).toBe(19);
   });
-  it('rechaza versiones desconocidas',()=>{
-    expect(()=>validateCharacterSnapshot({...makeCharacterSnapshot(input()),schemaVersion:3})).toThrow();
+  it('rechaza versiones desconocidas', () => {
+    expect(() =>
+      validateCharacterSnapshot({
+        ...makeCharacterSnapshot(input()),
+        schemaVersion: 3
+      })
+    ).toThrow();
   });
   it('rechaza personajes con elecciones invalidas',()=>{
     expect(()=>makeCharacterSnapshot({...input(),level:5 as 1})).toThrow();

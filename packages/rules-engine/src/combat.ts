@@ -5,7 +5,8 @@
 import { WEAPON_STATS, type AttackResolution, type WeaponAttackProfile, type DamageType } from './attacks';
 import { WEAPONS, type WeaponId } from './martial';
 import { applyInventoryAction, type InventoryAction, type InventoryItemId, type InventoryState } from './inventory';
-import {advanceConditionRound,initialConditionLedger,validateConditionLedger,type ConditionId,type ConditionLedger} from './conditions';
+import {advanceConditionRound,initialConditionLedger,validateConditionLedger,type ConditionId,type ConditionLedger,type RollMode} from './conditions';
+import type {IncomingDamageType,DamageMitigation} from './incoming';
 
 type AmmoId = NonNullable<WeaponAttackProfile['ammunition']>;
 export type CombatAttackEntry = Readonly<{
@@ -28,10 +29,16 @@ export type TrackedEffect = Readonly<{
   remainingRounds:number|null;
   notes:string;
 }>;
+export type ReceivedAttackEntry = Readonly<{
+  id:number;round:number;attacker:string;naturalRoll:number;attackTotal:number;armorClass:number;mode:RollMode;
+  hit:boolean;critical:boolean;damageType:IncomingDamageType;rolledDamage:number;effectiveDamage:number;mitigation:DamageMitigation;
+}>;
 export type CombatState = Readonly<{
   round:number;
   nextId:number;
   attacks:readonly CombatAttackEntry[];
+  /** Opcional: historial de ataques recibidos (compatible con guardados antiguos). */
+  receivedAttacks?:readonly ReceivedAttackEntry[];
   effects:readonly TrackedEffect[];
   /** Opcional para compatibilidad con los guardados anteriores a la actualización 17. */
   conditions?:ConditionLedger;
@@ -73,7 +80,7 @@ export function initialCombatState():CombatState{return {round:1,nextId:1,attack
 /** Valida y clona estados cargados de PostgreSQL (no confia en el JSON recibido). */
 export function validateCombatState(value:unknown):CombatState{
   if(!record(value))fail('Estado de combate inválido');
-  exactKeys(value,value.conditions===undefined?['round','nextId','attacks','effects']:['round','nextId','attacks','effects','conditions'],'Combate');
+  exactKeys(value,['round','nextId','attacks','effects',...(value.conditions===undefined?[]:['conditions']),...(value.receivedAttacks===undefined?[]:['receivedAttacks'])],'Combate');
   const round=bounded(value.round,1,MAX_ROUNDS,'Ronda');
   const nextId=bounded(value.nextId,1,MAX_ID,'Siguiente ID');
   if(!Array.isArray(value.attacks)||value.attacks.length>MAX_ATTACKS)fail('Historial de ataques demasiado largo');
@@ -110,7 +117,29 @@ export function validateCombatState(value:unknown):CombatState{
   });
   const conditions=value.conditions===undefined?undefined:validateConditionLedger(value.conditions,nextId);
   if(conditions){for(const c of conditions.instances){if(seen.has(c.id))fail('ID de evento duplicado');seen.add(c.id);}}
-  return {round,nextId,attacks,effects,...(conditions?{conditions}:{})};
+  let receivedAttacks:ReceivedAttackEntry[]|undefined;
+  if(value.receivedAttacks!==undefined){
+    if(!Array.isArray(value.receivedAttacks)||value.receivedAttacks.length>MAX_ATTACKS)fail('Historial de ataques recibidos inválido');
+    receivedAttacks=value.receivedAttacks.map((raw:unknown)=>{
+      if(!record(raw))fail('Ataque recibido inválido');
+      exactKeys(raw,['id','round','attacker','naturalRoll','attackTotal','armorClass','mode','hit','critical','damageType','rolledDamage','effectiveDamage','mitigation'],'Ataque recibido');
+      const id=bounded(raw.id,1,nextId-1,'ID de ataque recibido');
+      if(seen.has(id))fail('ID de evento duplicado');seen.add(id);
+      const eventRound=bounded(raw.round,1,round,'Ronda de ataque recibido');
+      if(!['normal','advantage','disadvantage'].includes(raw.mode as string)||typeof raw.hit!=='boolean'||typeof raw.critical!=='boolean'||(raw.critical&&!raw.hit))fail('Resultado de ataque recibido inválido');
+      if(!['acid','bludgeoning','cold','fire','force','lightning','necrotic','piercing','poison','psychic','radiant','slashing','thunder'].includes(raw.damageType as string))fail('Tipo de daño recibido inválido');
+      if(!['normal','resistance','vulnerability','both','immunity'].includes(raw.mitigation as string))fail('Mitigación inválida');
+      if(raw.attacker===undefined||typeof raw.attacker!=='string'||!raw.attacker.trim()||raw.attacker.length>80||/[\u0000-\u001f]/.test(raw.attacker))fail('Atacante inválido');
+      const effectiveDamage=bounded(raw.effectiveDamage,0,100_000,'Daño efectivo');
+      if(!raw.hit&&effectiveDamage!==0)fail('Un ataque fallido no causa daño de impacto');
+      return {id,round:eventRound,attacker:raw.attacker.trim(),naturalRoll:bounded(raw.naturalRoll,1,20,'d20 recibido'),
+        attackTotal:bounded(raw.attackTotal,-200,200,'Total recibido'),armorClass:bounded(raw.armorClass,0,100,'CA recibida'),
+        mode:raw.mode as RollMode,hit:raw.hit,critical:raw.critical,damageType:raw.damageType as IncomingDamageType,
+        rolledDamage:bounded(raw.rolledDamage,0,50_000,'Daño de la tirada'),effectiveDamage,
+        mitigation:raw.mitigation as DamageMitigation};
+    });
+  }
+  return {round,nextId,attacks,effects,...(conditions?{conditions}:{}),...(receivedAttacks?{receivedAttacks}:{})};
 }
 
 /** Registrar un ataque y descontar su municion forman una sola operacion logica.
@@ -191,4 +220,12 @@ export function changeExhaustion(state:CombatState,delta:number):CombatState{
   const exhaustion=ledger.exhaustion+delta;
   bounded(exhaustion,0,6,'Agotamiento final');
   return {...s,conditions:{...ledger,exhaustion}};
+}
+
+/** Registra un ataque enemigo ya resuelto. Usa el contador común de eventos para evitar IDs duplicados. */
+export function appendReceivedAttack(state:CombatState,entry:Omit<ReceivedAttackEntry,'id'|'round'>):CombatState{
+  const s=validateCombatState(state);
+  if(s.nextId>=MAX_ID)fail('Límite de historial de combate alcanzado');
+  const event:ReceivedAttackEntry={...entry,id:s.nextId,round:s.round};
+  return validateCombatState({...s,nextId:s.nextId+1,receivedAttacks:[...(s.receivedAttacks??[]),event].slice(-MAX_ATTACKS)});
 }
