@@ -22,7 +22,8 @@ import { FIGHTING_STYLES, WEAPONS, FIGHTER_PACKAGES, type FightingStyleId, type 
 import { ORIGIN_FEATS, CRAFTER_TOOLS, MUSICAL_INSTRUMENTS, TOOL_NAMES, SKILLED_OPTIONS, type ToolId } from "../../../../packages/rules-engine/src/origin-feats";
 import { SPELL_LISTS, MAGIC_ABILITY_OPTIONS, spellName, type SpellListId, type SpellAbility, type MagicInitiateSelection } from "../../../../packages/rules-engine/src/origin-magic";
 import { BACKGROUND_PACKAGES, GAMING_SETS, ITEM_NAMES, combineStartingInventory, validateBackgroundEquipment, type BackgroundPackageId, type GamingSetId } from "../../../../packages/rules-engine/src/background-equipment";
-import { INVENTORY_NAMES, INVENTORY_PRICES_CP, replayInventory, formatCopper, type InventoryAction, type InventoryItemId } from "../../../../packages/rules-engine/src/inventory";
+import { INVENTORY_NAMES, INVENTORY_PRICES_CP, replayInventory, importLegacyMagicWards, formatCopper, type InventoryAction, type InventoryItemId } from "../../../../packages/rules-engine/src/inventory";
+import {MAGIC_WARD_CATALOG} from "../../../../packages/rules-engine/src/magic-wards";
 
 const NAMES: Record<Ability, string> = {strength:'Fuerza',dexterity:'Destreza',constitution:'Constitución',intelligence:'Inteligencia',wisdom:'Sabiduría',charisma:'Carisma'};
 const SKILL_NAMES: Record<Skill,string> = {
@@ -92,8 +93,8 @@ export default function Home(){
     try{
       const updated=[...activeActions,action];
       replayInventory(starting,FIGHTER_PACKAGES[starter].initialArmor,updated);
-      setInventoryEdits({key:inventoryKey,actions:updated});setInventoryError(null);
-    }catch(e){setInventoryError(e instanceof Error?e.message:'Operación no válida');}
+      setInventoryEdits({key:inventoryKey,actions:updated});setInventoryError(null);return null;
+    }catch(e){const message=e instanceof Error?e.message:'Operación no válida';setInventoryError(message);return message;}
   }
   function undoTransaction(){if(activeActions.length) {setInventoryEdits({key:inventoryKey,actions:activeActions.slice(0,-1)});setInventoryError(null);}}
   function resetTransactions(){setInventoryEdits({key:inventoryKey,actions:[]});setInventoryError(null);}
@@ -164,7 +165,18 @@ export default function Home(){
     if(!sheet||!sessionCheck.state||sessionCheck.outOfSync)return;
     setAdventure(updateAdventureCombat(sessionCheck.state,combat,sheet));
   }
-  function loadSavedSnapshot(snapshot:CharacterSnapshot){loadSavedInput(snapshot.input);setAdventure(snapshot.adventure);}
+  function loadSavedSnapshot(snapshot:CharacterSnapshot){
+    // Los personajes de la fase 4.9 almacenaban objetos mágicos en AdventureState.
+    // Convertimos sus instancias al historial único una sola vez al cargarlos.
+    const legacy=snapshot.adventure.magicWards??[];
+    if(legacy.length&&snapshot.input.martial&&snapshot.input.backgroundEquipment){
+      const actions=importLegacyMagicWards(snapshot.input.inventoryActions??[],legacy);
+      const migrated={...snapshot.input,inventoryActions:actions};
+      calculateGuidedFighter(migrated); // Comprobar la migración antes de cambiar la UI.
+      loadSavedInput(migrated);
+      setAdventure({...snapshot.adventure,magicWards:[]});
+    }else {loadSavedInput(snapshot.input);setAdventure(snapshot.adventure);}
+  }
   const taken=[...bg.skills,...fighterSkills];
   const humanCandidates=SKILLS.filter(s=>!taken.includes(s));
   const elfCandidates=(['insight','perception','survival'] as const).filter(s=>!taken.includes(s));
@@ -184,11 +196,11 @@ export default function Home(){
   return <main className="app-shell">
     <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Creador guiado · D&D 2024</span></div></div><div className="status"><span className="status-dot"/> Motor conectado · Guardado local</div></header>
     <div className="content">
-      <div className="intro"><div><span className="eyebrow">PROTOTIPO 21 / CATÁLOGO DEFENSIVO MÁGICO</span><h1>Da forma a <em>tu aventurero.</em></h1><p>Guerrero de niveles 1–3. Tus decisiones de origen se validan y se reflejan en la hoja calculada.</p></div><span className="edition">PHB 2024 + SRD</span></div>
+      <div className="intro"><div><span className="eyebrow">PROTOTIPO 22 / INVENTARIO MÁGICO UNIFICADO</span><h1>Da forma a <em>tu aventurero.</em></h1><p>Guerrero de niveles 1–3. Tus decisiones de origen se validan y se reflejan en la hoja calculada.</p></div><span className="edition">PHB 2024 + SRD</span></div>
       <SaveLoadPanel input={input} adventure={sessionCheck.outOfSync?null:sessionCheck.state} valid={Boolean(output.result&&!sessionCheck.outOfSync)} onLoad={loadSavedSnapshot}/>
       <PlayPanel sheet={sheet??null} state={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
       <SurvivalPanel sheet={sheet??null} state={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
-      <MagicWardsPanel state={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
+      <MagicWardsPanel inventory={output.result?.inventory??null} outOfSync={sessionCheck.outOfSync} onInventoryAction={transact}/>
       <IncomingAttacksPanel sheet={sheet??null} state={sessionCheck.state} species={output.result?.origin.species??null} inventory={output.result?.inventory??null} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
       <ConditionsPanel combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} outOfSync={sessionCheck.outOfSync} onChange={handleCombatChange} baseSpeed={output.result?.origin.speedFeet??30}/>
       <AttacksPanel combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} sheet={sheet??null} inventory={output.result?.inventory??null} martial={input.martial??null} onRecord={confirmWeaponAttack} canRecord={Boolean(sheet&&!sessionCheck.outOfSync&&sessionCheck.state&&sessionCheck.state.fighter.hitPoints.current>0&&conditionCapabilities(sessionCheck.state.combat.conditions??initialConditionLedger()).canTakeAction)}/>
@@ -293,9 +305,12 @@ export default function Home(){
             <div className="two-col"><div className="preview-section"><div className="section-label"><h3>Habilidades</h3><span>Competencias elegidas</span></div><div className="data-list">{SKILLS.map(k=><div className="data-row" key={k}><span>{SKILL_NAMES[k]} {taken.includes(k)||((species==='human'&&humanSkill===k)||(species==='elf'&&elfSkill===k))?'•':''}</span><span><strong>{signed(sheet.skillBonuses[k])}</strong>{sheet.skillRollModes[k]!=='normal'&&<b className="mode-chip">{sheet.skillRollModes[k]==='advantage'?'Ventaja':'Desventaja'}</b>}</span></div>)}</div></div><div className="preview-section"><div className="section-label"><h3>Origen y rasgos</h3><span>PHB 2024</span></div><div className="resource-grid">{Object.entries(sheet.resources).map(([id,r])=>r&&<div className="resource-card" key={id}><span>{id==='second_wind'?'Segundo aliento':'Acción súbita'}</span><strong>{!sessionCheck.outOfSync&&sessionCheck.state?sessionCheck.state.fighter.resources[id as 'second_wind'|'action_surge']?.current??r.current:r.current}/{r.maximum}</strong></div>)}</div><p className="muted-note">Tamaño: {output.result.origin.size==='medium'?'Mediano':'Pequeño'} · Velocidad: {output.result.origin.speedFeet} pies</p><p className="muted-note">Dote del trasfondo: {originFeatName(bg.feat)}{output.result.origin.additionalFeat?` · Dote humana: ${FEATS[output.result.origin.additionalFeat]}`:''}</p><p className="muted-note">Herramientas: {output.result.origin.tools.join(', ')}</p>{output.result.origin.luckPointsMaximum!==undefined&&<p className="muted-note">Puntos de suerte máximos: {output.result.origin.luckPointsMaximum} (sin gestión de gasto)</p>}{output.result.martial&&<><p className="muted-note">Estilo: {FIGHTING_STYLES[output.result.martial.choices.fightingStyle]} · Dinero de clase: {output.result.martial.gold} po</p><p className="muted-note">Maestrías: {output.result.martial.masteries.map(m=>`${m.weapon} (${m.property})`).join(', ')}</p></>}
             <ul className="feature-list">{sheet.features.map(f=><li key={f}>{FEATURES[f]??f}</li>)}</ul></div></div>
             {output.result.inventory&&<div className="preview-section inventory-section">
-              <div className="section-label"><h3>Inventario actual</h3><span>{output.result.inventory.items.length} tipos</span></div>
+              <div className="section-label"><h3>Inventario actual</h3><span>{output.result.inventory.items.length} tipos comunes · {output.result.inventory.magicItems.length} mágicos</span></div>
               <div className="money-summary"><strong>{formatCopper(output.result.inventory.coinsCopper)}</strong><span>Saldo inicial: {output.result.startingInventory?.totalGold??0} po · {activeActions.length} operaciones</span></div>
               <div className="data-list">{output.result.inventory.items.length===0&&<p className="muted-note">No hay objetos en tu inventario.</p>}{output.result.inventory.items.map(it=><div className="data-row" key={it.id}><span>{it.name}<small className="item-origin">{it.sources.map(src=>`${src.from==='class'?'Clase':src.from==='background'?'Trasfondo':src.from==='purchase'?'Comprado':'Botín'} ×${src.quantity}`).join(' + ')}{armor===it.id?' · EQUIPADA':''}{shield&&it.id==='shield'?' · EQUIPADO':''}</small></span><strong>×{it.quantity}</strong></div>)}</div>
+              {output.result.inventory.magicItems.length>0&&<div className="data-list">{output.result.inventory.magicItems.map(it=><div className="data-row" key={it.instanceId}>
+                <span>{MAGIC_WARD_CATALOG[it.itemId].label}{it.damageType?` (${it.damageType})`:''}<small className="item-origin">Objeto mágico recibido del DM · {it.worn?'Puesto':'Guardado'} · {it.attuned?'Vinculado':MAGIC_WARD_CATALOG[it.itemId].attunement?'Sin vincular':'Sin vinculación requerida'}</small></span><strong>×1</strong>
+              </div>)}</div>}
               <p className="muted-note">Equipo: {armor?INVENTORY_NAMES[armor]:'sin armadura'} · Escudo: {shield?'sí':'no'} · La CA se recalcula al equipar o desequipar.</p>
               <p className="muted-note">Los paquetes de aventurero siguen siendo un único objeto. El inventario puede guardarse mediante el panel Mis personajes.</p>
             </div>}

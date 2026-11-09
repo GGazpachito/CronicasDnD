@@ -1,6 +1,7 @@
 /** Fase 4.9. Registro de objetos defensivos mágicos del SRD 5.2.1 (D&D 2024).
  * Datos y operaciones propios; jamás se ejecutan scripts procedentes de homebrew.
- * Este registro se guarda con la partida. Todavía no está unido al inventario común.
+ * El catálogo se utiliza desde el inventario único; AdventureState conserva
+ * una vía de lectura para guardados anteriores a la fase 4.10.
  */
 import type {DeclaredDamageDefense} from './damage-defenses';
 import type {IncomingDamageType} from './incoming';
@@ -21,6 +22,14 @@ export const MAGIC_WARD_CATALOG = {
   periapt_proof_poison: {
     label:'Amuleto antivenenos', attunement:true,
     note:'Inmunidad al daño de veneno. La inmunidad a la condición Envenenado se muestra como recordatorio, pendiente de integrarla con el panel de condiciones.'
+  },
+  cloak_protection: {
+    label:'Capa de protección', attunement:true,
+    note:'+1 a Clase de Armadura y tiradas de salvación al llevarla puesta y estar vinculado.'
+  },
+  ring_protection: {
+    label:'Anillo de protección', attunement:true,
+    note:'+1 a Clase de Armadura y tiradas de salvación al llevarlo puesto y estar vinculado.'
   }
 } as const;
 export type MagicWardItemId=keyof typeof MAGIC_WARD_CATALOG;
@@ -137,8 +146,23 @@ export function applyMagicWardAction(source:readonly MagicWardEntry[],action:Mag
 export function collectMagicWardDefenses(entries:readonly MagicWardEntry[]):readonly DeclaredDamageDefense[]{
   return validateMagicWards(entries).flatMap(item=>{
     if(!item.worn || (MAGIC_WARD_CATALOG[item.itemId].attunement&&!item.attuned))return [];
+    if(item.itemId==='cloak_protection'||item.itemId==='ring_protection')return [];
     const kind=item.itemId==='periapt_proof_poison'?'immunity':'resistance';
     const damageType:IncomingDamageType=item.itemId==='ring_resistance'?item.damageType!:item.itemId==='brooch_shielding'?'force':'poison';
     return [{id:`srd521:magic:${item.instanceId}`,source:`${MAGIC_WARD_CATALOG[item.itemId].label} (${item.instanceId})`,damageType,kind}];
+  });
+}
+
+/** Bonificadores fijos y acumulables concedidos por objetos mágicos activos.
+ * Cada instancia produce fuentes únicas; la hoja aplica sus valores mediante el
+ * mismo sistema declarativo que utiliza para los otros modificadores.
+ */
+export function collectMagicWardBonuses(entries:readonly MagicWardEntry[]):readonly Readonly<{
+  id:string; source:string; armorClass:number; savingThrows:number;
+}>[]{
+  return validateMagicWards(entries).flatMap(item=>{
+    if(!item.worn||!item.attuned)return [];
+    if(item.itemId!=='cloak_protection'&&item.itemId!=='ring_protection')return [];
+    return [{id:item.instanceId,source:MAGIC_WARD_CATALOG[item.itemId].label,armorClass:1,savingThrows:1}];
   });
 }

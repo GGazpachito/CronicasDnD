@@ -1,11 +1,12 @@
 /** Paso 12: inventario editable y transacciones deterministas para el Guerrero 2024.
  * Valores monetarios enteros en piezas de cobre (100 pc = 1 po).
  * Precios seleccionados del PHB 2024, cap. 6, pp. 213, 215, 219 y 223.
- * No representa disponibilidad comercial ni objetos mágicos.
+ * Los objetos mágicos se incorporan como instancias únicas sin precio normalizado.
  */
 import { ARMORS, type ArmorId } from './defense';
 import { ITEM_NAMES, type CatalogItemId, type StartingInventory } from './background-equipment';
 import { WEAPONS, type WeaponId } from './martial';
+import {applyMagicWardAction,validateMagicWards,type MagicWardEntry,type MagicWardItemId,type RingResistanceType} from './magic-wards';
 
 export type InventoryItemId = CatalogItemId | ArmorId | WeaponId | 'shield' | 'bolt' | 'bullet' | 'needle' | 'sling_bullet';
 export type InventorySource = 'class' | 'background' | 'purchase' | 'loot';
@@ -19,6 +20,8 @@ export type InventoryState = Readonly<{
   coinsCopper: number;
   items: readonly InventoryLine[];
   equipped: Readonly<{armor: ArmorId | null; shield: boolean}>;
+  /** Objetos mágicos y su vinculación, dentro del mismo inventario persistente. */
+  magicItems: readonly MagicWardEntry[];
 }>;
 
 const ARMOR_NAMES:Readonly<Record<ArmorId,string>> = {
@@ -53,7 +56,11 @@ export type InventoryAction =
   | Readonly<{type:'add';itemId:InventoryItemId;quantity:number}>
   | Readonly<{type:'remove';itemId:InventoryItemId;quantity:number}>
   | Readonly<{type:'equip_armor';armor:ArmorId|null}>
-  | Readonly<{type:'equip_shield';equipped:boolean}>;
+  | Readonly<{type:'equip_shield';equipped:boolean}>
+  | Readonly<{type:'magic_grant';itemId:MagicWardItemId;damageType?:RingResistanceType}>
+  | Readonly<{type:'magic_wear';instanceId:string;worn:boolean}>
+  | Readonly<{type:'magic_attune';instanceId:string;attuned:boolean}>
+  | Readonly<{type:'magic_remove';instanceId:string}>;
 
 const MAX_ACTIONS=200;
 const MAX_COINS=1_000_000_000_000;
@@ -71,8 +78,8 @@ function price(id:InventoryItemId):number {
   return p;
 }
 function itemCount(state:InventoryState,id:InventoryItemId):number {return state.items.find(x=>x.id===id)?.quantity??0;}
-function clone(state:InventoryState): {coinsCopper:number;items:{id:InventoryItemId;name:string;quantity:number;sources:{from:InventorySource;quantity:number}[]}[];equipped:{armor:ArmorId|null;shield:boolean}} {
-  return {coinsCopper:state.coinsCopper,items:state.items.map(x=>({id:x.id,name:x.name,quantity:x.quantity,sources:x.sources.map(s=>({...s}))})),equipped:{...state.equipped}};
+function clone(state:InventoryState): {coinsCopper:number;items:{id:InventoryItemId;name:string;quantity:number;sources:{from:InventorySource;quantity:number}[]}[];equipped:{armor:ArmorId|null;shield:boolean};magicItems:MagicWardEntry[]} {
+  return {coinsCopper:state.coinsCopper,items:state.items.map(x=>({id:x.id,name:x.name,quantity:x.quantity,sources:x.sources.map(s=>({...s}))})),equipped:{...state.equipped},magicItems:validateMagicWards(state.magicItems??[]).map(x=>({...x}))};
 }
 function addLine(state:ReturnType<typeof clone>,id:InventoryItemId,quantity:number,from:InventorySource):void{
   const existing=state.items.find(x=>x.id===id);
@@ -104,7 +111,7 @@ function money(value:number):number {
 export function initialInventoryState(starting:StartingInventory, initialArmor:ArmorId|null):InventoryState {
   if(!starting||!Array.isArray(starting.items))error('Inventario inicial inválido');
   if(initialArmor!==null&&!armorValid(initialArmor))error('Armadura inicial inválida');
-  const state:ReturnType<typeof clone>={coinsCopper:money(starting.totalGold*100),items:[],equipped:{armor:initialArmor,shield:false}};
+  const state:ReturnType<typeof clone>={coinsCopper:money(starting.totalGold*100),items:[],equipped:{armor:initialArmor,shield:false},magicItems:[]};
   for(const line of starting.items){
     if(!idValid(line.id)||!Number.isInteger(line.quantity)||line.quantity<1||line.quantity>MAX_UNITS)error('Objeto inicial inválido');
     if(!Array.isArray(line.sources)||line.sources.reduce((n:number,s:{quantity:number})=>n+s.quantity,0)!==line.quantity)error('Procedencia del objeto inicial inválida');
@@ -145,6 +152,22 @@ export function applyInventoryAction(state:InventoryState, action:InventoryActio
       if(action.equipped&&itemCount(state,'shield')<1)error('Necesitas poseer un escudo en el inventario');
       next.equipped.shield=action.equipped;break;
     }
+    case 'magic_grant':{
+      if(Object.keys(action).some(k=>!['type','itemId','damageType'].includes(k)))error('Campos inesperados en concesión mágica');
+      next.magicItems=[...applyMagicWardAction(next.magicItems,{type:'grant',itemId:action.itemId,...(action.damageType===undefined?{}:{damageType:action.damageType})})];break;
+    }
+    case 'magic_wear':{
+      if(Object.keys(action).some(k=>!['type','instanceId','worn'].includes(k)))error('Campos inesperados en acción mágica');
+      next.magicItems=[...applyMagicWardAction(next.magicItems,{type:'wear',instanceId:action.instanceId,worn:action.worn})];break;
+    }
+    case 'magic_attune':{
+      if(Object.keys(action).some(k=>!['type','instanceId','attuned'].includes(k)))error('Campos inesperados en acción mágica');
+      next.magicItems=[...applyMagicWardAction(next.magicItems,{type:'attune',instanceId:action.instanceId,attuned:action.attuned})];break;
+    }
+    case 'magic_remove':{
+      if(Object.keys(action).some(k=>!['type','instanceId'].includes(k)))error('Campos inesperados en acción mágica');
+      next.magicItems=[...applyMagicWardAction(next.magicItems,{type:'remove',instanceId:action.instanceId})];break;
+    }
     default:error('Acción de inventario no admitida');
   }
   return next;
@@ -160,4 +183,32 @@ export function formatCopper(value:number):string {
   if(value===0)return '0 po';
   const po=Math.floor(value/100), plata=Math.floor(value%100/10), cobre=value%10;
   return [po?`${po} po`:'',plata?`${plata} plata`:'',cobre?`${cobre} cobre`:''].filter(Boolean).join(' · ');
+}
+
+/** Conversión explícita de los registros de la fase 4.9 al diario unificado.
+ * No modifica ni la partida ni el historial original. Las identidades se reasignan
+ * a partir de las instancias existentes, sin perder las propiedades del objeto.
+ */
+export function importLegacyMagicWards(actions:readonly InventoryAction[],legacy:readonly MagicWardEntry[]):InventoryAction[]{
+  const old=validateMagicWards(legacy);
+  const result:InventoryAction[]=[...actions];
+  let existing:readonly MagicWardEntry[]=[];
+  for(const action of actions){
+    switch(action.type){
+      case 'magic_grant':existing=applyMagicWardAction(existing,{type:'grant',itemId:action.itemId,...(action.damageType===undefined?{}:{damageType:action.damageType})});break;
+      case 'magic_wear':existing=applyMagicWardAction(existing,{type:'wear',instanceId:action.instanceId,worn:action.worn});break;
+      case 'magic_attune':existing=applyMagicWardAction(existing,{type:'attune',instanceId:action.instanceId,attuned:action.attuned});break;
+      case 'magic_remove':existing=applyMagicWardAction(existing,{type:'remove',instanceId:action.instanceId});break;
+    }
+  }
+  for(const item of old){
+    const grant:InventoryAction={type:'magic_grant',itemId:item.itemId,...(item.damageType?{damageType:item.damageType}:{})};
+    existing=applyMagicWardAction(existing,{type:'grant',itemId:item.itemId,...(item.damageType?{damageType:item.damageType}:{})});
+    result.push(grant);
+    const id=existing[existing.length-1].instanceId;
+    if(item.worn){result.push({type:'magic_wear',instanceId:id,worn:true});existing=applyMagicWardAction(existing,{type:'wear',instanceId:id,worn:true});}
+    if(item.attuned){result.push({type:'magic_attune',instanceId:id,attuned:true});existing=applyMagicWardAction(existing,{type:'attune',instanceId:id,attuned:true});}
+  }
+  if(result.length>MAX_ACTIONS)error('Demasiadas operaciones al importar los objetos mágicos');
+  return result;
 }

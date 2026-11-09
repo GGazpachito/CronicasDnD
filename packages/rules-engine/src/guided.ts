@@ -9,6 +9,7 @@ import { ORIGIN_FEATS, TOOL_NAMES, validateHumanOriginFeat, type OriginFeatId, t
 import { validateMagicInitiate, grantsFromMagicInitiate, elfLineageSpells, type SpellGrant, type MagicInitiateSelection } from './origin-magic';
 import { combineStartingInventory, validateBackgroundEquipment, GAMING_SETS, type BackgroundEquipmentChoice, type StartingInventory } from './background-equipment';
 import { replayInventory, type InventoryAction, type InventoryState } from './inventory';
+import {collectMagicWardBonuses} from './magic-wards';
 
 export const FIGHTER_SKILL_OPTIONS: readonly Skill[] = [
   'acrobatics', 'animal_handling', 'athletics', 'history', 'insight',
@@ -181,11 +182,18 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
   const targetShield=inventory ? inventory.equipped.shield : input.shield;
   if(inventory && (input.armor!==targetArmor||input.shield!==targetShield)) fail(input.inventoryActions===undefined?'El equipo debe coincidir con el paquete inicial':'El equipo equipado no coincide con el inventario');
   if(martial && !inventory && (input.armor!==FIGHTER_PACKAGES[martial.startingPackage].initialArmor || input.shield)) fail('El equipo debe coincidir con el paquete inicial');
+  const magicBonuses=collectMagicWardBonuses(inventory?.magicItems??[]);
+  const magicModifiers=magicBonuses.flatMap(bonus=>['armor_class',...ABILITIES.map(a=>`saving_throws.${a}`)].map(target=>({
+    type:'numeric_modifier',effectId:`magic_${bonus.id}_${target.replace('.', '_')}`,
+    sourceRevisionId:`srd521:magic:${bonus.id}`,target,when:{type:'always'},operation:'add',
+    value:target==='armor_class'?bonus.armorClass:bonus.savingThrows,
+    group:'magic_equipment',stacking:'sum',priority:0
+  })));
   const fightingStyleModifiers = martial?.fightingStyle==='defense' && targetArmor!==null ? [{type:'numeric_modifier',effectId:'fighter_fighting_style_defense',sourceRevisionId:'phb2024:fighter:defense',target:'armor_class',when:{type:'always'},operation:'add',value:1,group:'fighting_style_defense',stacking:'sum',priority:0}] : [];
   const character: FighterCharacterInput = {
     id:'guided-preview',name:input.name.trim(),ruleset:'dnd-2024',fighterLevel:input.level,
     baseAbilities:finalScores,baseProficiencies:{skills:[...skills],savingThrows:['strength','constitution']},
-    modifiers:[...modifiers,...fightingStyleModifiers],hpMethod:'fixed',equipment:{armor:input.armor,shieldEquipped:input.shield,shieldTrained:true},
+    modifiers:[...modifiers,...fightingStyleModifiers,...magicModifiers],hpMethod:'fixed',equipment:{armor:input.armor,shieldEquipped:input.shield,shieldTrained:true},
     bonusHitPointsPerLevel,
     ...(input.level===3?{subclass:'champion' as const}:{})
   };

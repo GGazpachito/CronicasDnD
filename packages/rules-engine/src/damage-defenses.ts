@@ -55,6 +55,8 @@ export function collectDamageDefenses(context:DefenseContext={}):readonly Declar
   if(context.grants!==undefined&&(!Array.isArray(context.grants)||context.grants.length>40))fail('Demasiadas defensas declaradas');
   const grants:DeclaredDamageDefense[]=[];
   if(context.species==='dwarf')grants.push(DWARF_POISON);
+  grants.push(...collectMagicWardDefenses(context.inventory?.magicItems??[]));
+  // Entrada anterior a la unificación: continúa admitida para guardados v2 existentes.
   grants.push(...collectMagicWardDefenses(context.magicWards??[]));
   const seen=new Set(grants.map(x=>x.id));
   for(const raw of context.grants??[]){

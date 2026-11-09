@@ -1,10 +1,9 @@
 'use client';
 
 import {useState} from 'react';
-import type {AdventureState} from '../../../../packages/rules-engine/src/adventure';
-import {MAGIC_WARD_CATALOG,RING_RESISTANCE_TYPES,applyMagicWardAction,
-  collectMagicWardDefenses,type MagicWardItemId,type RingResistanceType,type MagicWardAction}
-  from '../../../../packages/rules-engine/src/magic-wards';
+import type {InventoryAction,InventoryState} from '../../../../packages/rules-engine/src/inventory';
+import {MAGIC_WARD_CATALOG,RING_RESISTANCE_TYPES,collectMagicWardBonuses,collectMagicWardDefenses,
+  type MagicWardItemId,type RingResistanceType} from '../../../../packages/rules-engine/src/magic-wards';
 
 const DAMAGE_NAMES:Readonly<Record<RingResistanceType,string>>={
   acid:'Ácido',cold:'Frío',fire:'Fuego',force:'Fuerza',lightning:'Relámpago',necrotic:'Necrótico',
@@ -12,42 +11,40 @@ const DAMAGE_NAMES:Readonly<Record<RingResistanceType,string>>={
 };
 
 type Props=Readonly<{
-  state:AdventureState|null;
+  inventory:InventoryState|null;
   outOfSync:boolean;
-  onChange:(state:AdventureState)=>void;
+  onInventoryAction:(action:InventoryAction)=>string|null;
 }>;
 
-export default function MagicWardsPanel({state,outOfSync,onChange}:Props){
+/** Editor del mismo diario de inventario que compra, vende y equipa objetos mundanos.
+ * Un único historial controla los objetos mágicos, sus estados y sus beneficios.
+ */
+export default function MagicWardsPanel({inventory,outOfSync,onInventoryAction}:Props){
   const [itemId,setItemId]=useState<MagicWardItemId>('ring_resistance');
   const [damageType,setDamageType]=useState<RingResistanceType>('fire');
   const [message,setMessage]=useState('');
   const [error,setError]=useState('');
-  const current=state?.magicWards??[];
-  const enabled=Boolean(state&&!outOfSync);
-  const active=enabled?collectMagicWardDefenses(current):[];
-  function perform(action:MagicWardAction){
-    if(!state||outOfSync)return;
-    try{
-      const magicWards=applyMagicWardAction(current,action);
-      onChange({...state,magicWards});
-      setError('');
-      setMessage('Registro actualizado. Pulsa «Actualizar guardado» para conservarlo en PostgreSQL.');
-    }catch(e){
-      setMessage('');
-      setError(e instanceof Error?e.message:'No se pudo modificar el objeto mágico');
-    }
+  const current=inventory?.magicItems??[];
+  const enabled=Boolean(inventory&&!outOfSync);
+  const defenses=collectMagicWardDefenses(current);
+  const bonuses=collectMagicWardBonuses(current);
+  function perform(action:InventoryAction){
+    if(!enabled)return;
+    const problem=onInventoryAction(action);
+    setError(problem??'');
+    setMessage(problem?'':'Inventario actualizado. Guarda el personaje para conservar los cambios en PostgreSQL.');
   }
-  return <section className="play-panel panel" aria-label="Objetos mágicos defensivos">
+  return <section className="play-panel panel" aria-label="Objetos mágicos del inventario">
     <div className="save-panel-head">
-      <div><span className="eyebrow">FASE 4.9 · OBJETOS MÁGICOS</span><h2>Defensas mágicas</h2></div>
+      <div><span className="eyebrow">FASE 4.10 · INVENTARIO ÚNICO</span><h2>Objetos mágicos del inventario</h2></div>
       <span className="save-label">Guardado manual</span>
     </div>
-    <p className="muted-note">Registra aquí los objetos concedidos por el director de juego. Este registro es independiente del inventario común por ahora: no se pueden comprar con oro. Los objetos deben estar puestos y, cuando corresponda, vinculados para activar sus defensas.</p>
-    {!enabled?<p className="play-warning" role="alert">Sincroniza tu hoja antes de modificar los objetos mágicos.</p>:<>
+    <p className="muted-note">Los objetos mágicos se gestionan en el mismo inventario y el mismo historial de operaciones que las armas y armaduras. Solo el director de juego puede concederlos: no tienen precio de compra ni venta en el prototipo.</p>
+    {!enabled?<p className="play-warning" role="alert">Completa y sincroniza tu hoja antes de editar el inventario mágico.</p>:<>
       <div className="play-actions-grid">
         <div className="play-action-group">
-          <h3>Añadir objeto concedido por el DM</h3>
-          <label className="field"><span>Objeto del SRD 5.2.1</span>
+          <h3>Registrar objeto concedido por el DM</h3>
+          <label className="field"><span>Objeto del catálogo</span>
             <select value={itemId} onChange={e=>setItemId(e.target.value as MagicWardItemId)}>
               {(Object.keys(MAGIC_WARD_CATALOG) as MagicWardItemId[]).map(id=><option key={id} value={id}>{MAGIC_WARD_CATALOG[id].label}</option>)}
             </select>
@@ -58,37 +55,40 @@ export default function MagicWardsPanel({state,outOfSync,onChange}:Props){
             </select>
           </label>}
           <p className="muted-note">{MAGIC_WARD_CATALOG[itemId].note}</p>
-          <button type="button" disabled={current.length>=12} onClick={()=>perform({type:'grant',itemId,...(itemId==='ring_resistance'?{damageType}:{})})}>Registrar objeto recibido</button>
+          <button type="button" disabled={current.length>=12} onClick={()=>perform({type:'magic_grant',itemId,...(itemId==='ring_resistance'?{damageType}:{})})}>Añadir objeto al inventario</button>
         </div>
         <div className="play-action-group">
-          <h3>Defensas mágicas activas</h3>
-          {active.length===0?<p className="muted-note">Sin defensas mágicas activas. Puedes registrar un objeto y marcarlo como puesto.</p>:
-            active.map(defense=><p className="muted-note" key={defense.id}><strong>{defense.source}</strong>: {defense.kind==='immunity'?'Inmunidad':'Resistencia'} a {defense.damageType}</p>)}
-          <p className="muted-note">La resistencia de la especie (si existe) se suma a estas fuentes sin duplicar su efecto. El panel «Ataques recibidos» calcula el resultado final.</p>
+          <h3>Bonificaciones activas</h3>
+          {defenses.length===0&&bonuses.length===0?<p className="muted-note">Ninguna defensa mágica activa.</p>:<>
+            {defenses.map(d=><p key={d.id} className="muted-note"><strong>{d.source}</strong>: {d.kind==='immunity'?'Inmunidad':'Resistencia'} a {d.damageType}</p>)}
+            {bonuses.map(b=><p key={b.id} className="muted-note"><strong>{b.source}</strong>: +{b.armorClass} CA y +{b.savingThrows} a todas las salvaciones.</p>)}
+          </>}
+          <p className="muted-note">La CA y las salvaciones aparecen actualizadas en la hoja. Las resistencias se aplican automáticamente a los ataques recibidos.</p>
         </div>
       </div>
-      <h3>Mis objetos mágicos ({current.length})</h3>
-      {current.length===0?<p className="muted-note">Ningún objeto registrado.</p>:
-        <div className="combat-list">{current.map(item=>{
+      <h3>Equipo mágico propio ({current.length})</h3>
+      {current.length===0?<p className="muted-note">Todavía no tienes objetos mágicos.</p>:<div className="combat-list">
+        {current.map(item=>{
           const template=MAGIC_WARD_CATALOG[item.itemId];
-          const isActive=item.worn&&(!template.attunement||item.attuned);
+          const active=item.worn&&(!template.attunement||item.attuned);
           return <div className="combat-row" key={item.instanceId} style={{display:'grid',gap:8}}>
             <div><strong>{template.label}{item.damageType?` (${DAMAGE_NAMES[item.damageType]})`:''}</strong>
-              <small>{isActive?'Defensa activa':'Defensa inactiva'} · {template.attunement?'Requiere vinculación':'No requiere vinculación'} · ID {item.instanceId}</small>
+              <small>{active?'Bonificación activa':'Bonificación inactiva'} · {template.attunement?'Vinculación requerida':'Sin vinculación'} · {item.instanceId}</small>
               <small>{template.note}</small>
             </div>
-            <label className="switch-field"><span>Objeto puesto</span>
-              <input type="checkbox" checked={item.worn} onChange={e=>perform({type:'wear',instanceId:item.instanceId,worn:e.target.checked})}/>
+            <label className="switch-field"><span>Llevado puesto</span>
+              <input type="checkbox" checked={item.worn} onChange={e=>perform({type:'magic_wear',instanceId:item.instanceId,worn:e.target.checked})}/>
             </label>
-            {template.attunement&&<label className="switch-field"><span>Vinculado (después de completar el descanso necesario)</span>
-              <input type="checkbox" checked={item.attuned} onChange={e=>perform({type:'attune',instanceId:item.instanceId,attuned:e.target.checked})}/>
+            {template.attunement&&<label className="switch-field"><span>Vinculado (realiza el descanso y la vinculación reglamentarios)</span>
+              <input type="checkbox" checked={item.attuned} onChange={e=>perform({type:'magic_attune',instanceId:item.instanceId,attuned:e.target.checked})}/>
             </label>}
-            <button type="button" onClick={()=>perform({type:'remove',instanceId:item.instanceId})}>Retirar objeto del registro</button>
+            <button type="button" onClick={()=>perform({type:'magic_remove',instanceId:item.instanceId})}>Retirar del inventario</button>
           </div>;
-        })}</div>}
-      {message&&<p className="save-success" role="status">{message}</p>}
-      {error&&<p className="save-error" role="alert">{error}</p>}
-      <p className="muted-note">Pendiente: inmunidad al conjuro Proyectil mágico del broche e inmunidad a la condición Envenenado del amuleto. No se aplican como inmunidades generales a otros daños o conjuros. La vinculación se declara manualmente; el descanso corto no la concede automáticamente.</p>
+        })}
+      </div>}
+      {message&&<p role="status" className="muted-note">{message}</p>}
+      {error&&<p role="alert" className="save-error">{error}</p>}
+      <p className="muted-note">Pendiente: inmunidad al conjuro Proyectil mágico del broche e inmunidad a la condición Envenenado del amuleto. La vinculación se marca manualmente y no se concede automáticamente en un descanso corto.</p>
     </>}
   </section>;
 }
