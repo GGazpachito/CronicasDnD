@@ -159,7 +159,7 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
     pending.push('Inspiración heroica del Humano al terminar un descanso largo aún no se gestiona');
   } else if (input.species==='dwarf') {
     bonusHitPointsPerLevel+=1;
-    pending.push('Enano: visión en la oscuridad, resistencia al veneno y Sentido de la piedra aún no automatizados');
+    pending.push('Enano: visión en la oscuridad, ventaja en salvaciones contra Envenenado y Sentido de la piedra aún pendientes');
   } else {
     if (!input.elfLineage || !['drow','high_elf','wood_elf'].includes(input.elfLineage)) fail('El elfo debe elegir linaje');
     if (!input.elfSenseSkill || !['insight','perception','survival'].includes(input.elfSenseSkill) || skills.has(input.elfSenseSkill)) fail('Elige una habilidad de Sentidos agudos no repetida');

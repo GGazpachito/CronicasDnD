@@ -28,3 +28,5 @@ export * from './conditions';
 export * from "./survival";
 
 export * from "./incoming";
+
+export * from './damage-defenses';

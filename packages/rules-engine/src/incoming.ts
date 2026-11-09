@@ -6,6 +6,7 @@ import type {CalculatedFighterSheet} from './sheet';
 import {evaluateConditionRoll,initialConditionLedger,type RollMode} from './conditions';
 import {applyAdventureAction,validateAdventureState,type AdventureState} from './adventure';
 import {appendReceivedAttack,type ReceivedAttackEntry} from './combat';
+import {collectDamageDefenses,mitigateDamage,resolveDamageDefense,type DefenseContext} from './damage-defenses';
 
 export const INCOMING_DAMAGE_TYPES = [
   'acid','bludgeoning','cold','fire','force','lightning','necrotic','piercing',
@@ -13,6 +14,21 @@ export const INCOMING_DAMAGE_TYPES = [
 ] as const;
 export type IncomingDamageType=typeof INCOMING_DAMAGE_TYPES[number];
 export type DamageMitigation='normal'|'resistance'|'vulnerability'|'both'|'immunity';
+/** Componente adicional del mismo impacto. El primario se mantiene por compatibilidad. */
+export type ExtraIncomingDamage=Readonly<{
+  damageType:IncomingDamageType;
+  rolledDamage:number;
+  damageAdjustment?:number;
+  mitigation?:DamageMitigation;
+}>;
+export type IncomingDamageBreakdown=Readonly<{
+  damageType:IncomingDamageType;
+  rolledDamage:number;
+  adjustedDamage:number;
+  effectiveDamage:number;
+  mitigation:DamageMitigation;
+  sources:readonly string[];
+}>;
 
 export type IncomingAttackInput=Readonly<{
   attacker:string;
@@ -35,6 +51,8 @@ export type IncomingAttackInput=Readonly<{
   /** Ajustes planos ANTES de resistencia y vulnerabilidad. */
   damageAdjustment?:number;
   mitigation:DamageMitigation;
+  /** Componentes adicionales (máximo tres); todos pertenecen a este mismo impacto. */
+  additionalDamage?:readonly ExtraIncomingDamage[];
 }>;
 
 export type IncomingAttackPreview=Readonly<{
@@ -50,6 +68,8 @@ export type IncomingAttackPreview=Readonly<{
   adjustedDamage:number;
   finalDamage:number;
   mitigation:DamageMitigation;
+  /** Incluye el componente principal y los adicionales. */
+  damageParts:readonly IncomingDamageBreakdown[];
   notes:readonly string[];
 }>;
 
@@ -69,12 +89,12 @@ function validName(value:unknown):string{
 }
 
 /** Vista previa, sin efectos secundarios. */
-export function previewIncomingAttack(state:AdventureState,sheet:CalculatedFighterSheet,input:IncomingAttackInput):IncomingAttackPreview{
+export function previewIncomingAttack(state:AdventureState,sheet:CalculatedFighterSheet,input:IncomingAttackInput,context:DefenseContext={}):IncomingAttackPreview{
   const current=validateAdventureState(state,sheet);
   if(current.survival?.death.dead||current.combat.conditions?.exhaustion===6)throw new RangeError('No se registran ataques a un personaje muerto');
   if(!input||typeof input!=='object'||Array.isArray(input))throw new RangeError('Ataque recibido inválido');
   const allowed=['attacker','attackBonus','firstD20','secondD20','attackerDistanceFeet','attackerCanSeeInvisible',
-    'situationalAdvantage','situationalDisadvantage','armorClassAdjustment','damageType','rolledDamage','damageAdjustment','mitigation'];
+    'situationalAdvantage','situationalDisadvantage','armorClassAdjustment','damageType','rolledDamage','damageAdjustment','mitigation','additionalDamage'];
   if(Object.keys(input).some(k=>!allowed.includes(k)))throw new RangeError('Ataque con campos no reconocidos');
   const attacker=validName(input.attacker);
   const attackBonus=integer(input.attackBonus,-100,100,'Bonificador del atacante');
@@ -91,6 +111,20 @@ export function previewIncomingAttack(state:AdventureState,sheet:CalculatedFight
   const adjustment=integer(input.damageAdjustment??0,-1000,1000,'Ajuste al daño');
   if(!['normal','resistance','vulnerability','both','immunity'].includes(input.mitigation))
     throw new RangeError('Mitigación desconocida');
+  if(input.additionalDamage!==undefined&&(!Array.isArray(input.additionalDamage)||input.additionalDamage.length>3))
+    throw new RangeError('El ataque admite hasta cuatro componentes de daño');
+  const normalizedExtras=(input.additionalDamage??[]).map((part,i)=>{
+    if(!part||typeof part!=='object'||Array.isArray(part)||Object.keys(part).some(k=>!['damageType','rolledDamage','damageAdjustment','mitigation'].includes(k)))
+      throw new RangeError(`Componente ${i+2} inválido`);
+    if(!INCOMING_DAMAGE_TYPES.includes(part.damageType))throw new RangeError(`Tipo de daño inválido del componente ${i+2}`);
+    const rolledDamage=integer(part.rolledDamage,0,50_000,'Daño de componente');
+    const damageAdjustment=integer(part.damageAdjustment??0,-1000,1000,'Ajuste de componente');
+    const mitigation=part.mitigation??'normal';
+    if(!['normal','resistance','vulnerability','both','immunity'].includes(mitigation))throw new RangeError('Defensa del componente inválida');
+    return {damageType:part.damageType,rolledDamage,damageAdjustment,mitigation};
+  });
+  // Todos los componentes de un ataque se resuelven antes de aplicar una sola instancia de daño.
+  const grants=collectDamageDefenses(context);
 
   const ledger=current.combat.conditions??initialConditionLedger();
   const conditions=evaluateConditionRoll(ledger,{kind:'incoming_attack',attackerDistanceFeet:distance,
@@ -107,27 +141,33 @@ export function previewIncomingAttack(state:AdventureState,sheet:CalculatedFight
   const total=selected+attackBonus;
   const hit=selected!==1&&(selected===20||total>=targetArmorClass);
   const critical=hit&&(selected===20||conditions.automaticCriticalIfHit||(atZeroUnconscious&&distance<=5));
-  const adjustedDamage=Math.max(0,rolledDamage+adjustment);
-  let damage=adjustedDamage;
-  if(input.mitigation==='immunity')damage=0;
-  else {
-    if(input.mitigation==='resistance'||input.mitigation==='both')damage=Math.floor(damage/2);
-    if(input.mitigation==='vulnerability'||input.mitigation==='both')damage*=2;
-  }
-  if(damage>100_000)throw new RangeError('El daño final supera el límite del estado de partida');
+  const normalized=[{damageType:input.damageType,rolledDamage,damageAdjustment:adjustment,mitigation:input.mitigation},...normalizedExtras];
+  const damageParts:IncomingDamageBreakdown[]=normalized.map(part=>{
+    const adjustedDamage=Math.max(0,part.rolledDamage+part.damageAdjustment);
+    const resolved=resolveDamageDefense(part.damageType,grants,part.mitigation);
+    const amount=mitigateDamage(adjustedDamage,resolved.mitigation);
+    return {damageType:part.damageType,rolledDamage:part.rolledDamage,adjustedDamage,
+      effectiveDamage:hit?amount:0,mitigation:resolved.mitigation,sources:resolved.sources};
+  });
+  const damage=damageParts.reduce((sum,part)=>sum+part.effectiveDamage,0);
+  if(!Number.isSafeInteger(damage)||damage>100_000)throw new RangeError('El daño final supera el límite del estado de partida');
   const notes=[...conditions.notes];
   if(atZeroUnconscious)notes.push('A 0 PG estás Inconsciente y Derribado, incluso sin una condición añadida manualmente.');
   if(critical)notes.push('Crítico: introduce el daño YA tirado con los dados apropiados; la aplicación no vuelve a duplicarlos.');
-  if(input.mitigation!=='normal')notes.push('Resistencia, vulnerabilidad o inmunidad aplicada manualmente; aún no se infiere del inventario.');
-  if(adjustment)notes.push(`Ajuste plano al daño antes de mitigación: ${adjustment>=0?'+':''}${adjustment}.`);
+  if(damageParts.length>1)notes.push('Los componentes se mitigan individualmente, y se aplica una sola instancia de daño total.');
+  for(const part of damageParts){
+    if(part.sources.length)notes.push(`${part.damageType}: ${part.sources.join(', ')} (${part.mitigation}).`);
+  }
+  if(adjustment)notes.push(`Ajuste plano al daño del primer componente: ${adjustment>=0?'+':''}${adjustment}.`);
   return {attacker,mode,selectedD20:selected,attackTotal:total,targetArmorClass,hit,critical,
-    damageType:input.damageType,rolledDamage,adjustedDamage,finalDamage:hit?damage:0,mitigation:input.mitigation,notes};
+    damageType:input.damageType,rolledDamage,adjustedDamage:damageParts[0].adjustedDamage,
+    finalDamage:damage,mitigation:damageParts[0].mitigation,damageParts,notes};
 }
 
 /** Confirmación única: registra y aplica el daño de manera atómica, sin mutar la entrada. */
-export function receiveIncomingAttack(state:AdventureState,sheet:CalculatedFighterSheet,input:IncomingAttackInput):
+export function receiveIncomingAttack(state:AdventureState,sheet:CalculatedFighterSheet,input:IncomingAttackInput,context:DefenseContext={}):
   Readonly<{state:AdventureState;preview:IncomingAttackPreview;description:string}> {
-  const preview=previewIncomingAttack(state,sheet,input);
+  const preview=previewIncomingAttack(state,sheet,input,context);
   const base=validateAdventureState(state,sheet);
   const applied=preview.hit&&preview.finalDamage>0?
     applyAdventureAction(base,{type:'damage',amount:preview.finalDamage,critical:preview.critical},sheet):
@@ -136,7 +176,7 @@ export function receiveIncomingAttack(state:AdventureState,sheet:CalculatedFight
     attacker:preview.attacker,naturalRoll:preview.selectedD20,attackTotal:preview.attackTotal,
     armorClass:preview.targetArmorClass,mode:preview.mode,hit:preview.hit,critical:preview.critical,
     damageType:preview.damageType,rolledDamage:preview.rolledDamage,
-    effectiveDamage:preview.finalDamage,mitigation:preview.mitigation
+    effectiveDamage:preview.finalDamage,mitigation:preview.mitigation,damageParts:preview.damageParts
   };
   const combat=appendReceivedAttack(applied.state.combat,entry);
   return {state:{...applied.state,combat},preview,description:`${preview.attacker}: ${preview.hit?'impacta':'falla'}. ${applied.description}`};

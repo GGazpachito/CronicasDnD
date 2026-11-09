@@ -6,7 +6,7 @@ import { WEAPON_STATS, type AttackResolution, type WeaponAttackProfile, type Dam
 import { WEAPONS, type WeaponId } from './martial';
 import { applyInventoryAction, type InventoryAction, type InventoryItemId, type InventoryState } from './inventory';
 import {advanceConditionRound,initialConditionLedger,validateConditionLedger,type ConditionId,type ConditionLedger,type RollMode} from './conditions';
-import type {IncomingDamageType,DamageMitigation} from './incoming';
+import type {IncomingDamageType,DamageMitigation,IncomingDamageBreakdown} from './incoming';
 
 type AmmoId = NonNullable<WeaponAttackProfile['ammunition']>;
 export type CombatAttackEntry = Readonly<{
@@ -32,6 +32,8 @@ export type TrackedEffect = Readonly<{
 export type ReceivedAttackEntry = Readonly<{
   id:number;round:number;attacker:string;naturalRoll:number;attackTotal:number;armorClass:number;mode:RollMode;
   hit:boolean;critical:boolean;damageType:IncomingDamageType;rolledDamage:number;effectiveDamage:number;mitigation:DamageMitigation;
+  /** Opcional: guardados anteriores a la fase 4.8 no tienen desglose. */
+  damageParts?:readonly IncomingDamageBreakdown[];
 }>;
 export type CombatState = Readonly<{
   round:number;
@@ -122,7 +124,7 @@ export function validateCombatState(value:unknown):CombatState{
     if(!Array.isArray(value.receivedAttacks)||value.receivedAttacks.length>MAX_ATTACKS)fail('Historial de ataques recibidos inválido');
     receivedAttacks=value.receivedAttacks.map((raw:unknown)=>{
       if(!record(raw))fail('Ataque recibido inválido');
-      exactKeys(raw,['id','round','attacker','naturalRoll','attackTotal','armorClass','mode','hit','critical','damageType','rolledDamage','effectiveDamage','mitigation'],'Ataque recibido');
+      exactKeys(raw,['id','round','attacker','naturalRoll','attackTotal','armorClass','mode','hit','critical','damageType','rolledDamage','effectiveDamage','mitigation',...(raw.damageParts===undefined?[]:['damageParts'])],'Ataque recibido');
       const id=bounded(raw.id,1,nextId-1,'ID de ataque recibido');
       if(seen.has(id))fail('ID de evento duplicado');seen.add(id);
       const eventRound=bounded(raw.round,1,round,'Ronda de ataque recibido');
@@ -132,11 +134,30 @@ export function validateCombatState(value:unknown):CombatState{
       if(raw.attacker===undefined||typeof raw.attacker!=='string'||!raw.attacker.trim()||raw.attacker.length>80||/[\u0000-\u001f]/.test(raw.attacker))fail('Atacante inválido');
       const effectiveDamage=bounded(raw.effectiveDamage,0,100_000,'Daño efectivo');
       if(!raw.hit&&effectiveDamage!==0)fail('Un ataque fallido no causa daño de impacto');
+      let damageParts:IncomingDamageBreakdown[]|undefined;
+      if(raw.damageParts!==undefined){
+        if(!Array.isArray(raw.damageParts)||raw.damageParts.length<1||raw.damageParts.length>4)fail('Desglose de daño inválido');
+        damageParts=raw.damageParts.map((part:unknown)=>{
+          if(!record(part))fail('Componente de daño inválido');
+          exactKeys(part,['damageType','rolledDamage','adjustedDamage','effectiveDamage','mitigation','sources'],'Componente de daño');
+          if(!['acid','bludgeoning','cold','fire','force','lightning','necrotic','piercing','poison','psychic','radiant','slashing','thunder'].includes(part.damageType as string))fail('Tipo de daño del componente inválido');
+          if(!['normal','resistance','vulnerability','both','immunity'].includes(part.mitigation as string))fail('Mitigación del componente inválida');
+          if(!Array.isArray(part.sources)||part.sources.length>40||part.sources.some((x:unknown)=>typeof x!=='string'||!x.trim()||x.length>100))fail('Fuentes del componente inválidas');
+          const effective=bounded(part.effectiveDamage,0,100_000,'Daño del componente');
+          if(!raw.hit&&effective>0)fail('El fallo no puede aplicar daño de un componente');
+          return {damageType:part.damageType as IncomingDamageType,rolledDamage:bounded(part.rolledDamage,0,50_000,'Daño tirado'),
+            adjustedDamage:bounded(part.adjustedDamage,0,50_000,'Daño ajustado'),effectiveDamage:effective,
+            mitigation:part.mitigation as DamageMitigation,sources:[...(part.sources as string[])]};
+        });
+        if(damageParts.reduce((total,p)=>total+p.effectiveDamage,0)!==effectiveDamage)fail('El desglose de daño no coincide con el total');
+        if(damageParts[0].damageType!==raw.damageType||damageParts[0].mitigation!==raw.mitigation||damageParts[0].rolledDamage!==raw.rolledDamage)
+          fail('El componente primario no coincide con el historial');
+      }
       return {id,round:eventRound,attacker:raw.attacker.trim(),naturalRoll:bounded(raw.naturalRoll,1,20,'d20 recibido'),
         attackTotal:bounded(raw.attackTotal,-200,200,'Total recibido'),armorClass:bounded(raw.armorClass,0,100,'CA recibida'),
         mode:raw.mode as RollMode,hit:raw.hit,critical:raw.critical,damageType:raw.damageType as IncomingDamageType,
         rolledDamage:bounded(raw.rolledDamage,0,50_000,'Daño de la tirada'),effectiveDamage,
-        mitigation:raw.mitigation as DamageMitigation};
+        mitigation:raw.mitigation as DamageMitigation,...(damageParts?{damageParts}:{})};
     });
   }
   return {round,nextId,attacks,effects,...(conditions?{conditions}:{}),...(receivedAttacks?{receivedAttacks}:{})};
