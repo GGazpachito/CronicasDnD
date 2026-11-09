@@ -6,7 +6,7 @@
 import { ARMORS, type ArmorId } from './defense';
 import { ITEM_NAMES, type CatalogItemId, type StartingInventory } from './background-equipment';
 import { WEAPONS, type WeaponId } from './martial';
-import {applyMagicWardAction,validateMagicWards,type MagicWardEntry,type MagicWardItemId,type RingResistanceType} from './magic-wards';
+import {applyMagicWardAction,validateMagicWards,type MagicWardEntry,type MagicWardItemId,type RingResistanceType,type EnhancementBonus} from './magic-wards';
 
 export type InventoryItemId = CatalogItemId | ArmorId | WeaponId | 'shield' | 'bolt' | 'bullet' | 'needle' | 'sling_bullet';
 export type InventorySource = 'class' | 'background' | 'purchase' | 'loot';
@@ -57,7 +57,7 @@ export type InventoryAction =
   | Readonly<{type:'remove';itemId:InventoryItemId;quantity:number}>
   | Readonly<{type:'equip_armor';armor:ArmorId|null}>
   | Readonly<{type:'equip_shield';equipped:boolean}>
-  | Readonly<{type:'magic_grant';itemId:MagicWardItemId;damageType?:RingResistanceType}>
+  | Readonly<{type:'magic_grant';itemId:MagicWardItemId;damageType?:RingResistanceType;armorId?:ArmorId;enhancement?:EnhancementBonus}>
   | Readonly<{type:'magic_wear';instanceId:string;worn:boolean}>
   | Readonly<{type:'magic_attune';instanceId:string;attuned:boolean}>
   | Readonly<{type:'magic_remove';instanceId:string}>;
@@ -145,20 +145,33 @@ export function applyInventoryAction(state:InventoryState, action:InventoryActio
     case 'equip_armor':{
       if(action.armor!==null&&!armorValid(action.armor))error('Armadura no reconocida');
       if(action.armor!==null&&itemCount(state,action.armor)<1)error('Necesitas poseer la armadura para equiparla');
-      next.equipped.armor=action.armor;break;
+      next.equipped.armor=action.armor;
+      if(action.armor!==null) next.magicItems=next.magicItems.map(m=>m.itemId==='armor_enhancement'?{...m,worn:false}:m);
+      break;
     }
     case 'equip_shield':{
       if(typeof action.equipped!=='boolean')error('Estado del escudo inválido');
       if(action.equipped&&itemCount(state,'shield')<1)error('Necesitas poseer un escudo en el inventario');
-      next.equipped.shield=action.equipped;break;
+      next.equipped.shield=action.equipped;
+      if(action.equipped)next.magicItems=next.magicItems.map(m=>m.itemId==='shield_enhancement'?{...m,worn:false}:m);
+      break;
     }
     case 'magic_grant':{
-      if(Object.keys(action).some(k=>!['type','itemId','damageType'].includes(k)))error('Campos inesperados en concesión mágica');
-      next.magicItems=[...applyMagicWardAction(next.magicItems,{type:'grant',itemId:action.itemId,...(action.damageType===undefined?{}:{damageType:action.damageType})})];break;
+      if(Object.keys(action).some(k=>!['type','itemId','damageType','armorId','enhancement'].includes(k)))error('Campos inesperados en concesión mágica');
+      next.magicItems=[...applyMagicWardAction(next.magicItems,{type:'grant',itemId:action.itemId,
+        ...(action.damageType===undefined?{}:{damageType:action.damageType}),
+        ...(action.armorId===undefined?{}:{armorId:action.armorId}),
+        ...(action.enhancement===undefined?{}:{enhancement:action.enhancement})})];break;
     }
     case 'magic_wear':{
       if(Object.keys(action).some(k=>!['type','instanceId','worn'].includes(k)))error('Campos inesperados en acción mágica');
-      next.magicItems=[...applyMagicWardAction(next.magicItems,{type:'wear',instanceId:action.instanceId,worn:action.worn})];break;
+      next.magicItems=[...applyMagicWardAction(next.magicItems,{type:'wear',instanceId:action.instanceId,worn:action.worn})];
+      if(action.worn){
+        const equipped=next.magicItems.find(x=>x.instanceId===action.instanceId)!;
+        if(equipped.itemId==='armor_enhancement')next.equipped.armor=null;
+        if(equipped.itemId==='shield_enhancement')next.equipped.shield=false;
+      }
+      break;
     }
     case 'magic_attune':{
       if(Object.keys(action).some(k=>!['type','instanceId','attuned'].includes(k)))error('Campos inesperados en acción mágica');
@@ -171,6 +184,15 @@ export function applyInventoryAction(state:InventoryState, action:InventoryActio
     default:error('Acción de inventario no admitida');
   }
   return next;
+}
+
+/** Equipo real de combate: la pieza mágica sustituye a la mundana, no se suma como una segunda armadura. */
+export function equippedArmor(state:InventoryState):ArmorId|null{
+  const magic=validateMagicWards(state.magicItems??[]).find(m=>m.itemId==='armor_enhancement'&&m.worn);
+  return magic?.armorId??state.equipped.armor;
+}
+export function hasEquippedShield(state:InventoryState):boolean{
+  return state.equipped.shield||validateMagicWards(state.magicItems??[]).some(m=>m.itemId==='shield_enhancement'&&m.worn);
 }
 
 /** El diario de acciones permite reconstruir el estado sin modificar el equipo de origen. */
@@ -195,15 +217,18 @@ export function importLegacyMagicWards(actions:readonly InventoryAction[],legacy
   let existing:readonly MagicWardEntry[]=[];
   for(const action of actions){
     switch(action.type){
-      case 'magic_grant':existing=applyMagicWardAction(existing,{type:'grant',itemId:action.itemId,...(action.damageType===undefined?{}:{damageType:action.damageType})});break;
+      case 'magic_grant':existing=applyMagicWardAction(existing,{type:'grant',itemId:action.itemId,...(action.damageType===undefined?{}:{damageType:action.damageType}),
+          ...(action.armorId===undefined?{}:{armorId:action.armorId}),...(action.enhancement===undefined?{}:{enhancement:action.enhancement})});break;
       case 'magic_wear':existing=applyMagicWardAction(existing,{type:'wear',instanceId:action.instanceId,worn:action.worn});break;
       case 'magic_attune':existing=applyMagicWardAction(existing,{type:'attune',instanceId:action.instanceId,attuned:action.attuned});break;
       case 'magic_remove':existing=applyMagicWardAction(existing,{type:'remove',instanceId:action.instanceId});break;
     }
   }
   for(const item of old){
-    const grant:InventoryAction={type:'magic_grant',itemId:item.itemId,...(item.damageType?{damageType:item.damageType}:{})};
-    existing=applyMagicWardAction(existing,{type:'grant',itemId:item.itemId,...(item.damageType?{damageType:item.damageType}:{})});
+    const variant={...(item.damageType?{damageType:item.damageType}:{}),...(item.armorId?{armorId:item.armorId}:{}),
+      ...(item.enhancement?{enhancement:item.enhancement}:{})};
+    const grant:InventoryAction={type:'magic_grant',itemId:item.itemId,...variant};
+    existing=applyMagicWardAction(existing,{type:'grant',itemId:item.itemId,...variant});
     result.push(grant);
     const id=existing[existing.length-1].instanceId;
     if(item.worn){result.push({type:'magic_wear',instanceId:id,worn:true});existing=applyMagicWardAction(existing,{type:'wear',instanceId:id,worn:true});}

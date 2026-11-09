@@ -8,7 +8,7 @@ import { FIGHTER_PACKAGES, WEAPONS, validateMartialChoices, type MartialChoices 
 import { ORIGIN_FEATS, TOOL_NAMES, validateHumanOriginFeat, type OriginFeatId, type HumanFeatDetails, type ToolId } from './origin-feats';
 import { validateMagicInitiate, grantsFromMagicInitiate, elfLineageSpells, type SpellGrant, type MagicInitiateSelection } from './origin-magic';
 import { combineStartingInventory, validateBackgroundEquipment, GAMING_SETS, type BackgroundEquipmentChoice, type StartingInventory } from './background-equipment';
-import { replayInventory, type InventoryAction, type InventoryState } from './inventory';
+import { replayInventory, equippedArmor, hasEquippedShield, type InventoryAction, type InventoryState } from './inventory';
 import {collectMagicWardBonuses} from './magic-wards';
 
 export const FIGHTER_SKILL_OPTIONS: readonly Skill[] = [
@@ -178,8 +178,8 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
   const startingInventory=bgEquipment?combineStartingInventory(martial?.startingPackage,bgEquipment):undefined;
   if (input.inventoryActions!==undefined && (!martial || !startingInventory)) fail('Completa primero el equipo de clase y trasfondo antes de editar el inventario');
   const inventory=martial && startingInventory ? replayInventory(startingInventory,FIGHTER_PACKAGES[martial.startingPackage].initialArmor,input.inventoryActions??[]) : undefined;
-  const targetArmor=inventory ? inventory.equipped.armor : input.armor;
-  const targetShield=inventory ? inventory.equipped.shield : input.shield;
+  const targetArmor=inventory ? equippedArmor(inventory) : input.armor;
+  const targetShield=inventory ? hasEquippedShield(inventory) : input.shield;
   if(inventory && (input.armor!==targetArmor||input.shield!==targetShield)) fail(input.inventoryActions===undefined?'El equipo debe coincidir con el paquete inicial':'El equipo equipado no coincide con el inventario');
   if(martial && !inventory && (input.armor!==FIGHTER_PACKAGES[martial.startingPackage].initialArmor || input.shield)) fail('El equipo debe coincidir con el paquete inicial');
   const magicBonuses=collectMagicWardBonuses(inventory?.magicItems??[]);

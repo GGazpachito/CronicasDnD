@@ -22,7 +22,7 @@ import { FIGHTING_STYLES, WEAPONS, FIGHTER_PACKAGES, type FightingStyleId, type 
 import { ORIGIN_FEATS, CRAFTER_TOOLS, MUSICAL_INSTRUMENTS, TOOL_NAMES, SKILLED_OPTIONS, type ToolId } from "../../../../packages/rules-engine/src/origin-feats";
 import { SPELL_LISTS, MAGIC_ABILITY_OPTIONS, spellName, type SpellListId, type SpellAbility, type MagicInitiateSelection } from "../../../../packages/rules-engine/src/origin-magic";
 import { BACKGROUND_PACKAGES, GAMING_SETS, ITEM_NAMES, combineStartingInventory, validateBackgroundEquipment, type BackgroundPackageId, type GamingSetId } from "../../../../packages/rules-engine/src/background-equipment";
-import { INVENTORY_NAMES, INVENTORY_PRICES_CP, replayInventory, importLegacyMagicWards, formatCopper, type InventoryAction, type InventoryItemId } from "../../../../packages/rules-engine/src/inventory";
+import { INVENTORY_NAMES, INVENTORY_PRICES_CP, replayInventory, equippedArmor, hasEquippedShield, importLegacyMagicWards, formatCopper, type InventoryAction, type InventoryItemId } from "../../../../packages/rules-engine/src/inventory";
 import {MAGIC_WARD_CATALOG} from "../../../../packages/rules-engine/src/magic-wards";
 
 const NAMES: Record<Ability, string> = {strength:'Fuerza',dexterity:'Destreza',constitution:'Constitución',intelligence:'Inteligencia',wisdom:'Sabiduría',charisma:'Carisma'};
@@ -86,8 +86,8 @@ export default function Home(){
   const starting=useMemo(()=>combineStartingInventory(starter,validateBackgroundEquipment(background,{startingPackage:backgroundPackage,...(background==='soldier'?{gamingSet:soldierGamingSet}:{})})),[starter,background,backgroundPackage,soldierGamingSet]);
   const activeActions=inventoryEdits.key===inventoryKey?inventoryEdits.actions:[];
   const inventory=useMemo(()=>replayInventory(starting,FIGHTER_PACKAGES[starter].initialArmor,activeActions),[starting,starter,activeActions]);
-  const armor:ArmorId|null=inventory.equipped.armor;
-  const shield=inventory.equipped.shield;
+  const armor:ArmorId|null=equippedArmor(inventory);
+  const shield=hasEquippedShield(inventory);
   const quotedQty=Number.isInteger(tradeCount)&&tradeCount>=1&&tradeCount<=1000?tradeCount:0;
   function transact(action:InventoryAction){
     try{
@@ -286,11 +286,13 @@ export default function Home(){
             {inventoryError&&<div className="error" role="alert">{inventoryError}</div>}
             <p className="muted-note">Las tiendas y los hallazgos se confirman con el director de juego. Los objetos sin precio validado solo se pueden añadir como botín.</p>
             <div className="divider"/>
-            <label className="field"><span>Armadura equipada (solo objetos que posees)</span><select value={armor??'none'} onChange={e=>transact({type:'equip_armor',armor:e.target.value==='none'?null:e.target.value as ArmorId})}>
+            <label className="field"><span>Armadura equipada (solo objetos que posees)</span><select value={inventory.equipped.armor??'none'} onChange={e=>transact({type:'equip_armor',armor:e.target.value==='none'?null:e.target.value as ArmorId})}>
               <option value="none">Sin armadura</option>
               {inventory.items.filter(it=>ARMOR_OPTIONS.some(x=>x.id===it.id)).map(it=><option key={it.id} value={it.id}>{INVENTORY_NAMES[it.id]}</option>)}
             </select></label>
-            <label className="switch-field"><span><strong>Escudo equipado</strong><small>Debes poseer al menos uno</small></span><input type="checkbox" checked={shield} disabled={!shield&&!inventory.items.some(it=>it.id==='shield')} onChange={e=>transact({type:'equip_shield',equipped:e.target.checked})}/></label>
+            {inventory.magicItems.some(m=>m.itemId==='armor_enhancement'&&m.worn)&&<p className="muted-note">Llevas una armadura mágica. Puedes quitártela desde «Objetos mágicos del inventario» o elegir aquí una armadura normal.</p>}
+            {inventory.magicItems.some(m=>m.itemId==='shield_enhancement'&&m.worn)&&<p className="muted-note">Tu escudo mágico se equipa y retira en «Objetos mágicos del inventario».</p>}
+            <label className="switch-field"><span><strong>Escudo equipado</strong><small>Debes poseer al menos uno</small></span><input type="checkbox" checked={inventory.equipped.shield} disabled={!inventory.equipped.shield&&!inventory.items.some(it=>it.id==='shield')} onChange={e=>transact({type:'equip_shield',equipped:e.target.checked})}/></label>
             <div className="trade-actions trade-history"><button type="button" disabled={!activeActions.length} onClick={undoTransaction}>Deshacer última</button><button type="button" disabled={!activeActions.length} onClick={resetTransactions}>Reiniciar inventario</button></div>
           </>}
           <div className="wizard-actions"><button type="button" disabled={step===0} onClick={()=>setStep(x=>Math.max(0,x-1))}>Anterior</button><button type="button" disabled={step===STEPS.length-1} onClick={()=>setStep(x=>Math.min(STEPS.length-1,x+1))}>Siguiente</button></div>
@@ -307,11 +309,11 @@ export default function Home(){
             {output.result.inventory&&<div className="preview-section inventory-section">
               <div className="section-label"><h3>Inventario actual</h3><span>{output.result.inventory.items.length} tipos comunes · {output.result.inventory.magicItems.length} mágicos</span></div>
               <div className="money-summary"><strong>{formatCopper(output.result.inventory.coinsCopper)}</strong><span>Saldo inicial: {output.result.startingInventory?.totalGold??0} po · {activeActions.length} operaciones</span></div>
-              <div className="data-list">{output.result.inventory.items.length===0&&<p className="muted-note">No hay objetos en tu inventario.</p>}{output.result.inventory.items.map(it=><div className="data-row" key={it.id}><span>{it.name}<small className="item-origin">{it.sources.map(src=>`${src.from==='class'?'Clase':src.from==='background'?'Trasfondo':src.from==='purchase'?'Comprado':'Botín'} ×${src.quantity}`).join(' + ')}{armor===it.id?' · EQUIPADA':''}{shield&&it.id==='shield'?' · EQUIPADO':''}</small></span><strong>×{it.quantity}</strong></div>)}</div>
+              <div className="data-list">{output.result.inventory.items.length===0&&<p className="muted-note">No hay objetos en tu inventario.</p>}{output.result.inventory.items.map(it=><div className="data-row" key={it.id}><span>{it.name}<small className="item-origin">{it.sources.map(src=>`${src.from==='class'?'Clase':src.from==='background'?'Trasfondo':src.from==='purchase'?'Comprado':'Botín'} ×${src.quantity}`).join(' + ')}{inventory.equipped.armor===it.id?' · EQUIPADA':''}{inventory.equipped.shield&&it.id==='shield'?' · EQUIPADO':''}</small></span><strong>×{it.quantity}</strong></div>)}</div>
               {output.result.inventory.magicItems.length>0&&<div className="data-list">{output.result.inventory.magicItems.map(it=><div className="data-row" key={it.instanceId}>
-                <span>{MAGIC_WARD_CATALOG[it.itemId].label}{it.damageType?` (${it.damageType})`:''}<small className="item-origin">Objeto mágico recibido del DM · {it.worn?'Puesto':'Guardado'} · {it.attuned?'Vinculado':MAGIC_WARD_CATALOG[it.itemId].attunement?'Sin vincular':'Sin vinculación requerida'}</small></span><strong>×1</strong>
+                <span>{MAGIC_WARD_CATALOG[it.itemId].label}{it.armorId?` (${INVENTORY_NAMES[it.armorId]})`:''}{it.enhancement?` +${it.enhancement}`:''}{it.damageType?` (${it.damageType})`:''}<small className="item-origin">Objeto mágico recibido del DM · {it.worn?'Puesto':'Guardado'} · {it.attuned?'Vinculado':MAGIC_WARD_CATALOG[it.itemId].attunement?'Sin vincular':'Sin vinculación requerida'}</small></span><strong>×1</strong>
               </div>)}</div>}
-              <p className="muted-note">Equipo: {armor?INVENTORY_NAMES[armor]:'sin armadura'} · Escudo: {shield?'sí':'no'} · La CA se recalcula al equipar o desequipar.</p>
+              <p className="muted-note">Equipo efectivo: {armor?INVENTORY_NAMES[armor]:'sin armadura'} · Escudo: {shield?'sí':'no'} · La CA se recalcula al equipar o desequipar. Los objetos mágicos reemplazan la pieza mundana correspondiente.</p>
               <p className="muted-note">Los paquetes de aventurero siguen siendo un único objeto. El inventario puede guardarse mediante el panel Mis personajes.</p>
             </div>}
             {output.result.spells.length>0&&<div className="preview-section"><div className="section-label"><h3>Conjuros de origen</h3><span>{output.result.spells.length} concedidos</span></div><div className="spell-list">{output.result.spells.map((sp,i)=><div className="spell-entry" key={`${sp.source}-${sp.id}-${i}`}><div><strong>{sp.name}</strong><small>{sp.source==='background'?'Trasfondo':sp.source==='human_feat'?'Dote humana':'Linaje élfico'} · {sp.level===0?'Truco':'Nivel 1'} · {NAMES[sp.spellcastingAbility]}</small></div>{sp.freeCastPerLongRest&&<span className="mode-chip">1 gratis / descanso largo</span>}</div>)}</div><p className="muted-note">Los conjuros están validados y registrados; sus tiradas, efectos y usos consumidos aún no se ejecutan.</p></div>}
