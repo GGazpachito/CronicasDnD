@@ -124,7 +124,7 @@ export function previewIncomingAttack(state:AdventureState,sheet:CalculatedFight
     return {damageType:part.damageType,rolledDamage,damageAdjustment,mitigation};
   });
   // Todos los componentes de un ataque se resuelven antes de aplicar una sola instancia de daño.
-  const grants=collectDamageDefenses(context);
+  const grants=collectDamageDefenses({...context,magicWards:current.magicWards??[]});
 
   const ledger=current.combat.conditions??initialConditionLedger();
   const conditions=evaluateConditionRoll(ledger,{kind:'incoming_attack',attackerDistanceFeet:distance,

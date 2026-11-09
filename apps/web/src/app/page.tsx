@@ -5,6 +5,7 @@ import SaveLoadPanel from "../components/SaveLoadPanel";
 import PlayPanel from "../components/PlayPanel";
 import SurvivalPanel from "../components/SurvivalPanel";
 import IncomingAttacksPanel from "../components/IncomingAttacksPanel";
+import MagicWardsPanel from "../components/MagicWardsPanel";
 import AttacksPanel from "../components/AttacksPanel";
 import CombatPanel from "../components/CombatPanel";
 import ConditionsPanel from "../components/ConditionsPanel";
@@ -183,10 +184,11 @@ export default function Home(){
   return <main className="app-shell">
     <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Creador guiado · D&D 2024</span></div></div><div className="status"><span className="status-dot"/> Motor conectado · Guardado local</div></header>
     <div className="content">
-      <div className="intro"><div><span className="eyebrow">PROTOTIPO 20 / DEFENSAS Y DAÑO MIXTO</span><h1>Da forma a <em>tu aventurero.</em></h1><p>Guerrero de niveles 1–3. Tus decisiones de origen se validan y se reflejan en la hoja calculada.</p></div><span className="edition">PHB 2024 + SRD</span></div>
+      <div className="intro"><div><span className="eyebrow">PROTOTIPO 21 / CATÁLOGO DEFENSIVO MÁGICO</span><h1>Da forma a <em>tu aventurero.</em></h1><p>Guerrero de niveles 1–3. Tus decisiones de origen se validan y se reflejan en la hoja calculada.</p></div><span className="edition">PHB 2024 + SRD</span></div>
       <SaveLoadPanel input={input} adventure={sessionCheck.outOfSync?null:sessionCheck.state} valid={Boolean(output.result&&!sessionCheck.outOfSync)} onLoad={loadSavedSnapshot}/>
       <PlayPanel sheet={sheet??null} state={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
       <SurvivalPanel sheet={sheet??null} state={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
+      <MagicWardsPanel state={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
       <IncomingAttacksPanel sheet={sheet??null} state={sessionCheck.state} species={output.result?.origin.species??null} inventory={output.result?.inventory??null} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
       <ConditionsPanel combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} outOfSync={sessionCheck.outOfSync} onChange={handleCombatChange} baseSpeed={output.result?.origin.speedFeet??30}/>
       <AttacksPanel combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} sheet={sheet??null} inventory={output.result?.inventory??null} martial={input.martial??null} onRecord={confirmWeaponAttack} canRecord={Boolean(sheet&&!sessionCheck.outOfSync&&sessionCheck.state&&sessionCheck.state.fighter.hitPoints.current>0&&conditionCapabilities(sessionCheck.state.combat.conditions??initialConditionLedger()).canTakeAction)}/>

@@ -41,7 +41,7 @@ export default function IncomingAttacksPanel({sheet,state,species,inventory,outO
   const [message,setMessage]=useState('');
   const [error,setError]=useState('');
   const ready=Boolean(sheet&&state&&!outOfSync);
-  const defenseContext={...(species?{species}:{}),...(inventory?{inventory}:{})};
+  const defenseContext={...(species?{species}:{}),...(inventory?{inventory}:{}),magicWards:state?.magicWards??[]};
   const knownDefenses=collectDamageDefenses(defenseContext);
   const args:IncomingAttackInput={attacker,attackBonus:bonus,firstD20:first,secondD20:second,
     attackerDistanceFeet:distance,attackerCanSeeInvisible:seesInvisible,situationalAdvantage:advantage,
@@ -72,7 +72,7 @@ export default function IncomingAttacksPanel({sheet,state,species,inventory,outO
   }
   const entries=state?.combat.receivedAttacks??[];
   return <section className="play-panel panel" aria-label="Ataques recibidos">
-    <div className="save-panel-head"><div><span className="eyebrow">FASE 4.8 · COMBATE</span><h2>Ataques recibidos</h2></div><span className="save-label">Guardado manual</span></div>
+    <div className="save-panel-head"><div><span className="eyebrow">FASE 4.9 · COMBATE</span><h2>Ataques recibidos</h2></div><span className="save-label">Guardado manual</span></div>
     <p className="muted-note">Introduce las tiradas reales del enemigo. La vista previa no cambia nada. <strong>Confirmar impacto o fallo</strong> registra el ataque y aplica el daño efectivo a PG, concentración y salvaciones de muerte.</p>
     {!ready?<p className="play-warning" role="alert">Sincroniza la hoja antes de registrar ataques recibidos.</p>:<>
       <div className="play-actions-grid">
@@ -92,7 +92,7 @@ export default function IncomingAttacksPanel({sheet,state,species,inventory,outO
           <label className="field"><span>Daño del primer componente (incluye dados de crítico)</span><input type="number" min={0} max={50000} value={damage} onChange={e=>setDamage(Number(e.target.value))}/></label>
           <label className="field"><span>Otros ajustes planos al daño, antes de mitigación</span><input type="number" min={-1000} max={1000} value={damageAdjustment} onChange={e=>setDamageAdjustment(Number(e.target.value))}/></label>
           <label className="field"><span>Defensa situacional del primer componente (adicional a los rasgos)</span><select value={mitigation} onChange={e=>setMitigation(e.target.value as DamageMitigation)}>{MITIGATION.map(m=><option value={m.id} key={m.id}>{m.label}</option>)}</select></label>
-          <p className="muted-note">La resistencia del Enano al veneno se aplica automáticamente. Otras defensas situacionales pueden indicarse manualmente. Ninguna armadura corriente concede resistencia por sí sola.</p>
+          <p className="muted-note">La resistencia del Enano y las defensas de los objetos mágicos ACTIVOS se aplican automáticamente. Las otras defensas situacionales siguen siendo manuales.</p>
           <div className="play-action-group"><h3>Defensas automáticas activas</h3>
             {knownDefenses.length===0?<p className="muted-note">Esta especie y equipo no conceden resistencias automáticas reconocidas.</p>:
               knownDefenses.map(d=><p className="muted-note" key={d.id}>{d.source}: {DAMAGE_NAMES[d.damageType]} ({d.kind==='resistance'?'Resistencia':d.kind==='vulnerability'?'Vulnerabilidad':'Inmunidad'})</p>)}

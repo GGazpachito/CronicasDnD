@@ -6,6 +6,7 @@
 import type {SpeciesId} from './guided';
 import type {InventoryItemId,InventoryState} from './inventory';
 import type {IncomingDamageType,DamageMitigation} from './incoming';
+import {collectMagicWardDefenses,type MagicWardEntry} from './magic-wards';
 
 export type DefenseKind='resistance'|'vulnerability'|'immunity';
 export type DefenseEquipmentSlot='armor'|'shield';
@@ -22,6 +23,8 @@ export type DefenseContext=Readonly<{
   inventory?:InventoryState;
   /** Para contenido futuro: únicamente declaraciones revisadas por la aplicación. */
   grants?:readonly DeclaredDamageDefense[];
+  /** Procedencia persistente de objetos mágicos del SRD 5.2.1. */
+  magicWards?:readonly MagicWardEntry[];
 }>;
 export type EffectiveDamageDefense=Readonly<{
   mitigation:DamageMitigation;
@@ -47,11 +50,12 @@ const DWARF_POISON:DeclaredDamageDefense={
  */
 export function collectDamageDefenses(context:DefenseContext={}):readonly DeclaredDamageDefense[]{
   if(!isRecord(context))fail('Contexto defensivo inválido');
-  if(Object.keys(context).some(k=>!['species','inventory','grants'].includes(k)))fail('Contexto defensivo con campos desconocidos');
+  if(Object.keys(context).some(k=>!['species','inventory','grants','magicWards'].includes(k)))fail('Contexto defensivo con campos desconocidos');
   if(context.species!==undefined&&!['human','dwarf','elf'].includes(context.species))fail('Especie desconocida');
   if(context.grants!==undefined&&(!Array.isArray(context.grants)||context.grants.length>40))fail('Demasiadas defensas declaradas');
   const grants:DeclaredDamageDefense[]=[];
   if(context.species==='dwarf')grants.push(DWARF_POISON);
+  grants.push(...collectMagicWardDefenses(context.magicWards??[]));
   const seen=new Set(grants.map(x=>x.id));
   for(const raw of context.grants??[]){
     if(!isRecord(raw)||Object.keys(raw).some(k=>!['id','source','damageType','kind','requiresEquipped'].includes(k)))fail('Declaración defensiva mal formada');

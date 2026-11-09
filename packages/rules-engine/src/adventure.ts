@@ -3,6 +3,7 @@
  * Los dados los proporciona el jugador; no se simula combate contra enemigos.
  */
 import type { CalculatedFighterSheet } from './sheet';
+import {validateMagicWards,type MagicWardEntry} from './magic-wards';
 import { initialCombatState,validateCombatState,type CombatState } from './combat';
 import {longRestConditionUpdate,initialConditionLedger,conditionCapabilities} from './conditions';
 import {advanceSurvivalRound,concentrationDC,damageAtZero,deathSavingThrow,initialSurvivalState,
@@ -18,6 +19,8 @@ export type AdventureState = Readonly<{
   combat: CombatState;
   /** Ausente en guardados v2 anteriores a esta actualización. */
   survival?: SurvivalState;
+  /** Registro opcional: ausente en personajes anteriores a la fase 4.9. */
+  magicWards?: readonly MagicWardEntry[];
 }>;
 
 export type AdventureAction =
@@ -54,13 +57,13 @@ function onlyKeys(value:Record<string,unknown>,keys:readonly string[],label:stri
 }
 
 export function initialAdventureState(sheet:CalculatedFighterSheet):AdventureState{
-  return {fighter:initialFighterState(sheet.level,sheet.maximumHitPoints),temporaryHitPoints:0,spentHitDice:0,combat:initialCombatState(),survival:initialSurvivalState()};
+  return {fighter:initialFighterState(sheet.level,sheet.maximumHitPoints),temporaryHitPoints:0,spentHitDice:0,combat:initialCombatState(),survival:initialSurvivalState(),magicWards:[]};
 }
 
 /** Comprueba que el estado pertenece a esta hoja; no se remapea silenciosamente. */
 export function validateAdventureState(value:unknown,sheet:CalculatedFighterSheet):AdventureState{
   if(!isRecord(value))throw new RangeError('Estado de partida inválido');
-  onlyKeys(value,['fighter','temporaryHitPoints','spentHitDice','combat','survival'],'Estado de partida');
+  onlyKeys(value,['fighter','temporaryHitPoints','spentHitDice','combat','survival','magicWards'],'Estado de partida');
   if(!isRecord(value.fighter))throw new RangeError('Estado del Guerrero inválido');
   onlyKeys(value.fighter,['fighterLevel','hitPoints','resources'],'Estado del Guerrero');
   if(!isRecord(value.fighter.hitPoints))throw new RangeError('PG inválidos');
@@ -78,13 +81,14 @@ export function validateAdventureState(value:unknown,sheet:CalculatedFighterShee
   const temporaryHitPoints=requireInteger(value.temporaryHitPoints,'PG temporales',0,100_000);
   const spentHitDice=requireInteger(value.spentHitDice,'Dados de golpe gastados',0,sheet.hitDice.total);
   const combat=value.combat===undefined?initialCombatState():validateCombatState(value.combat);
+  const magicWards=value.magicWards===undefined?[]:validateMagicWards(value.magicWards);
   const survival=value.survival===undefined?initialSurvivalState():validateSurvivalState(value.survival,fighter.hitPoints.current);
   if(survival.concentration&&!conditionCapabilities(combat.conditions??initialConditionLedger()).canConcentrate)
     throw new RangeError('No puedes mantener concentración mientras estás incapacitado');
   return {fighter:{fighterLevel:fighter.fighterLevel,hitPoints:{...fighter.hitPoints},resources:{
     second_wind:{current:fighter.resources.second_wind!.current},
     ...(fighter.fighterLevel>=2?{action_surge:{current:fighter.resources.action_surge!.current}}:{})
-  }},temporaryHitPoints,spentHitDice,combat,survival};
+  }},temporaryHitPoints,spentHitDice,combat,survival,magicWards};
 }
 
 function withHp(state:AdventureState,current:number):AdventureState{
