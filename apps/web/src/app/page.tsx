@@ -8,8 +8,10 @@ import IncomingAttacksPanel from "../components/IncomingAttacksPanel";
 import MagicWardsPanel from "../components/MagicWardsPanel";
 import AttacksPanel from "../components/AttacksPanel";
 import CombatPanel from "../components/CombatPanel";
+import TurnPanel from "../components/TurnPanel";
 import ConditionsPanel from "../components/ConditionsPanel";
 import { recordWeaponAttack } from "../../../../packages/rules-engine/src/combat";
+import type {AttackTurnUsage} from "../../../../packages/rules-engine/src/turns";
 import {conditionCapabilities,initialConditionLedger} from "../../../../packages/rules-engine/src/conditions";
 import type { WeaponAttackProfile,AttackResolution } from "../../../../packages/rules-engine/src/attacks";
 import type {MasteryContext} from "../../../../packages/rules-engine/src/mastery-effects";
@@ -152,11 +154,11 @@ export default function Home(){
     try{return {state:validateAdventureState(adventure,sheet),outOfSync:false};}
     catch{return {state:adventure,outOfSync:true};}
   },[sheet,adventure]);
-  function confirmWeaponAttack(profile:WeaponAttackProfile,resolution:AttackResolution,context:MasteryContext){
+  function confirmWeaponAttack(profile:WeaponAttackProfile,resolution:AttackResolution,context:MasteryContext,usage:AttackTurnUsage){
     if(!sheet||!sessionCheck.state||sessionCheck.outOfSync||!output.result?.inventory)throw new RangeError('Primero valida y sincroniza el personaje');
     if(sessionCheck.state.fighter.hitPoints.current===0)throw new RangeError('A 0 PG no se pueden registrar ataques: revisa el estado del personaje');
     if(!conditionCapabilities(sessionCheck.state.combat.conditions??initialConditionLedger()).canTakeAction)throw new RangeError('Las condiciones impiden registrar ataques');
-    const result=recordWeaponAttack(sessionCheck.state.combat,output.result.inventory,profile,resolution,context);
+    const result=recordWeaponAttack(sessionCheck.state.combat,output.result.inventory,profile,resolution,context,usage);
     const nextActions=result.inventoryAction?[...activeActions,result.inventoryAction]:activeActions;
     replayInventory(starting,FIGHTER_PACKAGES[starter].initialArmor,nextActions);
     if(result.inventoryAction)setInventoryEdits({key:inventoryKey,actions:nextActions});
@@ -205,6 +207,7 @@ export default function Home(){
       <MagicWardsPanel inventory={output.result?.inventory??null} outOfSync={sessionCheck.outOfSync} onInventoryAction={transact}/>
       <IncomingAttacksPanel sheet={sheet??null} state={sessionCheck.state} species={output.result?.origin.species??null} inventory={output.result?.inventory??null} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
       <ConditionsPanel combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} outOfSync={sessionCheck.outOfSync} onChange={handleCombatChange} baseSpeed={output.result?.origin.speedFeet??30}/>
+      <TurnPanel combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} outOfSync={sessionCheck.outOfSync} onChange={handleCombatChange} baseSpeedFeet={output.result?.origin.speedFeet??30} hitPoints={sessionCheck.state?.fighter.hitPoints.current??0}/>
       <AttacksPanel combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} sheet={sheet??null} inventory={output.result?.inventory??null} martial={input.martial??null} onRecord={confirmWeaponAttack} canRecord={Boolean(sheet&&!sessionCheck.outOfSync&&sessionCheck.state&&sessionCheck.state.fighter.hitPoints.current>0&&conditionCapabilities(sessionCheck.state.combat.conditions??initialConditionLedger()).canTakeAction)}/>
       <CombatPanel combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} outOfSync={sessionCheck.outOfSync} onChange={handleCombatChange}/>
       <nav className="wizard-tabs" aria-label="Pasos de creación">{STEPS.map((s,i)=><button type="button" key={s} className={step===i?'active':''} aria-current={step===i?'step':undefined} onClick={()=>setStep(i)}><span>{String(i+1).padStart(2,'0')}</span>{s}</button>)}</nav>

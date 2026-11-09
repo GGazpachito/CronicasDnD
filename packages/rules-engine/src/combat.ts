@@ -8,6 +8,7 @@ import { applyInventoryAction, type InventoryAction, type InventoryItemId, type 
 import {advanceConditionRound,initialConditionLedger,validateConditionLedger,type ConditionId,type ConditionLedger,type RollMode} from './conditions';
 import type {IncomingDamageType,DamageMitigation,IncomingDamageBreakdown} from './incoming';
 import {evaluateWeaponMastery,validateMasteryContext,validateMasteryPendingEffect,hasVexAdvantage,type MasteryContext,type MasteryPendingEffect} from './mastery-effects';
+import {initialTurnTracker,validateTurnTracker,startTurnTracker,endTurnTracker,spendTurnSlot,grantActionSurgeSlot,moveOnTurn,spendAttackOnTurn,type TurnTracker,type TurnSlot,type AttackTurnUsage} from './turns';
 
 type AmmoId = NonNullable<WeaponAttackProfile['ammunition']>;
 export type CombatAttackEntry = Readonly<{
@@ -51,6 +52,8 @@ export type CombatState = Readonly<{
   conditions?:ConditionLedger;
   /** Recordatorios manuales ligados a un objetivo, incluido Hostigar para próximos ataques. */
   masteryEffects?:readonly MasteryPendingEffect[];
+  /** Opcional en guardados anteriores: el tracker empieza solo cuando se usa la pantalla. */
+  turn?:TurnTracker;
 }>;
 const MAX_ATTACKS=100;
 const MAX_EFFECTS=30;
@@ -86,10 +89,38 @@ function preserveProneAfterUnconscious(before:ConditionLedger,after:ConditionLed
 
 export function initialCombatState():CombatState{return {round:1,nextId:1,attacks:[],effects:[]};}
 
+/** Inicia el turno propio; los efectos Sap/Slow temporizados vencen al COMENZAR. */
+export function startCharacterTurn(state:CombatState):CombatState{
+  const s=validateCombatState(state);
+  const turn=startTurnTracker(s.turn??initialTurnTracker());
+  const masteryEffects=s.masteryEffects?.filter(e=>!(e.sourceTurn!==undefined&&e.sourceTurn<turn.number&&
+    (e.mastery==='Sap'||e.mastery==='Slow')));
+  return {...s,turn,...(masteryEffects?{masteryEffects}:{})};
+}
+/** Hostigar creado en el turno N caduca al TERMINAR el turno N+1. */
+export function endCharacterTurn(state:CombatState):CombatState{
+  const s=validateCombatState(state);
+  const turn=endTurnTracker(s.turn??initialTurnTracker());
+  const masteryEffects=s.masteryEffects?.filter(e=>!(e.sourceTurn!==undefined&&e.sourceTurn<turn.number&&e.mastery==='Vex'));
+  return {...s,turn,...(masteryEffects?{masteryEffects}:{})};
+}
+export function spendCombatSlot(state:CombatState,slot:TurnSlot):CombatState{
+  const s=validateCombatState(state);
+  return {...s,turn:spendTurnSlot(s.turn??initialTurnTracker(),slot)};
+}
+export function grantCombatActionSurge(state:CombatState):CombatState{
+  const s=validateCombatState(state);
+  return {...s,turn:grantActionSurgeSlot(s.turn??initialTurnTracker())};
+}
+export function moveCombatCharacter(state:CombatState,feet:number,effectiveSpeedFeet:number):CombatState{
+  const s=validateCombatState(state);
+  return {...s,turn:moveOnTurn(s.turn??initialTurnTracker(),feet,effectiveSpeedFeet)};
+}
+
 /** Valida y clona estados cargados de PostgreSQL (no confia en el JSON recibido). */
 export function validateCombatState(value:unknown):CombatState{
   if(!record(value))fail('Estado de combate inválido');
-  exactKeys(value,['round','nextId','attacks','effects',...(value.conditions===undefined?[]:['conditions']),...(value.receivedAttacks===undefined?[]:['receivedAttacks']),...(value.masteryEffects===undefined?[]:['masteryEffects'])],'Combate');
+  exactKeys(value,['round','nextId','attacks','effects',...(value.conditions===undefined?[]:['conditions']),...(value.receivedAttacks===undefined?[]:['receivedAttacks']),...(value.masteryEffects===undefined?[]:['masteryEffects']),...(value.turn===undefined?[]:['turn'])],'Combate');
   const round=bounded(value.round,1,MAX_ROUNDS,'Ronda');
   const nextId=bounded(value.nextId,1,MAX_ID,'Siguiente ID');
   if(!Array.isArray(value.attacks)||value.attacks.length>MAX_ATTACKS)fail('Historial de ataques demasiado largo');
@@ -186,19 +217,27 @@ export function validateCombatState(value:unknown):CombatState{
       return e;
     });
   }
-  return {round,nextId,attacks,effects,...(conditions?{conditions}:{}),...(receivedAttacks?{receivedAttacks}:{}),...(masteryEffects?{masteryEffects}:{})};
+  const turn=value.turn===undefined?undefined:validateTurnTracker(value.turn);
+  if(turn&&masteryEffects?.some(e=>e.sourceTurn!==undefined&&e.sourceTurn>turn.number))fail('El origen de la maestría es posterior al turno actual');
+  return {round,nextId,attacks,effects,...(conditions?{conditions}:{}),...(receivedAttacks?{receivedAttacks}:{}),...(masteryEffects?{masteryEffects}:{}),...(turn?{turn}:{})};
 }
 
 /** Registrar un ataque y descontar su municion forman una sola operacion logica.
  * Devuelve la accion de inventario que se debe anadir al diario persistente, nunca la ejecuta dos veces.
  */
 export function recordWeaponAttack(
-  state:CombatState, inventory:InventoryState, profile:WeaponAttackProfile, resolution:AttackResolution, context?:MasteryContext,
+  state:CombatState, inventory:InventoryState, profile:WeaponAttackProfile, resolution:AttackResolution, context?:MasteryContext, usage:AttackTurnUsage='untracked',
 ):Readonly<{combat:CombatState;inventoryAction:InventoryAction|null}> {
   const combat=validateCombatState(state);
   const validatedContext=context===undefined?undefined:validateMasteryContext(context);
   const mastery=validatedContext?evaluateWeaponMastery(profile,resolution,validatedContext):null;
   if(combat.nextId>=MAX_ID)fail('Limite del historial de combate alcanzado');
+  if(usage!=='untracked'&&!combat.turn)fail('Inicia el seguimiento de turnos para utilizar acciones de combate');
+  const nextTurn=combat.turn?spendAttackOnTurn(combat.turn,usage,{
+    lightExtra:profile.lightExtraAttack,nickMastery:profile.mastery==='Nick',cleaveMastery:profile.mastery==='Cleave',
+    hitCreature:resolution.hit===true&&validatedContext?.targetIsCreature===true,
+    weaponId:profile.weaponId,targetName:validatedContext?.targetName??'',
+  }):undefined;
   if(!profile||!resolution||!weapon(profile.weaponId))fail('Perfil de ataque inválido');
   const stats=WEAPON_STATS[profile.weaponId];
   if(profile.ammunition!==stats.ammunition||profile.damageType!==stats.damageType)fail('Perfil de arma incompatible');
@@ -211,7 +250,11 @@ export function recordWeaponAttack(
   }else if(profile.magicEnhancement!==undefined)fail('Bonificador mágico sin arma identificada');
   else if(!inventory.items.some(i=>i.id===profile.weaponId&&i.quantity>=1))fail('El personaje no posee esta arma');
   if(typeof resolution.critical!=='boolean'||(resolution.hit!==null&&typeof resolution.hit!=='boolean'))fail('Resultado de ataque inválido');
-  const damageTotal=optionalDamage(resolution.damageTotal,'Daño');
+  const originalDamage=optionalDamage(resolution.damageTotal,'Daño');
+  // Tajo: se omite el modificador POSITIVO de característica en el ataque adicional;
+  // las mejoras mágicas de arma no se pierden. El resultado de los dados sigue intacto.
+  const damageTotal=usage==='cleave_extra'&&originalDamage!==null
+    ?Math.max(0,originalDamage-Math.max(0,profile.abilityModifier)):originalDamage;
   const grazeDamage=optionalDamage(resolution.grazeDamage,'Rozar');
   const ammo=profile.ammunition??null;
   const inventoryAction:InventoryAction|null=ammo?{type:'remove',itemId:ammo as InventoryItemId,quantity:1}:null;
@@ -235,9 +278,10 @@ export function recordWeaponAttack(
     :remaining;
   if(pending&&unique.length>=30)fail('Demasiados efectos de maestría pendientes');
   if(pending&&combat.nextId+1>=MAX_ID)fail('Limite del historial de combate alcanzado');
-  const newEffects=pending?[...unique,{id:combat.nextId+1,sourceAttackId:combat.nextId,round:combat.round,...pending}]:unique;
+  const newEffects=pending?[...unique,{id:combat.nextId+1,sourceAttackId:combat.nextId,round:combat.round,...pending,
+    ...(combat.turn&&combat.turn.number>0?{sourceTurn:combat.turn.number}:{})}]:unique;
   return {inventoryAction,combat:{...combat,nextId:combat.nextId+(pending?2:1),attacks:[...combat.attacks,entry].slice(-MAX_ATTACKS),
-    ...(validatedContext?{masteryEffects:newEffects}:{})}};
+    ...(validatedContext?{masteryEffects:newEffects}:{}),...(nextTurn?{turn:nextTurn}:{})}};
 }
 
 /** Retirada manual: el contador de rondas no identifica el inicio de cada turno. */
@@ -264,6 +308,7 @@ export function removeTrackedEffect(state:CombatState,id:number):CombatState{
 }
 export function advanceCombatRound(state:CombatState):CombatState{
   const s=validateCombatState(state);
+  if(s.turn?.active)fail('Termina tu turno antes de avanzar la ronda');
   if(s.round>=MAX_ROUNDS)fail('Límite de rondas alcanzado');
   const updated=s.conditions?preserveProneAfterUnconscious(s.conditions,advanceConditionRound(s.conditions),s.nextId):null;
   return {...s,nextId:updated?.nextId??s.nextId,round:s.round+1,

@@ -4,7 +4,7 @@
  */
 import type { CalculatedFighterSheet } from './sheet';
 import {validateMagicWards,type MagicWardEntry} from './magic-wards';
-import { initialCombatState,validateCombatState,type CombatState } from './combat';
+import { initialCombatState,validateCombatState,spendCombatSlot,grantCombatActionSurge,type CombatState } from './combat';
 import {longRestConditionUpdate,initialConditionLedger,conditionCapabilities} from './conditions';
 import {advanceSurvivalRound,concentrationDC,damageAtZero,deathSavingThrow,initialSurvivalState,
   recordConcentrationDamage,recoverFromStable,resetDeathTrack,resolveConcentration,startConcentration,
@@ -172,14 +172,16 @@ export function applyAdventureAction(source:AdventureState,action:AdventureActio
       requireConscious(state,'Segundo aliento');
       if(!conditionCapabilities(state.combat.conditions??initialConditionLedger()).canTakeBonusAction)throw new RangeError('Una condición impide usar Segundo aliento');
       const applied=useSecondWind(state.fighter,requireInteger(action.d10,'d10',1,10));
-      return {state:withFighter(state,applied.state),description:`Segundo aliento: +${applied.healed} PG efectivos y un uso gastado.`};
+      const combat=state.combat.turn?.active?spendCombatSlot(state.combat,'bonus'):state.combat;
+      return {state:{...withFighter(state,applied.state),combat},description:`Segundo aliento: +${applied.healed} PG efectivos y un uso gastado${combat!==state.combat?'; acción adicional consumida':''}.`};
     }
     case 'action_surge':{
       onlyKeys(action,['type'],'Acción súbita');
       requireConscious(state,'Acción súbita');
       if(!conditionCapabilities(state.combat.conditions??initialConditionLedger()).canTakeAction)throw new RangeError('Una condición impide usar Acción súbita');
       const fighter=spendFighterResource(state.fighter,'action_surge');
-      return {state:withFighter(state,fighter),description:'Acción súbita consumida. La acción adicional no puede ser Magia.'};
+      const combat=state.combat.turn?.active?grantCombatActionSurge(state.combat):state.combat;
+      return {state:{...withFighter(state,fighter),combat},description:'Acción súbita consumida. La acción extra no puede utilizarse para la acción Magia.'};
     }
     case 'tactical_mind':{
       onlyKeys(action,['type','originalTotal','difficultyClass','d10'],'Mente táctica');

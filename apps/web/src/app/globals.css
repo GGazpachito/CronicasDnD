@@ -121,3 +121,13 @@
 .condition-attack-summary .muted-note{margin:0}
 @media(max-width:800px){.condition-grid{grid-template-columns:1fr}.condition-results{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:500px){.condition-panel{padding:16px}.condition-summary{grid-template-columns:1fr 1fr}.condition-context .field{max-width:unset}}
+
+/* Paso 26: seguimiento de turnos, acciones y desplazamiento. */
+.turn-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:18px 0}
+.turn-stats>div{display:flex;flex-direction:column;gap:5px;background:#101b27;border:1px solid var(--line);border-radius:9px;padding:12px;min-width:0}
+.turn-stats span{color:var(--muted);font-size:11px}.turn-stats strong{font-size:16px;overflow-wrap:anywhere}
+.turn-movement{margin-top:15px;border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.turn-movement .field{min-width:150px;max-width:200px;margin:0}
+.turn-movement button{border:1px solid #518a72;background:#284439;color:#d5f4e2;padding:11px 13px;min-height:42px;border-radius:9px;cursor:pointer}
+.turn-movement button:disabled{opacity:.45;cursor:not-allowed}.turn-movement p{width:100%;margin:2px 0}
+@media(max-width:720px){.turn-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}

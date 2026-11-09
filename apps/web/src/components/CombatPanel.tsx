@@ -25,9 +25,9 @@ export default function CombatPanel({combat,onChange,outOfSync}:Props){
   return <section className="combat-panel panel" aria-label="Historial de combate y efectos temporales">
     <div className="save-panel-head"><div><span className="eyebrow">FASE 4.13 · REGISTRO DE COMBATE</span><h2>Registro y efectos temporales</h2></div><span className="save-label">Guardado manual</span></div>
     {!combat||outOfSync?<p className="play-warning" role="alert">El estado del personaje no está disponible o está desincronizado. Resuelve ese problema antes de registrar acciones.</p>:<>
-      <div className="combat-round-heading"><div><strong>Ronda indicada: {combat.round}</strong><p className="muted-note">Solo un contador manual; el director decide cuándo termina cada ronda.</p></div><button type="button" onClick={()=>perform(advanceCombatRound)}>Avanzar ronda</button></div>
+      <div className="combat-round-heading"><div><strong>Ronda indicada: {combat.round}</strong><p className="muted-note">El DM decide cuándo termina cada ronda. Finaliza tu turno antes de avanzar.</p></div><button type="button" onClick={()=>perform(advanceCombatRound)}>Avanzar ronda</button></div>
       <div className="combat-column"><h3>Maestrías pendientes ({combat.masteryEffects?.length??0})</h3>
-        <p className="muted-note">Hostigar concede ventaja contra el objetivo anotado y se consume al atacarlo. Otros efectos son recordatorios para el DM. Retíralos cuando se resuelvan o expiren; avanzar ronda no sustituye el inicio de turno.</p>
+        <p className="muted-note">Hostigar concede ventaja contra el objetivo anotado y se consume al atacarlo. Si activas el gestor de turnos, Hostigar, Debilitar y Ralentizar nuevos caducan automáticamente cuando corresponde. Los anteriores y los efectos sobre enemigos pueden requerir resolución manual.</p>
         <div className="combat-list">{!combat.masteryEffects?.length&&<p className="muted-note">Sin efectos de maestría pendientes.</p>}
           {(combat.masteryEffects??[]).map(effect=><div className="combat-row" key={effect.id}><div><strong>{effect.mastery} · {effect.target} · R{effect.round}</strong><small>{effect.detail}</small></div><button type="button" onClick={()=>perform(c=>clearMasteryEffect(c,effect.id))}>Resuelto / caducado</button></div>)}
         </div>
@@ -51,6 +51,6 @@ export default function CombatPanel({combat,onChange,outOfSync}:Props){
     </>}
     {message&&<p role="status" className="save-success">{message}</p>}
     {error&&<p role="alert" className="save-error">{error}</p>}
-    <p className="muted-note">El historial y los efectos se guardan al pulsar «Actualizar guardado» en Mis personajes. Avanzar una ronda reduce las duraciones de efectos y condiciones registradas, pero no simula iniciativa ni turnos completos.</p>
+    <p className="muted-note">El historial y los efectos se guardan al pulsar «Actualizar guardado» en Mis personajes. Avanzar ronda reduce las duraciones generales; el gestor de turnos registra solo los turnos de tu personaje, no iniciativa ni acciones de enemigos.</p>
   </section>;
 }

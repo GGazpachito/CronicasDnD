@@ -34,3 +34,4 @@ export * from './damage-defenses';
 export * from './magic-wards';
 
 export * from './mastery-effects';
+export * from './turns';

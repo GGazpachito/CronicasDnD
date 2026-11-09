@@ -19,6 +19,8 @@ export type MasteryTrackingKind='Vex'|'Sap'|'Slow'|'Topple'|'Push';
 export type MasteryPendingEffect=Readonly<{
   id:number; sourceAttackId:number; round:number; mastery:MasteryTrackingKind;
   target:string; detail:string;
+  /** Turno propio en que nació; ausente en guardados anteriores a la fase 26. */
+  sourceTurn?:number;
 }>;
 export type MasteryEvaluation=Readonly<{
   mastery:MasteryId|null;
@@ -41,14 +43,16 @@ export function validateMasteryContext(input:unknown):MasteryContext{
 export function validateMasteryPendingEffect(value:unknown):MasteryPendingEffect{
   if(!value||typeof value!=='object'||Array.isArray(value))throw new RangeError('Efecto de maestría inválido');
   const v=value as Record<string,unknown>;
-  if(Object.keys(v).length!==6||Object.keys(v).some(k=>!['id','sourceAttackId','round','mastery','target','detail'].includes(k)) ||
+  if(Object.keys(v).length!==(v.sourceTurn===undefined?6:7)||Object.keys(v).some(k=>!['id','sourceAttackId','round','mastery','target','detail','sourceTurn'].includes(k)) ||
+    (v.sourceTurn!==undefined&&(typeof v.sourceTurn!=='number'||!Number.isSafeInteger(v.sourceTurn)||v.sourceTurn<1||v.sourceTurn>100_000)) ||
     !PENDING.includes(v.mastery as MasteryTrackingKind) ||
     typeof v.id!=='number'||!Number.isSafeInteger(v.id)||v.id<1||v.id>=1_000_000 ||
     typeof v.sourceAttackId!=='number'||!Number.isSafeInteger(v.sourceAttackId)||v.sourceAttackId<1||v.sourceAttackId>=v.id ||
     typeof v.round!=='number'||!Number.isSafeInteger(v.round)||v.round<1||v.round>100_000 ||
     typeof v.target!=='string'||!v.target.trim()||v.target!==v.target.trim()||v.target.length>MAX_TARGET||/[\x00-\x1f]/.test(v.target) ||
     typeof v.detail!=='string'||!v.detail.trim()||v.detail.length>200||/[\x00-\x1f]/.test(v.detail))throw new RangeError('Efecto de maestría inválido');
-  return {id:v.id,sourceAttackId:v.sourceAttackId,round:v.round,mastery:v.mastery as MasteryTrackingKind,target:v.target,detail:v.detail};
+  return {id:v.id,sourceAttackId:v.sourceAttackId,round:v.round,mastery:v.mastery as MasteryTrackingKind,target:v.target,detail:v.detail,
+    ...(v.sourceTurn===undefined?{}:{sourceTurn:v.sourceTurn as number})};
 }
 const effect=(mastery:MasteryTrackingKind,target:string,detail:string):MasteryEvaluation['pending'] =>
   target?{mastery,target,detail}:null;
