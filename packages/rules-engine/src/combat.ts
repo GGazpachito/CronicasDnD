@@ -7,6 +7,7 @@ import { WEAPONS, type WeaponId } from './martial';
 import { applyInventoryAction, type InventoryAction, type InventoryItemId, type InventoryState } from './inventory';
 import {advanceConditionRound,initialConditionLedger,validateConditionLedger,type ConditionId,type ConditionLedger,type RollMode} from './conditions';
 import type {IncomingDamageType,DamageMitigation,IncomingDamageBreakdown} from './incoming';
+import {evaluateWeaponMastery,validateMasteryContext,validateMasteryPendingEffect,hasVexAdvantage,type MasteryContext,type MasteryPendingEffect} from './mastery-effects';
 
 type AmmoId = NonNullable<WeaponAttackProfile['ammunition']>;
 export type CombatAttackEntry = Readonly<{
@@ -15,6 +16,8 @@ export type CombatAttackEntry = Readonly<{
   weaponId:WeaponId;
   /** Ausentes en ataques anteriores a la actualización 24. */
   magicWeaponInstanceId?:string; magicEnhancement?:1|2|3;
+  /** Contexto opcional de ataques desde la fase 25. */
+  targetName?:string; masteryNote?:string;
   naturalRoll:number;
   attackTotal:number;
   critical:boolean;
@@ -46,6 +49,8 @@ export type CombatState = Readonly<{
   effects:readonly TrackedEffect[];
   /** Opcional para compatibilidad con los guardados anteriores a la actualización 17. */
   conditions?:ConditionLedger;
+  /** Recordatorios manuales ligados a un objetivo, incluido Hostigar para próximos ataques. */
+  masteryEffects?:readonly MasteryPendingEffect[];
 }>;
 const MAX_ATTACKS=100;
 const MAX_EFFECTS=30;
@@ -84,7 +89,7 @@ export function initialCombatState():CombatState{return {round:1,nextId:1,attack
 /** Valida y clona estados cargados de PostgreSQL (no confia en el JSON recibido). */
 export function validateCombatState(value:unknown):CombatState{
   if(!record(value))fail('Estado de combate inválido');
-  exactKeys(value,['round','nextId','attacks','effects',...(value.conditions===undefined?[]:['conditions']),...(value.receivedAttacks===undefined?[]:['receivedAttacks'])],'Combate');
+  exactKeys(value,['round','nextId','attacks','effects',...(value.conditions===undefined?[]:['conditions']),...(value.receivedAttacks===undefined?[]:['receivedAttacks']),...(value.masteryEffects===undefined?[]:['masteryEffects'])],'Combate');
   const round=bounded(value.round,1,MAX_ROUNDS,'Ronda');
   const nextId=bounded(value.nextId,1,MAX_ID,'Siguiente ID');
   if(!Array.isArray(value.attacks)||value.attacks.length>MAX_ATTACKS)fail('Historial de ataques demasiado largo');
@@ -94,7 +99,7 @@ export function validateCombatState(value:unknown):CombatState{
     if(!record(raw))fail('Ataque registrado inválido');
     exactKeys(raw,['id','round','weaponId','naturalRoll','attackTotal','critical','hit','damageTotal','grazeDamage','damageType','ammunitionSpent',
       ...(raw.magicWeaponInstanceId===undefined?[]:['magicWeaponInstanceId']),
-      ...(raw.magicEnhancement===undefined?[]:['magicEnhancement'])],'Ataque');
+      ...(raw.magicEnhancement===undefined?[]:['magicEnhancement']),...(raw.targetName===undefined?[]:['targetName']),...(raw.masteryNote===undefined?[]:['masteryNote'])],'Ataque');
     const id=bounded(raw.id,1,nextId-1,'ID de ataque');
     if(seen.has(id)||id<=previous)fail('Historial de ataques desordenado o duplicado');
     seen.add(id);previous=id;
@@ -108,12 +113,16 @@ export function validateCombatState(value:unknown):CombatState{
     if(ammo!==null&&ammo!==stats.ammunition)fail('Munición incompatible con el arma');
     if(stats.ammunition&&ammo!==stats.ammunition)fail('Falta el consumo de munición');
     if(typeof raw.critical!=='boolean'||(raw.hit!==null&&typeof raw.hit!=='boolean'))fail('Resultado de impacto inválido');
+    if(raw.targetName!==undefined&&(typeof raw.targetName!=='string'||!raw.targetName.trim()||raw.targetName!==raw.targetName.trim()||raw.targetName.length>60||/[\x00-\x1f]/.test(raw.targetName)))fail('Objetivo registrado inválido');
+    if(raw.masteryNote!==undefined&&(typeof raw.masteryNote!=='string'||!raw.masteryNote.trim()||raw.masteryNote.length>600||/[\x00-\x1f]/.test(raw.masteryNote)))fail('Nota de maestría inválida');
     const damageTotal=optionalDamage(raw.damageTotal,'Daño registrado');
     const grazeDamage=optionalDamage(raw.grazeDamage,'Daño de Rozar');
     return {id,round:eventRound,weaponId:raw.weaponId,naturalRoll:bounded(raw.naturalRoll,1,20,'d20'),
       attackTotal:bounded(raw.attackTotal,-1000,1000,'Total de ataque'),critical:raw.critical,hit:raw.hit,
       damageTotal,grazeDamage,damageType:stats.damageType,ammunitionSpent:ammo as AmmoId|null,
-      ...(raw.magicWeaponInstanceId===undefined?{}:{magicWeaponInstanceId:raw.magicWeaponInstanceId as string,magicEnhancement:raw.magicEnhancement as 1|2|3})};
+      ...(raw.magicWeaponInstanceId===undefined?{}:{magicWeaponInstanceId:raw.magicWeaponInstanceId as string,magicEnhancement:raw.magicEnhancement as 1|2|3}),
+      ...(raw.targetName===undefined?{}:{targetName:raw.targetName as string}),
+      ...(raw.masteryNote===undefined?{}:{masteryNote:raw.masteryNote as string})};
   });
   const effects:TrackedEffect[]=value.effects.map((raw:unknown)=>{
     if(!record(raw))fail('Efecto registrado inválido');
@@ -167,16 +176,28 @@ export function validateCombatState(value:unknown):CombatState{
         mitigation:raw.mitigation as DamageMitigation,...(damageParts?{damageParts}:{})};
     });
   }
-  return {round,nextId,attacks,effects,...(conditions?{conditions}:{}),...(receivedAttacks?{receivedAttacks}:{})};
+  let masteryEffects:MasteryPendingEffect[]|undefined;
+  if(value.masteryEffects!==undefined){
+    if(!Array.isArray(value.masteryEffects)||value.masteryEffects.length>30)fail('Demasiados efectos de maestría');
+    masteryEffects=value.masteryEffects.map((raw:unknown)=>{
+      const e=validateMasteryPendingEffect(raw);
+      if(e.id>=nextId||e.round>round||seen.has(e.id))fail('ID de maestría inválido o duplicado');
+      seen.add(e.id);
+      return e;
+    });
+  }
+  return {round,nextId,attacks,effects,...(conditions?{conditions}:{}),...(receivedAttacks?{receivedAttacks}:{}),...(masteryEffects?{masteryEffects}:{})};
 }
 
 /** Registrar un ataque y descontar su municion forman una sola operacion logica.
  * Devuelve la accion de inventario que se debe anadir al diario persistente, nunca la ejecuta dos veces.
  */
 export function recordWeaponAttack(
-  state:CombatState, inventory:InventoryState, profile:WeaponAttackProfile, resolution:AttackResolution,
+  state:CombatState, inventory:InventoryState, profile:WeaponAttackProfile, resolution:AttackResolution, context?:MasteryContext,
 ):Readonly<{combat:CombatState;inventoryAction:InventoryAction|null}> {
   const combat=validateCombatState(state);
+  const validatedContext=context===undefined?undefined:validateMasteryContext(context);
+  const mastery=validatedContext?evaluateWeaponMastery(profile,resolution,validatedContext):null;
   if(combat.nextId>=MAX_ID)fail('Limite del historial de combate alcanzado');
   if(!profile||!resolution||!weapon(profile.weaponId))fail('Perfil de ataque inválido');
   const stats=WEAPON_STATS[profile.weaponId];
@@ -200,10 +221,32 @@ export function recordWeaponAttack(
     naturalRoll:bounded(resolution.naturalRoll,1,20,'d20'),attackTotal:bounded(resolution.attackTotal,-1000,1000,'Total de ataque'),
     critical:resolution.critical,hit:resolution.hit,damageTotal,grazeDamage,
     damageType:stats.damageType,ammunitionSpent:ammo,
-    ...(magic===undefined?{}:{magicWeaponInstanceId:magic,magicEnhancement:profile.magicEnhancement})};
-  return {inventoryAction,combat:{...combat,nextId:combat.nextId+1,attacks:[...combat.attacks,entry].slice(-MAX_ATTACKS)}};
+    ...(magic===undefined?{}:{magicWeaponInstanceId:magic,magicEnhancement:profile.magicEnhancement}),
+    ...(validatedContext?.targetName?{targetName:validatedContext.targetName}:{}),
+    ...(mastery?.mastery?{masteryNote:mastery.message}:{})};
+  // Una ventaja previa de Hostigar se consume en el siguiente ataque contra ESA criatura,
+  // incluso si el impacto falla. No consume ventajas asociadas a otros objetivos.
+  const remaining=(combat.masteryEffects??[]).filter(e=>!(validatedContext?.targetName&&validatedContext.targetIsCreature&&e.mastery==='Vex'&&
+    hasVexAdvantage([e],validatedContext.targetName)));
+  const pending=mastery?.pending;
+  // Debilitar y Ralentizar no acumulan el mismo estado sobre una criatura.
+  const unique=pending&&(pending.mastery==='Sap'||pending.mastery==='Slow')
+    ?remaining.filter(e=>!(e.mastery===pending.mastery&&e.target.toLocaleLowerCase('es')===pending.target.toLocaleLowerCase('es')))
+    :remaining;
+  if(pending&&unique.length>=30)fail('Demasiados efectos de maestría pendientes');
+  if(pending&&combat.nextId+1>=MAX_ID)fail('Limite del historial de combate alcanzado');
+  const newEffects=pending?[...unique,{id:combat.nextId+1,sourceAttackId:combat.nextId,round:combat.round,...pending}]:unique;
+  return {inventoryAction,combat:{...combat,nextId:combat.nextId+(pending?2:1),attacks:[...combat.attacks,entry].slice(-MAX_ATTACKS),
+    ...(validatedContext?{masteryEffects:newEffects}:{})}};
 }
 
+/** Retirada manual: el contador de rondas no identifica el inicio de cada turno. */
+export function clearMasteryEffect(state:CombatState,id:number):CombatState{
+  const s=validateCombatState(state);
+  bounded(id,1,MAX_ID,'ID de maestría');
+  if(!s.masteryEffects?.some(e=>e.id===id))fail('Maestría pendiente desconocida');
+  return {...s,masteryEffects:s.masteryEffects.filter(e=>e.id!==id)};
+}
 export function addTrackedEffect(state:CombatState,name:string,remainingRounds:number|null,notes=''):CombatState{
   const s=validateCombatState(state);
   if(s.effects.length>=MAX_EFFECTS)fail('Límite de efectos activos alcanzado');

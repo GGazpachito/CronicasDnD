@@ -32,3 +32,5 @@ export * from "./incoming";
 export * from './damage-defenses';
 
 export * from './magic-wards';
+
+export * from './mastery-effects';

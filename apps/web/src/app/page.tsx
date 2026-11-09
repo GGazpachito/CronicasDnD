@@ -12,6 +12,7 @@ import ConditionsPanel from "../components/ConditionsPanel";
 import { recordWeaponAttack } from "../../../../packages/rules-engine/src/combat";
 import {conditionCapabilities,initialConditionLedger} from "../../../../packages/rules-engine/src/conditions";
 import type { WeaponAttackProfile,AttackResolution } from "../../../../packages/rules-engine/src/attacks";
+import type {MasteryContext} from "../../../../packages/rules-engine/src/mastery-effects";
 import { initialAdventureState, validateAdventureState, updateAdventureCombat, type AdventureState } from "../../../../packages/rules-engine/src/adventure";
 import type { CharacterSnapshot } from "../../../../packages/rules-engine/src/persistence";
 import { calculateGuidedFighter, BACKGROUNDS, FIGHTER_SKILL_OPTIONS, HUMAN_FEATS, type BackgroundId, type SpeciesId, type ElfLineage, type GuidedFighterInput, type HumanOriginFeat } from "../../../../packages/rules-engine/src/guided";
@@ -151,11 +152,11 @@ export default function Home(){
     try{return {state:validateAdventureState(adventure,sheet),outOfSync:false};}
     catch{return {state:adventure,outOfSync:true};}
   },[sheet,adventure]);
-  function confirmWeaponAttack(profile:WeaponAttackProfile,resolution:AttackResolution){
+  function confirmWeaponAttack(profile:WeaponAttackProfile,resolution:AttackResolution,context:MasteryContext){
     if(!sheet||!sessionCheck.state||sessionCheck.outOfSync||!output.result?.inventory)throw new RangeError('Primero valida y sincroniza el personaje');
     if(sessionCheck.state.fighter.hitPoints.current===0)throw new RangeError('A 0 PG no se pueden registrar ataques: revisa el estado del personaje');
     if(!conditionCapabilities(sessionCheck.state.combat.conditions??initialConditionLedger()).canTakeAction)throw new RangeError('Las condiciones impiden registrar ataques');
-    const result=recordWeaponAttack(sessionCheck.state.combat,output.result.inventory,profile,resolution);
+    const result=recordWeaponAttack(sessionCheck.state.combat,output.result.inventory,profile,resolution,context);
     const nextActions=result.inventoryAction?[...activeActions,result.inventoryAction]:activeActions;
     replayInventory(starting,FIGHTER_PACKAGES[starter].initialArmor,nextActions);
     if(result.inventoryAction)setInventoryEdits({key:inventoryKey,actions:nextActions});

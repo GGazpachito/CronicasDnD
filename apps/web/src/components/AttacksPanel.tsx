@@ -7,12 +7,17 @@ import type {CombatState} from '../../../../packages/rules-engine/src/combat';
 import {conditionKinds,evaluateConditionRoll,initialConditionLedger} from '../../../../packages/rules-engine/src/conditions';
 import type {MartialChoices} from '../../../../packages/rules-engine/src/martial';
 import {calculateOwnedWeaponAttack,ownedWeaponChoices,resolveWeaponAttack,WEAPON_STATS,type AttackResolution,type WeaponAttackProfile} from '../../../../packages/rules-engine/src/attacks';
+import {evaluateWeaponMastery,hasVexAdvantage,type CreatureSize,type MasteryContext} from '../../../../packages/rules-engine/src/mastery-effects';
 
-type Props={sheet:CalculatedFighterSheet|null;inventory:InventoryState|null;martial:MartialChoices|null;combat:CombatState|null;onRecord:(profile:WeaponAttackProfile,resolution:AttackResolution)=>void;canRecord:boolean};
+type Props={sheet:CalculatedFighterSheet|null;inventory:InventoryState|null;martial:MartialChoices|null;combat:CombatState|null;onRecord:(profile:WeaponAttackProfile,resolution:AttackResolution,context:MasteryContext)=>void;canRecord:boolean};
 const signed=(n:number)=>n>=0?`+${n}`:`${n}`;
 const DAMAGE_LABELS={bludgeoning:'contundente',piercing:'perforante',slashing:'cortante'};
 export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,canRecord}:Props){
   const [wanted,setWanted]=useState<string|null>(null);
+  const [targetName,setTargetName]=useState('');
+  const [targetSize,setTargetSize]=useState<CreatureSize>('unknown');
+  const [targetIsCreature,setTargetIsCreature]=useState(true);
+  const [damageDealt,setDamageDealt]=useState(true);
   const [useDex,setUseDex]=useState(false);
   const [thrown,setThrown]=useState(false);
   const [twoHands,setTwoHands]=useState(false);
@@ -43,6 +48,7 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
   const choice=owned.find(item=>item.selectionId===wanted)??owned[0];
   const id=choice?.weaponId;
   const w=id?WEAPON_STATS[id]:null;
+  const vexActive=hasVexAdvantage(combat?.masteryEffects,targetName);
   let profile:WeaponAttackProfile|null=null;
   let profileError='';
   if(sheet&&martial&&choice&&inventory){
@@ -50,7 +56,7 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
       ...(w?.finesse?{ability:useDex?'dexterity':'strength'}:{}),
       thrown:thrown&&Boolean(w?.thrownRange),twoHanded:twoHands&&Boolean(w?.versatileSides),
       lightExtraAttack:lightExtra&&Boolean(w?.light),otherWeaponHeld:otherWeapon,adjacentEnemy:adjacent,advantage,
-      conditionAdvantage:conditionRoll.advantages.length>0,
+      conditionAdvantage:conditionRoll.advantages.length>0||(vexActive&&targetIsCreature),
       conditionDisadvantage:conditionRoll.disadvantages.length>0,
       conditionD20Penalty:conditionRoll.d20Penalty,
       ...(distance.trim()?{targetDistanceFeet:Number(distance)}:{}),
@@ -58,6 +64,9 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
   }
   const rollKey=JSON.stringify({profile,d20,otherD20,ac,dice});
   const resolved=computed?.key===rollKey?computed.value:null;
+  const activeMasteryContext:MasteryContext={targetName:targetName.trim(),targetSize,targetIsCreature,
+    dealtDamage:Boolean(damageDealt&&resolved?.hit===true&&resolved.damageTotal!==null&&resolved.damageTotal>0)};
+  const masteryPreview=profile&&resolved?evaluateWeaponMastery(profile,resolved,activeMasteryContext):null;
   const setResolved=(value:AttackResolution|null)=>{setComputed(value?{key:rollKey,value}:null);if(!value){confirmedRef.current=false;setConfirmation('');}};
   const incompatibleShield=Boolean(inventory&&hasEquippedShield(inventory)&&profile?.twoHanded);
   const ammoCount=profile?.ammunition?inventory?.items.find(i=>i.id===profile!.ammunition)?.quantity??0:null;
@@ -77,11 +86,11 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
   }
   function confirm(){
     if(!profile||!resolved||!canRecord||blockedByConditions||confirmedRef.current)return;
-    try{onRecord(profile,resolved);confirmedRef.current=true;setComputed(null);setError('');setConfirmation('Ataque anotado y munición descontada cuando corresponde. Guarda el personaje para conservarlo.');}
+    try{onRecord(profile,resolved,activeMasteryContext);confirmedRef.current=true;setComputed(null);setError('');setConfirmation('Ataque anotado y munición descontada cuando corresponde. Guarda el personaje para conservarlo.');}
     catch(e){setError(e instanceof Error?e.message:'No se pudo registrar el ataque');}
   }
   return <section className="attack-panel panel" aria-label="Ataques con armas">
-    <div className="save-panel-head"><div><span className="eyebrow">FASE 4.4 · COMBATE</span><h2>Ataques con armas</h2></div><span className="save-label">Cálculo local</span></div>
+    <div className="save-panel-head"><div><span className="eyebrow">FASE 4.13 · MAESTRÍAS</span><h2>Ataques con armas</h2></div><span className="save-label">Cálculo local</span></div>
     <p className="muted-note">Solo aparecen armas que posees. «Calcular tirada» no altera el personaje; «Confirmar ataque» registra el resultado y consume una unidad de munición si corresponde.</p>
     {!sheet&&<p className="save-error" role="alert">Completa primero la creación del personaje.</p>}
     {sheet&&!martial&&<p className="save-error" role="alert">Selecciona un estilo de combate y tres maestrías en el apartado Equipo.</p>}
@@ -91,6 +100,14 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
         <label className="field"><span>Arma disponible</span><select value={choice.selectionId} onChange={e=>onChangeWeapon(e.target.value)}>{owned.map(k=><option key={k.selectionId} value={k.selectionId}>{k.label}</option>)}</select></label>
         <label className="field"><span>Distancia objetivo (pies, opcional)</span><input type="number" min="0" step="1" value={distance} placeholder="Sin distancia" onChange={e=>{setDistance(e.target.value);setResolved(null);}}/></label>
       </div>
+      <div className="attack-form-grid">
+        <label className="field"><span>Nombre del objetivo (para seguir maestrías)</span><input maxLength={60} value={targetName} placeholder="Ej.: Goblin 1" onChange={e=>setTargetName(e.target.value)}/></label>
+        <label className="field"><span>Tamaño del objetivo (para Empujar)</span><select value={targetSize} onChange={e=>setTargetSize(e.target.value as CreatureSize)}>
+          <option value="unknown">Desconocido</option><option value="tiny">Diminuto</option><option value="small">Pequeño</option><option value="medium">Mediano</option><option value="large">Grande</option><option value="huge">Enorme</option><option value="gargantuan">Gargantuesco</option>
+        </select></label>
+      </div>
+      <div className="attack-options"><label><input type="checkbox" checked={targetIsCreature} onChange={e=>setTargetIsCreature(e.target.checked)}/> El objetivo es una criatura (no un objeto)</label></div>
+      {vexActive&&targetIsCreature&&<p className="info-line">Hostigar vigente contra «{targetName}»: aporta ventaja a este ataque (puede quedar cancelada por desventaja). Retira el efecto al finalizar tu siguiente turno si no atacas al objetivo.</p>}
       <div className="attack-options">
         {w?.finesse&&<label><input type="checkbox" checked={useDex} onChange={e=>{setUseDex(e.target.checked);setResolved(null)}}/> Usar Destreza (Sutileza)</label>}
         {Boolean(w?.thrownRange&&(w.kind==='melee'||w.rangedRange))&&<label><input type="checkbox" checked={thrown} onChange={e=>{setThrown(e.target.checked);setResolved(null);}}/> Arrojar el arma</label>}
@@ -134,12 +151,19 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
         <button type="button" className="attack-resolve" disabled={incompatibleShield||blockedByConditions||Boolean(profile.ammunition&&ammoCount===0)} onClick={calculate}>Calcular tirada</button>
         {error&&<p className="save-error" role="alert">{error}</p>}
         {resolved&&<div className="attack-result" role="status"><strong>Resultado: {resolved.attackTotal} {resolved.critical?'· ¡Crítico!':''}</strong><span>{resolved.hit===null?'Impacto no determinado (sin CA)':resolved.hit?'Impacta':'Falla'} · Dados de daño requeridos: {resolved.damageDiceNeeded}</span><span>{resolved.damageTotal!==null?`Daño: ${resolved.damageTotal} (${DAMAGE_LABELS[profile.damageType]})`:'Introduce los dados de daño para obtener el total.'}</span>{resolved.grazeDamage!==null&&<span>Rozar: posible daño por fallo {resolved.grazeDamage}.</span>}</div>}
+        {resolved&&profile.mastery&&<div className="condition-attack-summary">
+          <strong>Maestría {profile.mastery}</strong>
+          <p className="muted-note">{masteryPreview?.message}</p>
+          {(profile.mastery==='Vex'||profile.mastery==='Slow')&&resolved.hit===true&&<label><input type="checkbox" checked={damageDealt} onChange={e=>setDamageDealt(e.target.checked)}/> El objetivo ha sufrido daño real (después de aplicar sus defensas)</label>}
+          {(profile.mastery==='Vex'||profile.mastery==='Slow')&&resolved.hit===true&&resolved.damageTotal===null&&<p className="muted-note">Introduce los resultados de daño y vuelve a calcular para activar esta maestría; no se presume daño a criaturas sin tirada resuelta.</p>}
+          {masteryPreview?.pending&&!targetName.trim()&&<p className="muted-note">Escribe un nombre de objetivo para conservar el efecto pendiente.</p>}
+        </div>}
         {resolved&&<button type="button" className="attack-confirm" disabled={!canRecord||incompatibleShield||blockedByConditions||Boolean(profile.ammunition&&ammoCount===0)} onClick={confirm}>Confirmar ataque y registrar</button>}
         {confirmation&&<p role="status" className="save-success">{confirmation}</p>}
         <ul className="attack-notes">{profile.notes.map((n,i)=><li key={`${id}-${i}`}>{n}</li>)}</ul>
       </>}
     </>}
     <p className="muted-note">Una misma arma mágica conserva su identificador en el historial. Si la retiras o deja de estar preparada, no se podrá confirmar un ataque con ella.</p>
-    <p className="muted-note">La confirmación registra el ataque y descuenta proyectiles disponibles; no aplica daño a enemigos ni simula turnos. Armas arrojadizas, efectos de maestría, salvaciones y munición recuperada se resuelven manualmente con el director.</p>
+    <p className="muted-note">Las maestrías se evalúan al confirmar. Hostigar puede conceder ventaja a tu siguiente ataque contra el mismo objetivo. Los efectos sobre criaturas, las salvaciones y el límite «una vez por turno» se resuelven con el DM; retira los recordatorios al expirar, porque el contador de rondas no conoce tu iniciativa.</p>
   </section>;
 }
