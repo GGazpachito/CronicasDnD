@@ -10,6 +10,7 @@ import { validateMagicInitiate, grantsFromMagicInitiate, elfLineageSpells, type 
 import { combineStartingInventory, validateBackgroundEquipment, GAMING_SETS, type BackgroundEquipmentChoice, type StartingInventory } from './background-equipment';
 import { replayInventory, equippedArmor, hasEquippedShield, type InventoryAction, type InventoryState } from './inventory';
 import {collectMagicWardBonuses} from './magic-wards';
+import {applyFighterLevel4Improvement,applyFighterLevel6Improvement,type FighterLevel4Improvement,type FighterLevel6Improvement} from './progression';
 
 export const FIGHTER_SKILL_OPTIONS: readonly Skill[] = [
   'acrobatics', 'animal_handling', 'athletics', 'history', 'insight',
@@ -30,7 +31,11 @@ export const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8] as const;
 
 export type GuidedFighterInput = Readonly<{
   name: string;
-  level: 1 | 2 | 3;
+  level: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  /** Solo desde el nivel 4; otras dotes generales quedan fuera de este incremento. */
+  level4Improvement?: FighterLevel4Improvement;
+  /** Segunda mejora independiente desde nivel 6. */
+  level6Improvement?:FighterLevel6Improvement;
   background: BackgroundId;
   species: SpeciesId;
   /** Puntuaciones antes de los aumentos por trasfondo. */
@@ -81,7 +86,7 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
   const bg = BACKGROUNDS[input.background];
   if (!bg) fail('Trasfondo no disponible');
   if (!['human','dwarf','elf'].includes(input.species)) fail('Especie no disponible');
-  if (![1,2,3].includes(input.level)) fail('Nivel fuera del prototipo');
+  if (![1,2,3,4,5,6,7].includes(input.level)) fail('Solo Guerrero nivel 1 a 7');
   if (!input.name?.trim() || input.name.length > 120) fail('Introduce un nombre válido');
   if (!input.assignedAbilities || typeof input.assignedAbilities !== 'object') fail('Faltan características');
   const assigned = ABILITIES.map(a => input.assignedAbilities[a]);
@@ -97,6 +102,10 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
   if (input.increaseMode === 'three_ones') for (const a of allowed) finalScores[a] += 1;
   else { finalScores[input.plusTwoAbility]+=2; finalScores[input.plusOneAbility]+=1; }
   if (ABILITIES.some(a=>finalScores[a]>20)) fail('No se puede superar 20 por las mejoras del trasfondo');
+  if(input.level<4 && input.level4Improvement!==undefined)fail('La mejora de nivel 4 no está disponible antes de nivel 4');
+  if(input.level<6&&input.level6Improvement!==undefined)fail('La mejora de nivel 6 no está disponible antes de nivel 6');
+  const level4Scores=input.level>=4 ? applyFighterLevel4Improvement(finalScores,input.level4Improvement!) : finalScores;
+  const improvedScores=input.level>=6 ? applyFighterLevel6Improvement(level4Scores,input.level6Improvement!) : level4Scores;
   if (!Array.isArray(input.fighterSkills) || input.fighterSkills.length!==2 || new Set(input.fighterSkills).size!==2 || input.fighterSkills.some(s=>!isSkill(s)||!FIGHTER_SKILL_OPTIONS.includes(s))) fail('Elige dos habilidades distintas de la lista del Guerrero');
   // Se exige una elección libre diferente si ya concede esa competencia el trasfondo.
   const skills = new Set<Skill>(bg.skills as readonly Skill[]);
@@ -171,9 +180,12 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
     pending.push('Elfo: visión en la oscuridad, ascendencia feérica y trance no están automatizados');
     pending.push('Elfo: lanzamiento, usos gratuitos y cambio de truco del Alto elfo tras descanso aún pendientes');
   }
-  const martial = input.martial===undefined ? undefined : validateMartialChoices(input.martial);
+  const martial = input.martial===undefined ? undefined : validateMartialChoices(input.martial,input.level>=4?4:3,input.level>=7);
   if (!martial) pending.push('Estilo de combate, tres maestrías y equipo inicial aún no seleccionados');
   if (martial && martial.fightingStyle !== 'defense') pending.push('El estilo de combate se utiliza en el panel de ataques cuando corresponde; las reacciones y sentidos especiales siguen pendientes');
+  if(input.level>=4)pending.push('Dotes generales alternativas a Mejora de característica: catálogo pendiente; en esta fase solo se admite esa dote en niveles 4 y 6');
+  if(input.level>=7&&martial?.additionalFightingStyle)pending.push('Segundo estilo del Campeón: los efectos situacionales y reacciones siguen requiriendo resolución manual');
+  if(input.level>=5)pending.push('Desplazamiento táctico: el movimiento sin ataques de oportunidad de Segundo aliento debe resolverse con el DM');
   if (martial) pending.push('Las maestrías se muestran en el panel de ataques; las que requieren control de turnos, posición o estados enemigos se resuelven manualmente');
   const startingInventory=bgEquipment?combineStartingInventory(martial?.startingPackage,bgEquipment):undefined;
   if (input.inventoryActions!==undefined && (!martial || !startingInventory)) fail('Completa primero el equipo de clase y trasfondo antes de editar el inventario');
@@ -189,13 +201,13 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
     value:target==='armor_class'?bonus.armorClass:bonus.savingThrows,
     group:'magic_equipment',stacking:'sum',priority:0
   })));
-  const fightingStyleModifiers = martial?.fightingStyle==='defense' && targetArmor!==null ? [{type:'numeric_modifier',effectId:'fighter_fighting_style_defense',sourceRevisionId:'phb2024:fighter:defense',target:'armor_class',when:{type:'always'},operation:'add',value:1,group:'fighting_style_defense',stacking:'sum',priority:0}] : [];
+  const fightingStyleModifiers = (martial?.fightingStyle==='defense'||martial?.additionalFightingStyle==='defense') && targetArmor!==null ? [{type:'numeric_modifier',effectId:'fighter_fighting_style_defense',sourceRevisionId:'phb2024:fighter:defense',target:'armor_class',when:{type:'always'},operation:'add',value:1,group:'fighting_style_defense',stacking:'sum',priority:0}] : [];
   const character: FighterCharacterInput = {
     id:'guided-preview',name:input.name.trim(),ruleset:'dnd-2024',fighterLevel:input.level,
-    baseAbilities:finalScores,baseProficiencies:{skills:[...skills],savingThrows:['strength','constitution']},
+    baseAbilities:improvedScores,baseProficiencies:{skills:[...skills],savingThrows:['strength','constitution']},
     modifiers:[...modifiers,...fightingStyleModifiers,...magicModifiers],hpMethod:'fixed',equipment:{armor:input.armor,shieldEquipped:input.shield,shieldTrained:true},
     bonusHitPointsPerLevel,
-    ...(input.level===3?{subclass:'champion' as const}:{})
+    ...(input.level>=3?{subclass:'champion' as const}:{})
   };
   const sheet=calculateFighterSheet(character);
   const bgTool=bgEquipment?.gamingSet?GAMING_SETS[bgEquipment.gamingSet]:bg.tool;

@@ -226,7 +226,7 @@ export function validateCombatState(value:unknown):CombatState{
  * Devuelve la accion de inventario que se debe anadir al diario persistente, nunca la ejecuta dos veces.
  */
 export function recordWeaponAttack(
-  state:CombatState, inventory:InventoryState, profile:WeaponAttackProfile, resolution:AttackResolution, context?:MasteryContext, usage:AttackTurnUsage='untracked',
+  state:CombatState, inventory:InventoryState, profile:WeaponAttackProfile, resolution:AttackResolution, context?:MasteryContext, usage:AttackTurnUsage='untracked',fighterLevel=3,
 ):Readonly<{combat:CombatState;inventoryAction:InventoryAction|null}> {
   const combat=validateCombatState(state);
   const validatedContext=context===undefined?undefined:validateMasteryContext(context);
@@ -236,7 +236,7 @@ export function recordWeaponAttack(
   const nextTurn=combat.turn?spendAttackOnTurn(combat.turn,usage,{
     lightExtra:profile.lightExtraAttack,nickMastery:profile.mastery==='Nick',cleaveMastery:profile.mastery==='Cleave',
     hitCreature:resolution.hit===true&&validatedContext?.targetIsCreature===true,
-    weaponId:profile.weaponId,targetName:validatedContext?.targetName??'',
+    weaponId:profile.weaponId,targetName:validatedContext?.targetName??'',attackLimit:fighterLevel>=5?2:1,
   }):undefined;
   if(!profile||!resolution||!weapon(profile.weaponId))fail('Perfil de ataque inválido');
   const stats=WEAPON_STATS[profile.weaponId];

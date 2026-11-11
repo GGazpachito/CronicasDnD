@@ -9,7 +9,7 @@ import {longRestConditionUpdate,initialConditionLedger,conditionCapabilities} fr
 import {advanceSurvivalRound,concentrationDC,damageAtZero,deathSavingThrow,initialSurvivalState,
   recordConcentrationDamage,recoverFromStable,resetDeathTrack,resolveConcentration,startConcentration,
   stabilize,validateSurvivalState,type SurvivalState} from './survival';
-import { finishFighterRest, initialFighterState, spendFighterResource, useSecondWind, useTacticalMind,
+import { advanceFighterLevel, finishFighterRest, initialFighterState, spendFighterResource, useSecondWind, useTacticalMind,
   validateFighterState, type FighterState, type FighterResourceId } from './resources';
 
 export type AdventureState = Readonly<{
@@ -262,7 +262,19 @@ export function applyAdventureAction(source:AdventureState,action:AdventureActio
 export function resourceDisplay(state:AdventureState,sheet:CalculatedFighterSheet):Readonly<Partial<Record<FighterResourceId,{current:number;maximum:number}>>>{
   validateAdventureState(state,sheet);
   return sheet.level>=2?{
-    second_wind:{current:state.fighter.resources.second_wind!.current,maximum:2},
+    second_wind:{current:state.fighter.resources.second_wind!.current,maximum:sheet.resources.second_wind!.maximum},
     action_surge:{current:state.fighter.resources.action_surge!.current,maximum:1}
-  }:{second_wind:{current:state.fighter.resources.second_wind!.current,maximum:2}};
+  }:{second_wind:{current:state.fighter.resources.second_wind!.current,maximum:sheet.resources.second_wind!.maximum}};
+}
+
+/** Transición explícita entre niveles consecutivos: preserva la sesión sin reiniciar el combate.
+ * Los PG ganados usan el nuevo máximo de la hoja, incluyendo cambios retroactivos de CON.
+ */
+export function advanceAdventureLevel(source:AdventureState,oldSheet:CalculatedFighterSheet,newSheet:CalculatedFighterSheet):AdventureState{
+  const before=validateAdventureState(source,oldSheet);
+  if(oldSheet.classId!=='fighter'||newSheet.classId!=='fighter'||newSheet.level!==oldSheet.level+1||newSheet.level>7)
+    throw new RangeError('Solo se permite subir un nivel del Guerrero hasta 7');
+  if(oldSheet.id!==newSheet.id||oldSheet.name!==newSheet.name)throw new RangeError('La progresión debe mantener la identidad del personaje');
+  const fighter=advanceFighterLevel(before.fighter,newSheet.level,newSheet.maximumHitPoints);
+  return validateAdventureState({...before,fighter},newSheet);
 }

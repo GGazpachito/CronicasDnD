@@ -65,7 +65,7 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
   let profile:WeaponAttackProfile|null=null;
   let profileError='';
   if(sheet&&martial&&choice&&inventory){
-    try{profile=calculateOwnedWeaponAttack(sheet,inventory,choice.selectionId,martial.fightingStyle,martial.weaponMasteries,{
+    try{profile=calculateOwnedWeaponAttack(sheet,inventory,choice.selectionId,martial.additionalFightingStyle?[martial.fightingStyle,martial.additionalFightingStyle]:martial.fightingStyle,martial.weaponMasteries,{
       ...(w?.finesse?{ability:useDex?'dexterity':'strength'}:{}),
       thrown:thrown&&Boolean(w?.thrownRange),twoHanded:twoHands&&Boolean(w?.versatileSides),
       lightExtraAttack:lightExtra&&Boolean(w?.light),otherWeaponHeld:otherWeapon,adjacentEnemy:adjacent,advantage,

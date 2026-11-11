@@ -1,4 +1,4 @@
-/** Fase 4.3 · Ataques con armas D&D 2024, niveles 1–3 del Guerrero.
+/** Fase 4.3 · Ataques con armas D&D 2024, niveles 1–7 del Guerrero.
  * Datos mecánicos normalizados del PHB 2024, pp. 12, 25-28, 96, 209-210, 213-215.
  * Calculador puro: no modifica criaturas, inventarios ni estados de partida.
  */
@@ -109,13 +109,14 @@ export function ownedWeapons(inventory:InventoryState):WeaponId[]{
   return inventory.items.filter(item=>isWeapon(item.id)&&item.quantity>0).map(item=>item.id as WeaponId);
 }
 export function calculateWeaponAttack(
-  sheet:CalculatedFighterSheet, weaponId:WeaponId, style:FightingStyleId,
+  sheet:CalculatedFighterSheet, weaponId:WeaponId, style:FightingStyleId|readonly FightingStyleId[],
   masteries:readonly WeaponId[], options:WeaponAttackOptions={}
 ):WeaponAttackProfile {
-  if(!sheet||sheet.classId!=='fighter'||sheet.ruleset!=='dnd-2024'||sheet.level<1||sheet.level>3)throw new RangeError('Hoja de Guerrero 2024 nivel 1–3 requerida');
+  if(!sheet||sheet.classId!=='fighter'||sheet.ruleset!=='dnd-2024'||sheet.level<1||sheet.level>7)throw new RangeError('Hoja de Guerrero 2024 nivel 1–7 requerida');
   if(!isWeapon(weaponId))throw new RangeError('Arma desconocida');
-  if(typeof style!=='string'||!['archery','blind_fighting','defense','dueling','great_weapon_fighting','interception','protection','thrown_weapon_fighting','two_weapon_fighting','unarmed_fighting'].includes(style))throw new RangeError('Estilo desconocido');
-  if(!Array.isArray(masteries)||masteries.length!==3||new Set(masteries).size!==3||masteries.some(x=>!isWeapon(x)))throw new RangeError('Tres maestrías válidas requeridas');
+  const styles:readonly FightingStyleId[]=typeof style==='string'?[style]:style;
+  if(!Array.isArray(styles)||styles.length<1||styles.length>(sheet.level>=7?2:1)||new Set(styles).size!==styles.length||styles.some(s=>!['archery','blind_fighting','defense','dueling','great_weapon_fighting','interception','protection','thrown_weapon_fighting','two_weapon_fighting','unarmed_fighting'].includes(s)))throw new RangeError('Estilos de combate desconocidos, duplicados o no desbloqueados');
+  if(!Array.isArray(masteries)||masteries.length!==(sheet.level>=4?4:3)||new Set(masteries).size!==(sheet.level>=4?4:3)||masteries.some(x=>!isWeapon(x)))throw new RangeError('Maestrías de Guerrero inválidas para su nivel');
   if(!options||typeof options!=='object'||Array.isArray(options))throw new RangeError('Opciones de ataque inválidas');
   for(const key of Object.keys(options))if(!['ability','thrown','twoHanded','lightExtraAttack','otherWeaponHeld','adjacentEnemy','advantage','conditionAdvantage','conditionDisadvantage','conditionD20Penalty','targetDistanceFeet'].includes(key))throw new RangeError('Opción de ataque desconocida');
   for(const key of ['thrown','twoHanded','lightExtraAttack','otherWeaponHeld','adjacentEnemy','advantage','conditionAdvantage','conditionDisadvantage'] as const)if(options[key]!==undefined&&typeof options[key]!=='boolean')throw new RangeError(`${key} debe ser booleano`);
@@ -141,13 +142,13 @@ export function calculateWeaponAttack(
   const rangedAttack=thrown||w.kind==='ranged';
   const notes:string[]=[];
   let attackBonus=modifier+sheet.proficiencyBonus; // Guerrero: competencia con armas simples y marciales.
-  if(style==='archery'&&w.kind==='ranged')attackBonus+=2;
+  if(styles.includes('archery')&&w.kind==='ranged')attackBonus+=2;
   attackBonus+=options.conditionD20Penalty??0;
-  let damageModifier=options.lightExtraAttack&&style!=='two_weapon_fighting'?Math.min(0,modifier):modifier;
-  if(style==='dueling'&&w.kind==='melee'&&!twoHanded&&!options.otherWeaponHeld&&!thrown)damageModifier+=2;
-  if(style==='thrown_weapon_fighting'&&thrown)damageModifier+=2;
+  let damageModifier=options.lightExtraAttack&&!styles.includes('two_weapon_fighting')?Math.min(0,modifier):modifier;
+  if(styles.includes('dueling')&&w.kind==='melee'&&!twoHanded&&!options.otherWeaponHeld&&!thrown)damageModifier+=2;
+  if(styles.includes('thrown_weapon_fighting')&&thrown)damageModifier+=2;
   if(options.lightExtraAttack)notes.push('Confirma que el ataque adicional está permitido por Ligera y que utilizas otra arma.');
-  if(style==='great_weapon_fighting'&&w.kind==='melee'&&twoHanded&&(w.twoHanded||w.versatileSides))notes.push('Combate con arma a dos manos: cada dado de daño del arma con resultado 1 o 2 se trata como 3.');
+  if(styles.includes('great_weapon_fighting')&&w.kind==='melee'&&twoHanded&&(w.twoHanded||w.versatileSides))notes.push('Combate con arma a dos manos: cada dado de daño del arma con resultado 1 o 2 se trata como 3.');
   if(weaponId==='lance'&&twoHanded)notes.push('La lanza de caballería puede manejarse con una mano estando montado: este prototipo no modela ese caso.');
   if(w.loading)notes.push('Carga: limita la cantidad de proyectiles por acción, acción adicional o reacción.');
   if(w.ammunition)notes.push('Se requiere munición adecuada. Este cálculo no la consume del inventario.');
@@ -179,7 +180,7 @@ export function calculateWeaponAttack(
     };
     notes.push(hint[mastery]);
   }
-  const greatWeaponFighting=style==='great_weapon_fighting'&&w.kind==='melee'&&twoHanded&&Boolean(w.twoHanded||w.versatileSides);
+  const greatWeaponFighting=styles.includes('great_weapon_fighting')&&w.kind==='melee'&&twoHanded&&Boolean(w.twoHanded||w.versatileSides);
   const fixedDamage=w.fixedDamage??0;
   return {weaponId,weaponName:WEAPONS[weaponId].name,ability,abilityModifier:modifier,attackBonus,damageModifier,
     damageDice:baseDice??null,fixedDamage,damageType:w.damageType,mode,criticalMinimum:sheet.subclass==='champion'?19:20,
@@ -249,7 +250,7 @@ export function ownedWeaponChoices(inventory:InventoryState):OwnedWeaponChoice[]
  * No modifica maestrías, cantidad de dados del crítico, ni daño de Rozar en un fallo.
  */
 export function calculateOwnedWeaponAttack(sheet:CalculatedFighterSheet,inventory:InventoryState,
-  selectionId:string,style:FightingStyleId,masteries:readonly WeaponId[],options:WeaponAttackOptions={}
+  selectionId:string,style:FightingStyleId|readonly FightingStyleId[],masteries:readonly WeaponId[],options:WeaponAttackOptions={}
 ):WeaponAttackProfile{
   const choice=ownedWeaponChoices(inventory).find(c=>c.selectionId===selectionId);
   if(!choice)throw new RangeError('No posees o no tienes preparada esa arma');

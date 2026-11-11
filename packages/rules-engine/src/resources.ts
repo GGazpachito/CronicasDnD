@@ -1,4 +1,4 @@
-/** Paso 05. Recursos persistentes del Guerrero (niveles 1-3), D&D 2024.
+/** Paso 05. Recursos persistentes del Guerrero (niveles 1-7), D&D 2024.
  * Funciones puras. Ninguna operación restaura recursos salvo descansos explícitos.
  */
 export type FighterResourceId = 'second_wind' | 'action_surge';
@@ -17,13 +17,13 @@ function integer(value: unknown, name: string, minimum: number, maximum: number)
   }
   return value;
 }
-function fighterLevel(value: number): number { return integer(value, 'fighterLevel', 1, 3); }
+function fighterLevel(value: number): number { return integer(value, 'fighterLevel', 1, 7); }
 
 /** Los máximos se derivan del nivel, jamás del estado persistido. */
 export function fighterResourceMaximum(level: number, id: FighterResourceId): number {
   const n = fighterLevel(level);
   switch (id) {
-    case 'second_wind': return 2;
+    case 'second_wind': return n >= 4 ? 3 : 2;
     case 'action_surge': return n >= 2 ? 1 : 0;
     default: throw new TypeError('Recurso no reconocido');
   }
@@ -37,7 +37,7 @@ export function initialFighterState(level: number, maximumHitPoints: number): Fi
     fighterLevel: n,
     hitPoints: { current: hp, maximum: hp },
     resources: {
-      second_wind: { current: 2 },
+      second_wind: { current: fighterResourceMaximum(n,'second_wind') },
       ...(n >= 2 ? { action_surge: { current: 1 } } : {}),
     },
   };
@@ -85,7 +85,8 @@ export function finishFighterRest(state: FighterState, rest: RecoveryReason): Fi
   validateFighterState(state);
   if (rest !== 'short_rest' && rest !== 'long_rest') throw new TypeError('Descanso no reconocido');
   const currentSecondWind = state.resources.second_wind!.current;
-  const secondWind = rest === 'long_rest' ? 2 : Math.min(2, currentSecondWind + 1);
+  const maxWind=fighterResourceMaximum(state.fighterLevel,'second_wind');
+  const secondWind = rest === 'long_rest' ? maxWind : Math.min(maxWind, currentSecondWind + 1);
   const next = changeResource(state, 'second_wind', secondWind);
   if (state.fighterLevel === 1) return next;
   return changeResource(next, 'action_surge', 1);
@@ -146,6 +147,8 @@ export function advanceFighterLevel(state: FighterState, nextLevel: number, newM
     hitPoints: { current: Math.min(maximum, state.hitPoints.current + (maximum - state.hitPoints.maximum)), maximum },
     resources: {
       ...state.resources,
+      second_wind:{current:Math.min(fighterResourceMaximum(level,'second_wind'),
+        state.resources.second_wind!.current+fighterResourceMaximum(level,'second_wind')-fighterResourceMaximum(state.fighterLevel,'second_wind'))},
       ...(level === 2 ? { action_surge: { current: 1 } } : {}),
     },
   };

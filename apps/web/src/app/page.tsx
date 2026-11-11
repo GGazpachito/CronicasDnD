@@ -15,7 +15,7 @@ import type {AttackTurnUsage} from "../../../../packages/rules-engine/src/turns"
 import {conditionCapabilities,initialConditionLedger} from "../../../../packages/rules-engine/src/conditions";
 import type { WeaponAttackProfile,AttackResolution } from "../../../../packages/rules-engine/src/attacks";
 import type {MasteryContext} from "../../../../packages/rules-engine/src/mastery-effects";
-import { initialAdventureState, validateAdventureState, updateAdventureCombat, type AdventureState } from "../../../../packages/rules-engine/src/adventure";
+import { initialAdventureState, validateAdventureState, updateAdventureCombat, advanceAdventureLevel, type AdventureState } from "../../../../packages/rules-engine/src/adventure";
 import type { CharacterSnapshot } from "../../../../packages/rules-engine/src/persistence";
 import { calculateGuidedFighter, BACKGROUNDS, FIGHTER_SKILL_OPTIONS, HUMAN_FEATS, type BackgroundId, type SpeciesId, type ElfLineage, type GuidedFighterInput, type HumanOriginFeat } from "../../../../packages/rules-engine/src/guided";
 import { ABILITIES, type Ability, type AbilityScores } from "../../../../packages/rules-engine/src/abilities";
@@ -38,7 +38,7 @@ const ARMOR_OPTIONS: ReadonlyArray<{id:ArmorId|null;name:string}> = [
 {id:'half_plate',name:'Media armadura'},{id:'ring_mail',name:'Cota de anillas'},{id:'chain_mail',name:'Cota de malla'},
 {id:'splint',name:'Bandas'},{id:'plate',name:'Placas'}
 ];
-const FEATURES:Record<string,string>={fighting_style:'Estilo de combate',second_wind:'Segundo aliento',weapon_mastery:'Maestría de armas',action_surge:'Acción súbita',tactical_mind:'Mente táctica',champion_improved_critical:'Crítico mejorado',champion_remarkable_athlete:'Atleta extraordinario'};
+const FEATURES:Record<string,string>={ability_score_improvement:'Mejora de característica (nivel 4)',extra_attack:'Ataque adicional (nivel 5)',tactical_shift:'Desplazamiento táctico (nivel 5)',fighting_style:'Estilo de combate',second_wind:'Segundo aliento',weapon_mastery:'Maestría de armas',action_surge:'Acción súbita',tactical_mind:'Mente táctica',champion_improved_critical:'Crítico mejorado',champion_remarkable_athlete:'Atleta extraordinario',ability_score_improvement_level_6:'Mejora de característica (nivel 6)',champion_additional_fighting_style:'Estilo de combate adicional (Campeón nivel 7)'};
 const FEATS = ORIGIN_FEATS;
 const originFeatName=(x:string)=>({magic_initiate_cleric:'Iniciado en la Magia (Clérigo)',magic_initiate_wizard:'Iniciado en la Magia (Mago)',...ORIGIN_FEATS} as Record<string,string>)[x]??x;
 const signed=(n:number)=>n>=0?`+${n}`:String(n);
@@ -50,7 +50,14 @@ export default function Home(){
   const [step,setStep]=useState(0);
   const [adventure,setAdventure]=useState<AdventureState|null>(null);
   const [name,setName]=useState('Aldric');
-  const [level,setLevel]=useState<1|2|3>(1);
+  const [level,setLevel]=useState<1|2|3|4|5|6|7>(1);
+  const [asiMode,setAsiMode]=useState<'plus_two'|'two_ones'>('plus_two');
+  const [asiFirst,setAsiFirst]=useState<Ability>('strength');
+  const [asiSecond,setAsiSecond]=useState<Ability>('constitution');
+  const [asi6Mode,setAsi6Mode]=useState<'plus_two'|'two_ones'>('plus_two');
+  const [asi6First,setAsi6First]=useState<Ability>('constitution');
+  const [asi6Second,setAsi6Second]=useState<Ability>('dexterity');
+  const [levelMessage,setLevelMessage]=useState('');
   const [background,setBackground]=useState<BackgroundId>('soldier');
   const [species,setSpecies]=useState<SpeciesId>('human');
   const [scores,setScores]=useState<AbilityScores>({strength:15,dexterity:14,constitution:13,intelligence:10,wisdom:12,charisma:8});
@@ -77,7 +84,9 @@ export default function Home(){
   const [elfSkill,setElfSkill]=useState<'insight'|'perception'|'survival'>('insight');
   const [elfSpell,setElfSpell]=useState<'intelligence'|'wisdom'|'charisma'>('intelligence');
   const [style,setStyle]=useState<FightingStyleId>('defense');
+  const [additionalStyle,setAdditionalStyle]=useState<FightingStyleId|''>('');
   const [masteries,setMasteries]=useState<WeaponId[]>(['greatsword','flail','javelin']);
+  const [fourthMastery,setFourthMastery]=useState<WeaponId>('shortsword');
   const [starter,setStarter]=useState<StartingPackageId>('a');
   const [backgroundPackage,setBackgroundPackage]=useState<BackgroundPackageId>('a');
   const [soldierGamingSet,setSoldierGamingSet]=useState<GamingSetId>('dice_set');
@@ -113,11 +122,18 @@ export default function Home(){
     ? {list:'cleric',spellcastingAbility:bgMagicAbility,cantrips:bgClericCantrips,level1Spell:bgClericSpell}
     : background==='sage'?{list:'wizard',spellcastingAbility:bgMagicAbility,cantrips:bgWizardCantrips,level1Spell:bgWizardSpell}:undefined;
   const humanFeatDetails={magicInitiate:{list:humanMagicList,spellcastingAbility:humanMagicAbility,cantrips:humanCantrips,level1Spell:humanSpell},crafterTools,musicianInstruments:instruments,skilledProficiencies:skilled};
-  const input:GuidedFighterInput={name,level,background,species,assignedAbilities:scores,increaseMode:mode,plusTwoAbility:two,plusOneAbility:one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,elfLineage:lineage,elfSenseSkill:elfSkill,elfSpellAbility:elfSpell,armor,shield,inventoryActions:activeActions,martial:{fightingStyle:style,weaponMasteries:masteries,startingPackage:starter},
+  const input:GuidedFighterInput={name,level,background,species,
+    ...(level>=4?{level4Improvement:{mode:asiMode,first:asiFirst,...(asiMode==='two_ones'?{second:asiSecond}:{})}}:{}),
+    ...(level>=6?{level6Improvement:{mode:asi6Mode,first:asi6First,...(asi6Mode==='two_ones'?{second:asi6Second}:{})}}:{}),
+    assignedAbilities:scores,increaseMode:mode,plusTwoAbility:two,plusOneAbility:one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,elfLineage:lineage,elfSenseSkill:elfSkill,elfSpellAbility:elfSpell,armor,shield,inventoryActions:activeActions,martial:{fightingStyle:style,...(level>=7?{additionalFightingStyle:additionalStyle as FightingStyleId}:{}),weaponMasteries:masteries,startingPackage:starter},
     backgroundEquipment:{startingPackage:backgroundPackage,...(background==='soldier'?{gamingSet:soldierGamingSet}:{})}};
-  const output=useMemo(()=>{try{return {result:calculateGuidedFighter(input),error:null};}catch(e){return {result:null,error:e instanceof Error?e.message:'Error al crear el personaje'};}},[name,level,background,species,scores,mode,two,one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,lineage,elfSkill,elfSpell,armor,shield,style,masteries,starter,backgroundPackage,soldierGamingSet,activeActions]);
+  const output=useMemo(()=>{try{return {result:calculateGuidedFighter(input),error:null};}catch(e){return {result:null,error:e instanceof Error?e.message:'Error al crear el personaje'};}},[name,level,asiMode,asiFirst,asiSecond,asi6Mode,asi6First,asi6Second,additionalStyle,background,species,scores,mode,two,one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,lineage,elfSkill,elfSpell,armor,shield,style,masteries,starter,backgroundPackage,soldierGamingSet,activeActions]);
   function loadSavedInput(saved:GuidedFighterInput){
-    setName(saved.name);setLevel(saved.level);setBackground(saved.background);setSpecies(saved.species);
+    setName(saved.name);setLevel(saved.level);setLevelMessage('');
+    setAsiMode(saved.level4Improvement?.mode??'plus_two');setAsiFirst(saved.level4Improvement?.first??'strength');
+    setAsiSecond(saved.level4Improvement?.second??'constitution');
+    setAsi6Mode(saved.level6Improvement?.mode??'plus_two');setAsi6First(saved.level6Improvement?.first??'constitution');
+    setAsi6Second(saved.level6Improvement?.second??'dexterity');setBackground(saved.background);setSpecies(saved.species);
     setScores({...saved.assignedAbilities});setMode(saved.increaseMode);setTwo(saved.plusTwoAbility);setOne(saved.plusOneAbility);
     setFighterSkills([...saved.fighterSkills]);setHumanSkill(saved.humanSkill??'investigation');
     setHumanFeat(saved.humanFeat??'tough');setHumanSize(saved.humanSize??'medium');
@@ -139,7 +155,7 @@ export default function Home(){
     if(details?.musicianInstruments)setInstruments([...details.musicianInstruments]);
     if(details?.skilledProficiencies)setSkilled([...details.skilledProficiencies]);
     const martial=saved.martial;
-    setStyle(martial?.fightingStyle??'defense');setMasteries(martial?[...martial.weaponMasteries]:['greatsword','flail','javelin']);
+    setStyle(martial?.fightingStyle??'defense');setAdditionalStyle(martial?.additionalFightingStyle??'');setMasteries(martial?[...martial.weaponMasteries]:['greatsword','flail','javelin']);setFourthMastery(martial?.weaponMasteries[3]??'shortsword');
     const newStarter=martial?.startingPackage??'a';setStarter(newStarter);
     const newBackgroundPack=saved.backgroundEquipment?.startingPackage??'a';setBackgroundPackage(newBackgroundPack);
     const game=saved.backgroundEquipment?.gamingSet??'dice_set';setSoldierGamingSet(game);
@@ -154,11 +170,28 @@ export default function Home(){
     try{return {state:validateAdventureState(adventure,sheet),outOfSync:false};}
     catch{return {state:adventure,outOfSync:true};}
   },[sheet,adventure]);
+  function selectFighterLevel(next:1|2|3|4|5|6|7){
+    if(next===level)return;
+    if(next<level){setLevel(next);setMasteries(prev=>next<4?prev.slice(0,3):prev);setAdventure(null);
+      setLevelMessage('Nivel reducido: estado de combate reiniciado. Conserva una copia del guardado anterior si quieres volver.');return;}
+    if(next!==level+1){setLevelMessage('Sube exactamente un nivel cada vez.');return;}
+    if(!output.result?.sheet||sessionCheck.outOfSync||!sessionCheck.state){setLevelMessage('Corrige las elecciones o sincroniza el estado antes de subir de nivel.');return;}
+    const nextMasteries=next===4?[...masteries,fourthMastery]:masteries;
+    try{const nextInput:GuidedFighterInput={...input,level:next,
+      ...(next>=4?{level4Improvement:{mode:asiMode,first:asiFirst,...(asiMode==='two_ones'?{second:asiSecond}:{})}}:{}),
+      ...(next>=6?{level6Improvement:{mode:asi6Mode,first:asi6First,...(asi6Mode==='two_ones'?{second:asi6Second}:{})}}:{}),
+      martial:{...input.martial!,weaponMasteries:nextMasteries,...(next>=7?{additionalFightingStyle:additionalStyle as FightingStyleId}:{})}};
+      const nextSheet=calculateGuidedFighter(nextInput).sheet;
+      const nextAdventure=advanceAdventureLevel(sessionCheck.state,output.result.sheet,nextSheet);
+      setAdventure(nextAdventure);setMasteries(nextMasteries);setLevel(next);
+      setLevelMessage(`Guerrero nivel ${next}: PG, recursos e historial conservados. Actualiza el guardado.`);
+    }catch(e){setLevelMessage(e instanceof Error?e.message:'No se pudo subir de nivel');}
+  }
   function confirmWeaponAttack(profile:WeaponAttackProfile,resolution:AttackResolution,context:MasteryContext,usage:AttackTurnUsage){
     if(!sheet||!sessionCheck.state||sessionCheck.outOfSync||!output.result?.inventory)throw new RangeError('Primero valida y sincroniza el personaje');
     if(sessionCheck.state.fighter.hitPoints.current===0)throw new RangeError('A 0 PG no se pueden registrar ataques: revisa el estado del personaje');
     if(!conditionCapabilities(sessionCheck.state.combat.conditions??initialConditionLedger()).canTakeAction)throw new RangeError('Las condiciones impiden registrar ataques');
-    const result=recordWeaponAttack(sessionCheck.state.combat,output.result.inventory,profile,resolution,context,usage);
+    const result=recordWeaponAttack(sessionCheck.state.combat,output.result.inventory,profile,resolution,context,usage,sheet.level);
     const nextActions=result.inventoryAction?[...activeActions,result.inventoryAction]:activeActions;
     replayInventory(starting,FIGHTER_PACKAGES[starter].initialArmor,nextActions);
     if(result.inventoryAction)setInventoryEdits({key:inventoryKey,actions:nextActions});
@@ -200,7 +233,7 @@ export default function Home(){
   return <main className="app-shell">
     <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Creador guiado · D&D 2024</span></div></div><div className="status"><span className="status-dot"/> Motor conectado · Guardado local</div></header>
     <div className="content">
-      <div className="intro"><div><span className="eyebrow">PROTOTIPO 22 / INVENTARIO MÁGICO UNIFICADO</span><h1>Da forma a <em>tu aventurero.</em></h1><p>Guerrero de niveles 1–3. Tus decisiones de origen se validan y se reflejan en la hoja calculada.</p></div><span className="edition">PHB 2024 + SRD</span></div>
+      <div className="intro"><div><span className="eyebrow">ACTUALIZACIÓN 28 / PROGRESIÓN DEL GUERRERO</span><h1>Da forma a <em>tu aventurero.</em></h1><p>Guerrero de niveles 1–7. Tus decisiones de origen se validan y se reflejan en la hoja calculada.</p></div><span className="edition">PHB 2024 + SRD</span></div>
       <SaveLoadPanel input={input} adventure={sessionCheck.outOfSync?null:sessionCheck.state} valid={Boolean(output.result&&!sessionCheck.outOfSync)} onLoad={loadSavedSnapshot}/>
       <PlayPanel sheet={sheet??null} state={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
       <SurvivalPanel sheet={sheet??null} state={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
@@ -217,8 +250,9 @@ export default function Home(){
           {step===0&&<>
             <label className="field"><span>Nombre del personaje</span><input value={name} maxLength={120} onChange={e=>setName(e.target.value)}/></label>
             <div className="field"><span className="field-label">Clase</span><div className="info-line">Guerrero (única clase disponible en esta versión)</div></div>
-            <div className="field"><span className="field-label">Nivel</span><div className="level-picker">{([1,2,3] as const).map(n=><button key={n} type="button" className={level===n?'active':''} onClick={()=>setLevel(n)}>Nivel {n}</button>)}</div></div>
-            {level===3&&<div className="info-line">Subclase: Campeón. El resto se añadirá después.</div>}
+            <div className="field"><span className="field-label">Nivel</span><div className="level-picker">{([1,2,3,4,5,6,7] as const).map(n=><button key={n} type="button" className={level===n?'active':''} onClick={()=>selectFighterLevel(n)}>Nivel {n}</button>)}</div></div>
+            {level>=3&&<div className="info-line">Subclase: Campeón. Próximo nivel: {level===7?'pendiente de ampliar':level+1}.</div>}
+            {levelMessage&&<p className="info-line" role="status">{levelMessage}</p>}
           </>}
           {step===1&&<>
             <label className="field"><span>Trasfondo</span><select value={background} onChange={e=>onBackground(e.target.value as BackgroundId)}>{Object.entries(BACKGROUNDS).map(([id,b])=><option key={id} value={id}>{b.name}</option>)}</select></label>
@@ -249,6 +283,20 @@ export default function Home(){
             <label className="field"><span>Distribución</span><select value={mode} onChange={e=>setMode(e.target.value as typeof mode)}><option value="two_plus_one">+2 y +1 a características distintas</option><option value="three_ones">+1 a las tres características</option></select></label>
             {mode==='two_plus_one'&&<><label className="field"><span>Característica que recibe +2</span><select value={two} onChange={e=>setTwo(e.target.value as Ability)}>{allowed.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label><label className="field"><span>Característica que recibe +1</span><select value={one} onChange={e=>setOne(e.target.value as Ability)}>{allowed.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label></>}
             <p className="muted-note">Opciones del trasfondo: {allowed.map(a=>NAMES[a]).join(', ')}.</p>
+            {level>=3&&<><div className="divider"/><div className="section-label"><h3>Dote Mejora de característica, nivel 4</h3><span>{level>=4?'Aplicada':'Elígela antes de subir'}</span></div>
+              <p className="muted-note">En esta fase puedes elegir la dote Mejora de característica (+2 o +1/+1, máximo 20). Las demás dotes generales se añadirán más adelante.</p>
+              <label className="field"><span>Distribución al alcanzar nivel 4</span><select value={asiMode} onChange={e=>setAsiMode(e.target.value as typeof asiMode)}><option value="plus_two">+2 a una característica</option><option value="two_ones">+1 a dos características</option></select></label>
+              <label className="field"><span>Primera característica</span><select value={asiFirst} onChange={e=>setAsiFirst(e.target.value as Ability)}>{ABILITIES.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label>
+              {asiMode==='two_ones'&&<label className="field"><span>Segunda característica</span><select value={asiSecond} onChange={e=>setAsiSecond(e.target.value as Ability)}>{ABILITIES.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label>}
+              <p className="muted-note">Elige antes de subir a nivel 4. Cambiar la mejora después puede requerir sincronizar el estado de combate.</p>
+            </>}
+            {level>=5&&<><div className="divider"/><div className="section-label"><h3>Segunda mejora de característica · nivel 6</h3><span>{level>=6?'Aplicada':'Elígela antes de subir'}</span></div>
+              <p className="muted-note">Esta mejora es independiente de la de nivel 4. Se acumula con ella, hasta un máximo de 20 por característica.</p>
+              <label className="field"><span>Distribución al alcanzar nivel 6</span><select value={asi6Mode} onChange={e=>setAsi6Mode(e.target.value as typeof asi6Mode)}><option value="plus_two">+2 a una característica</option><option value="two_ones">+1 a dos características</option></select></label>
+              <label className="field"><span>Primera característica (nivel 6)</span><select value={asi6First} onChange={e=>setAsi6First(e.target.value as Ability)}>{ABILITIES.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label>
+              {asi6Mode==='two_ones'&&<label className="field"><span>Segunda característica (nivel 6)</span><select value={asi6Second} onChange={e=>setAsi6Second(e.target.value as Ability)}>{ABILITIES.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label>}
+              <p className="muted-note">En nivel 6 el Guerrero también puede elegir otra dote que cumpla requisitos; ese catálogo sigue pendiente. Aquí se implementa Mejora de característica.</p>
+            </>}
           </>}
           {step===3&&<>
             <p className="muted-note">El Guerrero elige dos habilidades. El trasfondo ya concede dos competencias adicionales.</p>
@@ -258,11 +306,14 @@ export default function Home(){
             <div className="origin-detail"><strong>Salvaciones del Guerrero</strong><small>Fuerza y Constitución</small></div>
           </>}
           {step===4&&<>
-            <label className="field"><span>Estilo de combate del Guerrero</span><select value={style} onChange={e=>setStyle(e.target.value as FightingStyleId)}>{Object.entries(FIGHTING_STYLES).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label>
-            <div className="info-line">{style==='defense'?'Defensa: +1 a CA mientras llevas armadura. Aplicado automáticamente.':'Los estilos de ataque se calculan en el nuevo panel de combate. Las reacciones y sentidos siguen pendientes.'}</div>
-            <div className="section-label"><h3>Maestría de armas</h3><span>3 tipos distintos</span></div>
-            {([0,1,2] as const).map(i=><label key={i} className="field"><span>Arma dominada {i+1}</span><select value={masteries[i]} onChange={e=>changeMastery(i,e.target.value as WeaponId)}>{Object.entries(WEAPONS).map(([id,data])=><option key={id} value={id}>{data.name} · {data.mastery}</option>)}</select></label>)}
-            <p className="muted-note">Puedes elegir armas aunque aún no las poseas. Sus propiedades se muestran en el panel de combate; la mayoría de efectos situacionales se resuelven con el director.</p>
+            <label className="field"><span>Estilo de combate del Guerrero</span><select value={style} onChange={e=>{const chosen=e.target.value as FightingStyleId;setStyle(chosen);if(chosen===additionalStyle)setAdditionalStyle('');}}>{Object.entries(FIGHTING_STYLES).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label>
+            {level>=6&&<label className="field"><span>Segundo estilo de combate del Campeón (nivel 7)</span><select value={additionalStyle} onChange={e=>setAdditionalStyle(e.target.value as FightingStyleId| '')}><option value="">Selecciona el segundo estilo</option>{Object.entries(FIGHTING_STYLES).filter(([id])=>id!==style).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label>}
+            {level>=6&&<p className="muted-note">El segundo estilo se activa al subir a nivel 7. Debe ser distinto del primero y sus bonificadores se aplicarán automáticamente cuando corresponda.</p>}
+            <div className="info-line">{(style==='defense'||level>=7&&additionalStyle==='defense')?'Defensa: +1 a CA mientras llevas armadura. Aplicado automáticamente.':'Los estilos de ataque se calculan en el nuevo panel de combate. Las reacciones y sentidos siguen pendientes.'}</div>
+            <div className="section-label"><h3>Maestría de armas</h3><span>{level>=4?4:3} tipos distintos</span></div>
+            {Array.from({length:level>=4?4:3},(_,i)=>i).map(i=><label key={i} className="field"><span>Arma dominada {i+1}</span><select value={masteries[i]} onChange={e=>changeMastery(i,e.target.value as WeaponId)}>{Object.entries(WEAPONS).map(([id,data])=><option key={id} value={id}>{data.name} · {data.mastery}</option>)}</select></label>)}
+            {level===3&&<label className="field"><span>Cuarta maestría al subir a nivel 4</span><select value={fourthMastery} onChange={e=>setFourthMastery(e.target.value as WeaponId)}>{Object.entries(WEAPONS).map(([id,data])=><option key={id} value={id}>{data.name} · {data.mastery}</option>)}</select></label>}
+            <p className="muted-note">Las maestrías deben ser distintas. Selecciona la cuarta antes de subir a nivel 4. Puedes elegir armas aunque aún no las poseas. Sus propiedades se muestran en el panel de combate; la mayoría de efectos situacionales se resuelven con el director.</p>
             <div className="divider"/>
             <label className="field"><span>Equipo inicial de clase</span><select value={starter} onChange={e=>changePackage(e.target.value as StartingPackageId)}>{Object.entries(FIGHTER_PACKAGES).map(([id,pack])=><option key={id} value={id}>{pack.label}</option>)}</select></label>
             <div className="origin-detail"><strong>{FIGHTER_PACKAGES[starter].gold} po · Equipo de clase</strong>{FIGHTER_PACKAGES[starter].items.map((it,i)=><small key={i}>{it.quantity} × {it.name}</small>)}{starter==='c'&&<small>Sin objetos. La compra de equipo se añadirá después.</small>}</div>
@@ -304,7 +355,7 @@ export default function Home(){
           <div className="editor-footnote">Creación parcial con guardado manual local. Los precios se expresan en piezas de cobre y se venden objetos a mitad del valor de catálogo.</div>
         </aside>
         <section className="preview panel" aria-live="polite">
-          <div className="panel-heading"><div><span className="eyebrow">HOJA EN VIVO</span><h2>{name.trim()||'Sin nombre'}</h2><p>Guerrero {level}{level===3?' · Campeón':''} · {bg.name} · {species==='human'?'Humano':species==='dwarf'?'Enano':'Elfo'}</p></div><span className="roundel">{level}</span></div>
+          <div className="panel-heading"><div><span className="eyebrow">HOJA EN VIVO</span><h2>{name.trim()||'Sin nombre'}</h2><p>Guerrero {level}{level>=3?' · Campeón':''} · {bg.name} · {species==='human'?'Humano':species==='dwarf'?'Enano':'Elfo'}</p></div><span className="roundel">{level}</span></div>
           {output.error&&<div className="error" role="alert"><strong>Revisa tus elecciones.</strong><p>{output.error}</p></div>}
           {sheet&&output.result&&<>
             <div className="stat-cards"><div className="stat-card"><span>PG MÁXIMOS</span><strong>{sheet.maximumHitPoints}</strong><small>Actuales: {!sessionCheck.outOfSync&&sessionCheck.state?sessionCheck.state.fighter.hitPoints.current:'pendiente'} · {sheet.hitDice.total}d{sheet.hitDice.die}</small></div><div className="stat-card"><span>CLASE DE ARMADURA</span><strong>{sheet.armorClass}</strong><small>{sheet.armorClassDetails.formula}</small></div><div className="stat-card"><span>INICIATIVA</span><strong>{signed(sheet.initiative)}</strong><small>{sheet.initiativeRollMode==='advantage'?'Ventaja':sheet.initiativeRollMode==='disadvantage'?'Desventaja':'Normal'}</small></div></div>

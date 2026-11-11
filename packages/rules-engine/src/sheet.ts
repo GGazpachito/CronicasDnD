@@ -12,7 +12,7 @@ export type FighterCharacterInput = Readonly<{
   id: string;
   name: string;
   ruleset: 'dnd-2024';
-  fighterLevel: 1 | 2 | 3;
+  fighterLevel: 1 | 2 | 3 | 4 | 5 | 6 | 7;
   baseAbilities: AbilityScores;
   /** Competencias ya concedidas por clase, trasfondo y elecciones validadas fuera de este módulo. */
   baseProficiencies: ProficiencyGrants;
@@ -59,9 +59,9 @@ function validateIdentity(input: FighterCharacterInput): void {
   if (typeof input.id !== 'string' || !/^[a-zA-Z0-9:_-]{1,100}$/.test(input.id)) throw new TypeError('id inválido');
   if (typeof input.name !== 'string' || !input.name.trim() || input.name.length > 120) throw new TypeError('name inválido');
   if (input.ruleset !== 'dnd-2024') throw new TypeError('Esta proyección solo admite D&D 2024');
-  if (![1, 2, 3].includes(input.fighterLevel)) throw new RangeError('Solo Guerrero nivel 1 a 3');
+  if (![1, 2, 3, 4, 5, 6, 7].includes(input.fighterLevel)) throw new RangeError('Solo Guerrero nivel 1 a 7');
   if (input.fighterLevel < 3 && input.subclass !== undefined) throw new RangeError('La subclase se elige a nivel 3');
-  if (input.fighterLevel === 3 && input.subclass !== 'champion') throw new TypeError('Selecciona la subclase Campeón para nivel 3');
+  if (input.fighterLevel >= 3 && input.subclass !== 'champion') throw new TypeError('Selecciona la subclase Campeón para nivel 3');
   if (!input.baseProficiencies || typeof input.baseProficiencies !== 'object') throw new TypeError('Faltan competencias iniciales');
   if (!input.equipment || typeof input.equipment !== 'object') throw new TypeError('Falta equipo');
 }
@@ -71,6 +71,10 @@ function fighterFeatures(level: number, subclass: 'champion' | null): readonly s
     'fighting_style', 'second_wind', 'weapon_mastery',
     ...(level >= 2 ? ['action_surge', 'tactical_mind'] : []),
     ...(subclass === 'champion' ? ['champion_improved_critical', 'champion_remarkable_athlete'] : []),
+    ...(level >= 4 ? ['ability_score_improvement'] : []),
+    ...(level >= 5 ? ['extra_attack', 'tactical_shift'] : []),
+    ...(level >= 6 ? ['ability_score_improvement_level_6'] : []),
+    ...(subclass==='champion'&&level>=7 ? ['champion_additional_fighting_style'] : []),
   ];
 }
 

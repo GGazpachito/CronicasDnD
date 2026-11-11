@@ -35,3 +35,5 @@ export * from './magic-wards';
 
 export * from './mastery-effects';
 export * from './turns';
+
+export * from './progression';

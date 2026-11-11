@@ -32,7 +32,7 @@ export type MagicInitiateSelection = Readonly<{
 export type SpellGrant = Readonly<{
   id: string;
   name: string;
-  level: 0 | 1;
+  level: 0 | 1 | 2;
   source: 'background' | 'human_feat' | 'elf_lineage';
   spellcastingAbility: SpellAbility;
   freeCastPerLongRest: boolean;
@@ -46,6 +46,7 @@ const SPELL_NAMES: Readonly<Record<string,string>> = {
   prestidigitation:'Prestidigitation',goodberry:'Goodberry',faerie_fire:'Faerie Fire',
   magic_missile:'Magic Missile',mage_hand:'Mage Hand',sacred_flame:'Sacred Flame',
   detect_magic:'Detect Magic',longstrider:'Longstrider',dancing_lights:'Dancing Lights',
+  darkness:'Darkness',misty_step:'Misty Step',pass_without_trace:'Pass without Trace',
   guidance:'Guidance',tashas_hideous_laughter:"Tasha's Hideous Laughter",tensers_floating_disk:"Tenser's Floating Disk",
   create_or_destroy_water:'Create or Destroy Water',detect_evil_and_good:'Detect Evil and Good',
   detect_poison_and_disease:'Detect Poison and Disease',protection_from_evil_and_good:'Protection from Evil and Good',
@@ -78,9 +79,13 @@ export function grantsFromMagicInitiate(value:MagicInitiateSelection,source:'bac
   const grant=(id:string, level:0|1):SpellGrant=>({id,name:spellName(id),level,source,spellcastingAbility:value.spellcastingAbility,freeCastPerLongRest:level===1,allowsSpellSlot:level===1});
   return [...value.cantrips.map(id=>grant(id,0)),grant(value.level1Spell,1)];
 }
-export function elfLineageSpells(lineage:'drow'|'high_elf'|'wood_elf',level:1|2|3,ability:SpellAbility):readonly SpellGrant[] {
+export function elfLineageSpells(lineage:'drow'|'high_elf'|'wood_elf',level:1|2|3|4|5|6|7,ability:SpellAbility):readonly SpellGrant[] {
   const cantrip=lineage==='drow'?'dancing_lights':lineage==='high_elf'?'prestidigitation':'druidcraft';
   const higher=lineage==='drow'?'faerie_fire':lineage==='high_elf'?'detect_magic':'longstrider';
   const base:SpellGrant={id:cantrip,name:spellName(cantrip),level:0,source:'elf_lineage',spellcastingAbility:ability,freeCastPerLongRest:false,allowsSpellSlot:false};
-  return level<3?[base]:[base,{id:higher,name:spellName(higher),level:1,source:'elf_lineage',spellcastingAbility:ability,freeCastPerLongRest:true,allowsSpellSlot:true}];
+  const granted:SpellGrant[]=[base];
+  if(level>=3)granted.push({id:higher,name:spellName(higher),level:1,source:'elf_lineage',spellcastingAbility:ability,freeCastPerLongRest:true,allowsSpellSlot:true});
+  if(level>=5){const newSpell=lineage==='drow'?'darkness':lineage==='high_elf'?'misty_step':'pass_without_trace';
+    granted.push({id:newSpell,name:spellName(newSpell),level:2,source:'elf_lineage',spellcastingAbility:ability,freeCastPerLongRest:true,allowsSpellSlot:true});}
+  return granted;
 }
