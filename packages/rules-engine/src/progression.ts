@@ -1,4 +1,4 @@
-/** Guerrero niveles 4 y 6: dos mejoras independientes, acumulativas. Dotes generales alternativas pendientes. */
+/** Guerrero niveles 4, 6 y 8: tres mejoras independientes, acumulativas. Dotes generales alternativas pendientes. */
 import {ABILITIES,type Ability,type AbilityScores} from './abilities';
 
 export type FighterAbilityImprovement=Readonly<{
@@ -6,9 +6,10 @@ export type FighterAbilityImprovement=Readonly<{
 }>;
 export type FighterLevel4Improvement=FighterAbilityImprovement;
 export type FighterLevel6Improvement=FighterAbilityImprovement;
+export type FighterLevel8Improvement=FighterAbilityImprovement;
 
 /** Valida y aplica una sola dote Mejora de característica, sin sobrepasar 20. */
-export function applyFighterAbilityImprovement(scores:AbilityScores,choice:FighterAbilityImprovement,level:4|6):AbilityScores{
+export function applyFighterAbilityImprovement(scores:AbilityScores,choice:FighterAbilityImprovement,level:4|6|8):AbilityScores{
   if(!choice||typeof choice!=='object'||Array.isArray(choice))throw new RangeError(`Elige la mejora de característica de nivel ${level}`);
   if(choice.mode!=='plus_two'&&choice.mode!=='two_ones')throw new RangeError(`Modo de mejora de nivel ${level} inválido`);
   if(!ABILITIES.includes(choice.first))throw new RangeError('Primera característica inválida');
@@ -29,4 +30,20 @@ export function applyFighterLevel4Improvement(scores:AbilityScores,choice:Fighte
 }
 export function applyFighterLevel6Improvement(scores:AbilityScores,choice:FighterLevel6Improvement):AbilityScores{
   return applyFighterAbilityImprovement(scores,choice,6);
+}
+
+/** Tercera elección independiente al alcanzar nivel 8. */
+export function applyFighterLevel8Improvement(scores:AbilityScores,choice:FighterLevel8Improvement):AbilityScores{
+  return applyFighterAbilityImprovement(scores,choice,8);
+}
+
+/** Niveles de Guerrero admitidos por el creador actual. El control visual solo da un paso.
+ * Devuelve null en los extremos, para deshabilitar la flecha correspondiente.
+ */
+export type SupportedFighterLevel = 1|2|3|4|5|6|7|8|9|10|11;
+export function adjacentFighterLevel(level:SupportedFighterLevel,direction:-1|1):SupportedFighterLevel|null {
+  if(!Number.isInteger(level)||level<1||level>11)throw new RangeError('Nivel de Guerrero no reconocido');
+  if(direction!==-1&&direction!==1)throw new RangeError('La navegación solo permite subir o bajar un nivel');
+  const next=level+direction;
+  return next>=1&&next<=11?next as SupportedFighterLevel:null;
 }

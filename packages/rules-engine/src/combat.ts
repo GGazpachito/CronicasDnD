@@ -54,6 +54,8 @@ export type CombatState = Readonly<{
   masteryEffects?:readonly MasteryPendingEffect[];
   /** Opcional en guardados anteriores: el tracker empieza solo cuando se usa la pantalla. */
   turn?:TurnTracker;
+  /** Campeón 10: recurso de Inspiración heroica, que persiste hasta gastarse. */
+  heroicInspiration?:boolean;
 }>;
 const MAX_ATTACKS=100;
 const MAX_EFFECTS=30;
@@ -90,12 +92,13 @@ function preserveProneAfterUnconscious(before:ConditionLedger,after:ConditionLed
 export function initialCombatState():CombatState{return {round:1,nextId:1,attacks:[],effects:[]};}
 
 /** Inicia el turno propio; los efectos Sap/Slow temporizados vencen al COMENZAR. */
-export function startCharacterTurn(state:CombatState):CombatState{
+export function startCharacterTurn(state:CombatState,heroicWarrior=false):CombatState{
   const s=validateCombatState(state);
   const turn=startTurnTracker(s.turn??initialTurnTracker());
   const masteryEffects=s.masteryEffects?.filter(e=>!(e.sourceTurn!==undefined&&e.sourceTurn<turn.number&&
     (e.mastery==='Sap'||e.mastery==='Slow')));
-  return {...s,turn,...(masteryEffects?{masteryEffects}:{})};
+  return {...s,turn,...(masteryEffects?{masteryEffects}:{}),
+    ...(heroicWarrior?{heroicInspiration:true}:{})};
 }
 /** Hostigar creado en el turno N caduca al TERMINAR el turno N+1. */
 export function endCharacterTurn(state:CombatState):CombatState{
@@ -103,6 +106,12 @@ export function endCharacterTurn(state:CombatState):CombatState{
   const turn=endTurnTracker(s.turn??initialTurnTracker());
   const masteryEffects=s.masteryEffects?.filter(e=>!(e.sourceTurn!==undefined&&e.sourceTurn<turn.number&&e.mastery==='Vex'));
   return {...s,turn,...(masteryEffects?{masteryEffects}:{})};
+}
+/** Gasta una Inspiración heroica para volver a tirar un dado; el dado se resuelve en mesa. */
+export function spendHeroicInspiration(state:CombatState):CombatState{
+  const combat=validateCombatState(state);
+  if(!combat.heroicInspiration)fail('No tienes Inspiración heroica disponible');
+  return {...combat,heroicInspiration:false};
 }
 export function spendCombatSlot(state:CombatState,slot:TurnSlot):CombatState{
   const s=validateCombatState(state);
@@ -120,7 +129,7 @@ export function moveCombatCharacter(state:CombatState,feet:number,effectiveSpeed
 /** Valida y clona estados cargados de PostgreSQL (no confia en el JSON recibido). */
 export function validateCombatState(value:unknown):CombatState{
   if(!record(value))fail('Estado de combate inválido');
-  exactKeys(value,['round','nextId','attacks','effects',...(value.conditions===undefined?[]:['conditions']),...(value.receivedAttacks===undefined?[]:['receivedAttacks']),...(value.masteryEffects===undefined?[]:['masteryEffects']),...(value.turn===undefined?[]:['turn'])],'Combate');
+  exactKeys(value,['round','nextId','attacks','effects',...(value.conditions===undefined?[]:['conditions']),...(value.receivedAttacks===undefined?[]:['receivedAttacks']),...(value.masteryEffects===undefined?[]:['masteryEffects']),...(value.turn===undefined?[]:['turn']),...(value.heroicInspiration===undefined?[]:['heroicInspiration'])],'Combate');
   const round=bounded(value.round,1,MAX_ROUNDS,'Ronda');
   const nextId=bounded(value.nextId,1,MAX_ID,'Siguiente ID');
   if(!Array.isArray(value.attacks)||value.attacks.length>MAX_ATTACKS)fail('Historial de ataques demasiado largo');
@@ -218,8 +227,9 @@ export function validateCombatState(value:unknown):CombatState{
     });
   }
   const turn=value.turn===undefined?undefined:validateTurnTracker(value.turn);
+  if(value.heroicInspiration!==undefined&&typeof value.heroicInspiration!=='boolean')fail('Inspiración heroica inválida');
   if(turn&&masteryEffects?.some(e=>e.sourceTurn!==undefined&&e.sourceTurn>turn.number))fail('El origen de la maestría es posterior al turno actual');
-  return {round,nextId,attacks,effects,...(conditions?{conditions}:{}),...(receivedAttacks?{receivedAttacks}:{}),...(masteryEffects?{masteryEffects}:{}),...(turn?{turn}:{})};
+  return {round,nextId,attacks,effects,...(conditions?{conditions}:{}),...(receivedAttacks?{receivedAttacks}:{}),...(masteryEffects?{masteryEffects}:{}),...(turn?{turn}:{}),...(value.heroicInspiration===undefined?{}:{heroicInspiration:value.heroicInspiration as boolean})};
 }
 
 /** Registrar un ataque y descontar su municion forman una sola operacion logica.
@@ -236,7 +246,7 @@ export function recordWeaponAttack(
   const nextTurn=combat.turn?spendAttackOnTurn(combat.turn,usage,{
     lightExtra:profile.lightExtraAttack,nickMastery:profile.mastery==='Nick',cleaveMastery:profile.mastery==='Cleave',
     hitCreature:resolution.hit===true&&validatedContext?.targetIsCreature===true,
-    weaponId:profile.weaponId,targetName:validatedContext?.targetName??'',attackLimit:fighterLevel>=5?2:1,
+    weaponId:profile.weaponId,targetName:validatedContext?.targetName??'',attackLimit:fighterLevel>=11?3:fighterLevel>=5?2:1,
   }):undefined;
   if(!profile||!resolution||!weapon(profile.weaponId))fail('Perfil de ataque inválido');
   const stats=WEAPON_STATS[profile.weaponId];

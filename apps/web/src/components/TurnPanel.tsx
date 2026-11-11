@@ -1,12 +1,12 @@
 'use client';
 
 import {useState} from 'react';
-import {startCharacterTurn,endCharacterTurn,spendCombatSlot,moveCombatCharacter,type CombatState} from '../../../../packages/rules-engine/src/combat';
+import {startCharacterTurn,endCharacterTurn,spendCombatSlot,moveCombatCharacter,spendHeroicInspiration,type CombatState} from '../../../../packages/rules-engine/src/combat';
 import {conditionCapabilities,initialConditionLedger} from '../../../../packages/rules-engine/src/conditions';
 import {initialTurnTracker} from '../../../../packages/rules-engine/src/turns';
 
-type Props={combat:CombatState|null;outOfSync:boolean;onChange:(combat:CombatState)=>void;baseSpeedFeet:number;hitPoints:number};
-export default function TurnPanel({combat,outOfSync,onChange,baseSpeedFeet,hitPoints}:Props){
+type Props={fighterLevel:number;heroicWarrior:boolean;combat:CombatState|null;outOfSync:boolean;onChange:(combat:CombatState)=>void;baseSpeedFeet:number;hitPoints:number};
+export default function TurnPanel({fighterLevel,heroicWarrior,combat,outOfSync,onChange,baseSpeedFeet,hitPoints}:Props){
   const [feet,setFeet]=useState(5);
   const [error,setError]=useState('');
   const [message,setMessage]=useState('');
@@ -27,9 +27,13 @@ export default function TurnPanel({combat,outOfSync,onChange,baseSpeedFeet,hitPo
     {!ready?<p className="play-warning" role="alert">Completa y sincroniza primero el estado del personaje.</p>:<>
       <p className="muted-note">Ronda global {combat!.round} · Turno propio {turn.number||'sin iniciar'} · {turn.active?'Turno en curso':'Fuera de tu turno'}. Los enemigos y la iniciativa siguen bajo control del DM.</p>
       <div className="play-buttons">
-        <button type="button" disabled={turn.active||hitPoints===0||cap.deadByExhaustion} onClick={()=>change(startCharacterTurn,'Turno iniciado.')}>Iniciar mi turno</button>
+        <button type="button" disabled={turn.active||hitPoints===0||cap.deadByExhaustion} onClick={()=>change(c=>startCharacterTurn(c,heroicWarrior),heroicWarrior?'Turno iniciado: Guerrero heroico concede Inspiración heroica si no la tenías.':'Turno iniciado.')}>Iniciar mi turno</button>
         <button type="button" disabled={!turn.active} onClick={()=>change(endCharacterTurn,'Turno terminado.')}>Terminar mi turno</button>
       </div>
+      {heroicWarrior&&<div className="play-action-group"><h3>Guerrero heroico · Campeón nivel 10</h3>
+        <p className="muted-note">Inspiración heroica: {combat?.heroicInspiration?'Disponible':'No disponible'}. Al empezar tu turno de combate, la recuperas si no la tienes. Al gastarla, puedes volver a tirar un dado que acabes de tirar y debes usar el nuevo resultado.</p>
+        <button type="button" disabled={!ready||!combat?.heroicInspiration} onClick={()=>change(spendHeroicInspiration,'Inspiración heroica gastada; resuelve la repetición del dado en mesa.')}>Gastar Inspiración heroica</button>
+      </div>}
       {turn.number>0&&<>
         <div className="turn-stats" aria-label="Recursos de turno">
           <div><span>Acciones</span><strong>{turn.actionLimit-turn.actionsUsed} / {turn.actionLimit}</strong></div>
@@ -49,7 +53,7 @@ export default function TurnPanel({combat,outOfSync,onChange,baseSpeedFeet,hitPo
           <button type="button" disabled={!canAct||speed===0||!Number.isInteger(feet)||feet<1||feet>movementRemaining} onClick={()=>change(c=>moveCombatCharacter(c,feet,speed),`${feet} pies recorridos.`)}>Registrar movimiento</button>
           <p className="muted-note">Velocidad actual: {speed} pies · Correr: {turn.dashes} vez/veces · Movimiento usado: {turn.movementUsedFeet}. Introduce el coste real en pies, incluido terreno difícil. No se calculan posiciones sobre un mapa.</p>
         </div>
-        <p className="muted-note">Ataques: {turn.attackActionUsed?'acción Atacar realizada':'acción Atacar pendiente'} · Ataque extra Ligera: {turn.lightExtraUsed?'usado':'no usado'} · Ataque extra Tajo: {turn.cleaveExtraUsed?'usado':'no usado'}. Elige el gasto correspondiente en «Ataques con armas» antes de confirmar.</p>
+        <p className="muted-note">Ataques: {turn.attackActionUsed?`acción Atacar: ${turn.attackActionAttacksUsed??1} de {fighterLevel>=11?3:fighterLevel>=5?2:1} ataque(s) confirmado(s)`:'acción Atacar pendiente'} · Ataque extra Ligera: {turn.lightExtraUsed?'usado':'no usado'} · Ataque extra Tajo: {turn.cleaveExtraUsed?'usado':'no usado'}. Elige el gasto correspondiente en «Ataques con armas» antes de confirmar.</p>
         {turn.cleaveReadyWeapon&&!turn.cleaveExtraUsed&&<p className="info-line">Tajo disponible tras impactar a «{turn.cleaveFirstTarget}»: comprueba que la segunda criatura esté a 5 pies de la primera y a tu alcance.</p>}
       </>}
     </>}

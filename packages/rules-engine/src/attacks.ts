@@ -1,4 +1,4 @@
-/** Fase 4.3 · Ataques con armas D&D 2024, niveles 1–7 del Guerrero.
+/** Fase 4.3 · Ataques con armas D&D 2024, niveles 1–11 del Guerrero.
  * Datos mecánicos normalizados del PHB 2024, pp. 12, 25-28, 96, 209-210, 213-215.
  * Calculador puro: no modifica criaturas, inventarios ni estados de partida.
  */
@@ -85,6 +85,8 @@ export type WeaponAttackOptions = Readonly<{
   /** Penalización al test d20 por agotamiento (0 a -12). */
   conditionD20Penalty?: number;
   targetDistanceFeet?: number;
+  /** Guerrero 9: sustituye la maestría del arma dominada solo en este ataque. */
+  tacticalMastery?:'Push'|'Sap'|'Slow';
 }>;
 export type WeaponAttackProfile = Readonly<{
   weaponId: WeaponId; weaponName: string; ability:'strength'|'dexterity'; abilityModifier:number;
@@ -112,15 +114,20 @@ export function calculateWeaponAttack(
   sheet:CalculatedFighterSheet, weaponId:WeaponId, style:FightingStyleId|readonly FightingStyleId[],
   masteries:readonly WeaponId[], options:WeaponAttackOptions={}
 ):WeaponAttackProfile {
-  if(!sheet||sheet.classId!=='fighter'||sheet.ruleset!=='dnd-2024'||sheet.level<1||sheet.level>7)throw new RangeError('Hoja de Guerrero 2024 nivel 1–7 requerida');
+  if(!sheet||sheet.classId!=='fighter'||sheet.ruleset!=='dnd-2024'||sheet.level<1||sheet.level>11)throw new RangeError('Hoja de Guerrero 2024 nivel 1–11 requerida');
   if(!isWeapon(weaponId))throw new RangeError('Arma desconocida');
   const styles:readonly FightingStyleId[]=typeof style==='string'?[style]:style;
   if(!Array.isArray(styles)||styles.length<1||styles.length>(sheet.level>=7?2:1)||new Set(styles).size!==styles.length||styles.some(s=>!['archery','blind_fighting','defense','dueling','great_weapon_fighting','interception','protection','thrown_weapon_fighting','two_weapon_fighting','unarmed_fighting'].includes(s)))throw new RangeError('Estilos de combate desconocidos, duplicados o no desbloqueados');
-  if(!Array.isArray(masteries)||masteries.length!==(sheet.level>=4?4:3)||new Set(masteries).size!==(sheet.level>=4?4:3)||masteries.some(x=>!isWeapon(x)))throw new RangeError('Maestrías de Guerrero inválidas para su nivel');
+  if(!Array.isArray(masteries)||masteries.length!==(sheet.level>=10?5:sheet.level>=4?4:3)||new Set(masteries).size!==(sheet.level>=10?5:sheet.level>=4?4:3)||masteries.some(x=>!isWeapon(x)))throw new RangeError('Maestrías de Guerrero inválidas para su nivel');
   if(!options||typeof options!=='object'||Array.isArray(options))throw new RangeError('Opciones de ataque inválidas');
-  for(const key of Object.keys(options))if(!['ability','thrown','twoHanded','lightExtraAttack','otherWeaponHeld','adjacentEnemy','advantage','conditionAdvantage','conditionDisadvantage','conditionD20Penalty','targetDistanceFeet'].includes(key))throw new RangeError('Opción de ataque desconocida');
+  for(const key of Object.keys(options))if(!['ability','thrown','twoHanded','lightExtraAttack','otherWeaponHeld','adjacentEnemy','advantage','conditionAdvantage','conditionDisadvantage','conditionD20Penalty','targetDistanceFeet','tacticalMastery'].includes(key))throw new RangeError('Opción de ataque desconocida');
   for(const key of ['thrown','twoHanded','lightExtraAttack','otherWeaponHeld','adjacentEnemy','advantage','conditionAdvantage','conditionDisadvantage'] as const)if(options[key]!==undefined&&typeof options[key]!=='boolean')throw new RangeError(`${key} debe ser booleano`);
   if(options.conditionD20Penalty!==undefined&&(typeof options.conditionD20Penalty!=='number'||!Number.isSafeInteger(options.conditionD20Penalty)||options.conditionD20Penalty>0||options.conditionD20Penalty< -12||options.conditionD20Penalty%2!==0))throw new RangeError('Penalización d20 de condición inválida');
+  if(options.tacticalMastery!==undefined){
+    if(!['Push','Sap','Slow'].includes(options.tacticalMastery))throw new RangeError('Dominio táctico solo permite Empujar, Debilitar o Ralentizar');
+    if(sheet.level<9)throw new RangeError('Dominio táctico requiere nivel 9');
+    if(!masteries.includes(weaponId))throw new RangeError('Dominio táctico requiere dominar la maestría de esta arma');
+  }
   const w=WEAPON_STATS[weaponId];
   const thrown=options.thrown===true || (w.kind==='ranged'&&!w.rangedRange&&Boolean(w.thrownRange));
   const twoHanded=w.twoHanded===true||(options.twoHanded===true&&w.versatileSides!==undefined);
@@ -164,9 +171,10 @@ export function calculateWeaponAttack(
   const adv=options.advantage===true||options.conditionAdvantage===true;
   const dis=disadvantage||options.conditionDisadvantage===true;
   const mode=adv&&dis?'normal':dis?'disadvantage':adv?'advantage':'normal';
-  const mastery=masteries.includes(weaponId)?WEAPONS[weaponId].mastery:null;
+  const mastery=masteries.includes(weaponId)?(options.tacticalMastery??WEAPONS[weaponId].mastery):null;
   const masterySaveDC=mastery==='Topple'?8+sheet.proficiencyBonus+modifier:null;
   const grazeOnMiss=mastery==='Graze'?Math.max(0,modifier):null;
+  if(options.tacticalMastery)notes.push(`Dominio táctico: en ESTE ataque se usa ${options.tacticalMastery} en lugar de ${WEAPONS[weaponId].mastery}. La maestría original permanece aprendida.`);
   if(mastery){
     const hint:Record<MasteryId,string>={
       Cleave:'Tajo: un posible segundo objetivo cercano; se resuelve en la mesa.',

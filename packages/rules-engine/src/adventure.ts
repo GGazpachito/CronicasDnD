@@ -3,6 +3,7 @@
  * Los dados los proporciona el jugador; no se simula combate contra enemigos.
  */
 import type { CalculatedFighterSheet } from './sheet';
+import {ABILITIES,type Ability} from './abilities';
 import {validateMagicWards,type MagicWardEntry} from './magic-wards';
 import { initialCombatState,validateCombatState,spendCombatSlot,grantCombatActionSurge,type CombatState } from './combat';
 import {longRestConditionUpdate,initialConditionLedger,conditionCapabilities} from './conditions';
@@ -30,6 +31,7 @@ export type AdventureAction =
   | Readonly<{type:'second_wind'; d10:number}>
   | Readonly<{type:'action_surge'}>
   | Readonly<{type:'tactical_mind'; originalTotal:number; difficultyClass:number; d10:number}>
+  | Readonly<{type:'indomitable'; originalTotal:number; difficultyClass:number; ability:Ability; d20:number; extraBonus?:number}>
   | Readonly<{type:'short_rest'; hitDieRolls:readonly number[]}>
   | Readonly<{type:'long_rest'}>
   | Readonly<{type:'death_save';d20:number}>
@@ -69,7 +71,7 @@ export function validateAdventureState(value:unknown,sheet:CalculatedFighterShee
   if(!isRecord(value.fighter.hitPoints))throw new RangeError('PG inválidos');
   onlyKeys(value.fighter.hitPoints,['current','maximum'],'PG');
   if(!isRecord(value.fighter.resources))throw new RangeError('Recursos inválidos');
-  onlyKeys(value.fighter.resources,['second_wind','action_surge'],'Recursos');
+  onlyKeys(value.fighter.resources,['second_wind','action_surge','indomitable'],'Recursos');
   for(const [id,entry] of Object.entries(value.fighter.resources)){
     if(!isRecord(entry))throw new RangeError(`Recurso ${id} inválido`);
     onlyKeys(entry,['current'],`Recurso ${id}`);
@@ -87,7 +89,8 @@ export function validateAdventureState(value:unknown,sheet:CalculatedFighterShee
     throw new RangeError('No puedes mantener concentración mientras estás incapacitado');
   return {fighter:{fighterLevel:fighter.fighterLevel,hitPoints:{...fighter.hitPoints},resources:{
     second_wind:{current:fighter.resources.second_wind!.current},
-    ...(fighter.fighterLevel>=2?{action_surge:{current:fighter.resources.action_surge!.current}}:{})
+    ...(fighter.fighterLevel>=2?{action_surge:{current:fighter.resources.action_surge!.current}}:{}),
+    ...(fighter.fighterLevel>=9?{indomitable:{current:fighter.resources.indomitable!.current}}:{})
   }},temporaryHitPoints,spentHitDice,combat,survival,magicWards};
 }
 
@@ -193,6 +196,22 @@ export function applyAdventureAction(source:AdventureState,action:AdventureActio
       });
       return {state:withFighter(state,applied.state),description:`Mente táctica: total ${applied.finalTotal}; ${applied.success?'éxito, se gasta Segundo aliento':'fallo, no se gasta Segundo aliento'}.`};
     }
+    case 'indomitable':{
+      onlyKeys(action,['type','originalTotal','difficultyClass','ability','d20','extraBonus'],'Indomable');
+      if(sheet.level<9)throw new RangeError('Indomable requiere Guerrero nivel 9');
+      // Salvaciones de muerte: reglas específicas; deben resolverse desde su panel.
+      requireConscious(state,'Indomable (salvación ordinaria)');
+      if(!ABILITIES.includes(action.ability))throw new RangeError('Característica de salvación inválida');
+      const original=requireInteger(action.originalTotal,'Resultado fallido',-1000,1000);
+      const dc=requireInteger(action.difficultyClass,'CD de salvación',1,1000);
+      const d20=requireInteger(action.d20,'Nuevo d20',1,20);
+      const extra=action.extraBonus===undefined?0:requireInteger(action.extraBonus,'Modificador situacional',-100,100);
+      if(original>=dc)throw new RangeError('Indomable requiere una salvación fallida');
+      const exhaustion=state.combat.conditions?.exhaustion??0;
+      const total=d20+sheet.savingThrowBonuses[action.ability]-2*exhaustion+extra+sheet.level;
+      const fighter=spendFighterResource(state.fighter,'indomitable');
+      return {state:withFighter(state,fighter),description:`Indomable: nueva tirada ${d20} + salvación ${sheet.savingThrowBonuses[action.ability]} + nivel ${sheet.level}${exhaustion?` − agotamiento ${exhaustion*2}`:''}${extra?` ${extra>=0?'+':''}${extra} situacional`:''} = ${total} contra CD ${dc}. ${total>=dc?'Éxito.':'Fallo.'} Debes usar la nueva tirada; Indomable gastado.`};
+    }
     case 'short_rest':{
       onlyKeys(action,['type','hitDieRolls'],'Descanso corto');
       requireConscious(state,'Descanso corto');
@@ -263,7 +282,8 @@ export function resourceDisplay(state:AdventureState,sheet:CalculatedFighterShee
   validateAdventureState(state,sheet);
   return sheet.level>=2?{
     second_wind:{current:state.fighter.resources.second_wind!.current,maximum:sheet.resources.second_wind!.maximum},
-    action_surge:{current:state.fighter.resources.action_surge!.current,maximum:1}
+    action_surge:{current:state.fighter.resources.action_surge!.current,maximum:1},
+    ...(sheet.level>=9?{indomitable:{current:state.fighter.resources.indomitable!.current,maximum:1}}:{})
   }:{second_wind:{current:state.fighter.resources.second_wind!.current,maximum:sheet.resources.second_wind!.maximum}};
 }
 
@@ -272,9 +292,27 @@ export function resourceDisplay(state:AdventureState,sheet:CalculatedFighterShee
  */
 export function advanceAdventureLevel(source:AdventureState,oldSheet:CalculatedFighterSheet,newSheet:CalculatedFighterSheet):AdventureState{
   const before=validateAdventureState(source,oldSheet);
-  if(oldSheet.classId!=='fighter'||newSheet.classId!=='fighter'||newSheet.level!==oldSheet.level+1||newSheet.level>7)
-    throw new RangeError('Solo se permite subir un nivel del Guerrero hasta 7');
+  if(oldSheet.classId!=='fighter'||newSheet.classId!=='fighter'||newSheet.level!==oldSheet.level+1||newSheet.level>11)
+    throw new RangeError('Solo se permite subir un nivel del Guerrero hasta 11');
   if(oldSheet.id!==newSheet.id||oldSheet.name!==newSheet.name)throw new RangeError('La progresión debe mantener la identidad del personaje');
   const fighter=advanceFighterLevel(before.fighter,newSheet.level,newSheet.maximumHitPoints);
   return validateAdventureState({...before,fighter},newSheet);
+}
+
+
+/** Sincronización explícita para cambios de PG máximos en el MISMO nivel.
+ * Conserva el daño sufrido, recursos gastados, combate, condiciones y registros.
+ * No sirve para cambiar de nivel: para ello se utiliza advanceAdventureLevel.
+ * Debe ser confirmada por el jugador desde la interfaz cuando resulte necesaria.
+ */
+export function synchronizeAdventureSheet(source:AdventureState,sheet:CalculatedFighterSheet):AdventureState{
+  validateFighterState(source.fighter);
+  if(source.fighter.fighterLevel!==sheet.level)
+    throw new RangeError('No se puede sincronizar un estado de otro nivel: carga el personaje correcto');
+  const previous=source.fighter.hitPoints;
+  const delta=sheet.maximumHitPoints-previous.maximum;
+  const current=Math.max(0,Math.min(sheet.maximumHitPoints,previous.current+delta));
+  const synced:AdventureState={...source,fighter:{...source.fighter,
+    hitPoints:{current,maximum:sheet.maximumHitPoints}}};
+  return validateAdventureState(synced,sheet);
 }

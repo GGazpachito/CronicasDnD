@@ -19,7 +19,7 @@ async function jsonOrThrow<T>(response:Response):Promise<T>{
 export default function SaveLoadPanel({input,adventure,valid,onLoad}:Props){
   const [entries,setEntries]=useState<Summary[]>([]);
   const [selected,setSelected]=useState<string>('');
-  const [active,setActive]=useState<{id:string;revision:number}|null>(null);
+  const [active,setActive]=useState<{id:string;revision:number;savedLevel:number}|null>(null);
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState('');
   const [error,setError]=useState('');
@@ -51,8 +51,9 @@ export default function SaveLoadPanel({input,adventure,valid,onLoad}:Props){
       const snapshot=makeCharacterSnapshot(input,adventure??undefined);
       const response=await fetch('/api/characters',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({snapshot})});
       const d=await jsonOrThrow<{character:Summary}>(response);
-      setActive({id:d.character.id,revision:d.character.revision});setSelected(d.character.id);
-      setMessage(`Personaje «${d.character.name}» guardado por primera vez.`);
+      if(d.character.level!==snapshot.input.level)throw new Error('El servidor no confirmó el nivel esperado. No se ha validado este guardado.');
+      setActive({id:d.character.id,revision:d.character.revision,savedLevel:d.character.level});setSelected(d.character.id);
+      setMessage(`Personaje «${d.character.name}» guardado por primera vez en NIVEL ${d.character.level}.`);
       await refresh();
     });
   }
@@ -62,8 +63,9 @@ export default function SaveLoadPanel({input,adventure,valid,onLoad}:Props){
       const snapshot=makeCharacterSnapshot(input,adventure??undefined);
       const response=await fetch(`/api/characters/${encodeURIComponent(active.id)}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision:active.revision,snapshot})});
       const d=await jsonOrThrow<{character:Summary}>(response);
-      setActive({id:d.character.id,revision:d.character.revision});
-      setMessage(`Cambios guardados (revisión ${d.character.revision}).`);
+      if(d.character.level!==snapshot.input.level)throw new Error('El servidor devolvió otro nivel. Comprueba el personaje guardado antes de continuar.');
+      setActive({id:d.character.id,revision:d.character.revision,savedLevel:d.character.level});
+      setMessage(`Cambios guardados: NIVEL ${d.character.level} (revisión ${d.character.revision}).`);
       await refresh();
     });
   }
@@ -73,9 +75,11 @@ export default function SaveLoadPanel({input,adventure,valid,onLoad}:Props){
     await act(async()=>{
       const response=await fetch(`/api/characters/${encodeURIComponent(selected)}`,{cache:'no-store'});
       const d=await jsonOrThrow<{character:Detail}>(response);
+      if(d.character.level!==d.character.snapshot.input.level||d.character.level!==d.character.snapshot.adventure.fighter.fighterLevel)
+        throw new Error('El nivel del registro no coincide con la hoja y la partida guardadas. No se ha cargado un personaje inconsistente.');
       onLoad(d.character.snapshot);
-      setActive({id:d.character.id,revision:d.character.revision});
-      setMessage(`Personaje «${d.character.name}» recuperado.`);
+      setActive({id:d.character.id,revision:d.character.revision,savedLevel:d.character.level});
+      setMessage(`Personaje «${d.character.name}» recuperado en NIVEL ${d.character.level}.`);
     });
   }
   async function remove(){
@@ -105,7 +109,10 @@ export default function SaveLoadPanel({input,adventure,valid,onLoad}:Props){
         <button type="button" onClick={remove} disabled={busy||!selected} className="save-danger">Eliminar</button>
       </div>
     </div>
-    {active&&<p className="muted-note">Editando guardado #{active.id.slice(0,8)} · revisión {active.revision}. Los cambios no se guardan automáticamente.</p>}
+    {active&&<div className={active.savedLevel!==input.level?'play-warning':'muted-note'} role={active.savedLevel!==input.level?'status':undefined}>
+      Editando guardado #{active.id.slice(0,8)} · revisión {active.revision} · <strong>Nivel en PostgreSQL: {active.savedLevel}</strong> · <strong>Nivel en la hoja: {input.level}</strong>.
+      {active.savedLevel!==input.level?' Hay cambios de nivel sin guardar. Pulsa «Actualizar guardado» cuando la hoja sea válida.':' Los cambios no se guardan automáticamente.'}
+    </div>}
     {message&&<p role="status" className="save-success">{message}</p>}
     {error&&<p role="alert" className="save-error">{error}</p>}
     {!valid&&<p className="muted-note">Corrige primero los errores de creación para poder guardar.</p>}

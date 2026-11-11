@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import {ABILITIES,type Ability} from '../../../../packages/rules-engine/src/abilities';
 import type { CalculatedFighterSheet } from '../../../../packages/rules-engine/src/sheet';
 import { applyAdventureAction, initialAdventureState, resourceDisplay,
   type AdventureAction, type AdventureState } from '../../../../packages/rules-engine/src/adventure';
@@ -14,6 +15,11 @@ export default function PlayPanel({sheet,state,outOfSync,onChange}:Props){
   const [hitDieRolls,setHitDieRolls]=useState('');
   const [check,setCheck]=useState(11);
   const [dc,setDc]=useState(15);
+  const [indomitableAbility,setIndomitableAbility]=useState<Ability>('constitution');
+  const [indomitableD20,setIndomitableD20]=useState(11);
+  const [indomitableOriginal,setIndomitableOriginal]=useState(10);
+  const [indomitableDc,setIndomitableDc]=useState(15);
+  const [indomitableExtra,setIndomitableExtra]=useState(0);
   const [note,setNote]=useState('');
   const [error,setError]=useState('');
 
@@ -21,7 +27,7 @@ export default function PlayPanel({sheet,state,outOfSync,onChange}:Props){
     if(!sheet||!state)return;
     try{
       const result=applyAdventureAction(state,action,sheet);
-      onChange(result.state);setError('');setNote(result.description);
+      onChange(result.state);setError('');setNote(result.description+(action.type==='second_wind'&&sheet.level>=5?' Desplazamiento táctico: puedes moverte hasta la mitad de tu velocidad sin provocar ataques de oportunidad. Registra el movimiento con el DM.':''));
       if(action.type==='short_rest')setHitDieRolls('');
     }catch(e){setError(e instanceof Error?e.message:'Operación no válida');}
   }
@@ -47,8 +53,9 @@ export default function PlayPanel({sheet,state,outOfSync,onChange}:Props){
         <div><span>PG actuales / máximos</span><strong>{state.fighter.hitPoints.current} / {sheet.maximumHitPoints}</strong></div>
         <div><span>PG temporales</span><strong>{state.temporaryHitPoints}</strong></div>
         <div><span>Dados de golpe disponibles</span><strong>{available} / {sheet.hitDice.total} d10</strong></div>
-        <div><span>Segundo aliento</span><strong>{resources?.second_wind?.current ?? 0} / 2</strong></div>
+        <div><span>Segundo aliento</span><strong>{resources?.second_wind?.current ?? 0} / {resources?.second_wind?.maximum ?? 0}</strong></div>
         {sheet.level>=2&&<div><span>Acción súbita</span><strong>{resources?.action_surge?.current ?? 0} / 1</strong></div>}
+        {sheet.level>=9&&<div><span>Indomable</span><strong>{resources?.indomitable?.current??0} / 1</strong></div>}
       </div>
       {state.fighter.hitPoints.current===0&&<p className="play-warning" role="alert">El personaje está a 0 PG. Gestiona sus salvaciones contra muerte y estabilización en el panel siguiente. No puede descansar ni utilizar acciones de clase.</p>}
       <div className="play-actions-grid">
@@ -59,12 +66,20 @@ export default function PlayPanel({sheet,state,outOfSync,onChange}:Props){
         </div>
         <div className="play-action-group"><h3>Rasgos del Guerrero</h3>
           <label className="field"><span>Resultado del d10</span><input type="number" min="1" max="10" step="1" value={d10} onChange={e=>setD10(Number(e.target.value))}/></label>
+          {sheet.level>=5&&<p className="muted-note">Desplazamiento táctico: al usar Segundo aliento como acción adicional, puedes moverte hasta la mitad de tu velocidad sin provocar ataques de oportunidad. El movimiento se resuelve manualmente con el DM.</p>}
           <div className="play-buttons"><button type="button" disabled={!ready||state.fighter.hitPoints.current===0||(resources?.second_wind?.current??0)===0} onClick={()=>act({type:'second_wind',d10})}>Segundo aliento</button>
           {sheet.level>=2&&<button type="button" disabled={!ready||state.fighter.hitPoints.current===0||(resources?.action_surge?.current??0)===0} onClick={()=>act({type:'action_surge'})}>Gastar Acción súbita</button>}</div>
           {sheet.level>=2&&<div className="play-mind"><p className="muted-note">Mente táctica (solo tras fallar una prueba). Utiliza el d10 anterior.</p>
             <div className="play-check-row"><label className="field"><span>Resultado previo</span><input type="number" value={check} onChange={e=>setCheck(Number(e.target.value))}/></label><label className="field"><span>CD</span><input type="number" value={dc} onChange={e=>setDc(Number(e.target.value))}/></label></div>
             <button type="button" disabled={!ready||state.fighter.hitPoints.current===0||(resources?.second_wind?.current??0)===0} onClick={()=>act({type:'tactical_mind',originalTotal:check,difficultyClass:dc,d10})}>Aplicar Mente táctica</button></div>}
         </div>
+        {sheet.level>=9&&<div className="play-action-group"><h3>Indomable · nivel 9</h3>
+          <p className="muted-note">Tras fallar una salvación ordinaria, repítela y suma tu nivel de Guerrero (+{sheet.level}). Es obligatorio usar el nuevo resultado. Un uso por descanso largo. Para las salvaciones de muerte utiliza su panel específico.</p>
+          <label className="field"><span>Característica de la salvación</span><select value={indomitableAbility} onChange={e=>setIndomitableAbility(e.target.value as Ability)}>{ABILITIES.map(a=><option key={a} value={a}>{({strength:'Fuerza',dexterity:'Destreza',constitution:'Constitución',intelligence:'Inteligencia',wisdom:'Sabiduría',charisma:'Carisma'} as Record<Ability,string>)[a]} (bono {sheet.savingThrowBonuses[a]>=0?'+':''}{sheet.savingThrowBonuses[a]})</option>)}</select></label>
+          <div className="play-check-row"><label className="field"><span>Resultado total de la salvación fallida</span><input type="number" value={indomitableOriginal} onChange={e=>setIndomitableOriginal(Number(e.target.value))}/></label><label className="field"><span>CD</span><input type="number" min="1" value={indomitableDc} onChange={e=>setIndomitableDc(Number(e.target.value))}/></label></div>
+          <div className="play-check-row"><label className="field"><span>Nuevo d20</span><input type="number" min="1" max="20" value={indomitableD20} onChange={e=>setIndomitableD20(Number(e.target.value))}/></label><label className="field"><span>Modificador situacional adicional (si procede)</span><input type="number" value={indomitableExtra} onChange={e=>setIndomitableExtra(Number(e.target.value))}/></label></div>
+          <button type="button" disabled={!ready||state.fighter.hitPoints.current===0||(resources?.indomitable?.current??0)===0} onClick={()=>act({type:'indomitable',originalTotal:indomitableOriginal,difficultyClass:indomitableDc,ability:indomitableAbility,d20:indomitableD20,extraBonus:indomitableExtra})}>Repetir salvación con Indomable</button>
+        </div>}
         <div className="play-action-group play-rest-group"><h3>Descansos</h3>
           <label className="field"><span>Resultados de dados de golpe d10 (ej.: 6, 3); vacío = no gastar dados</span><input type="text" value={hitDieRolls} placeholder="6, 3" onChange={e=>setHitDieRolls(e.target.value)}/></label>
           <p className="muted-note">Descanso corto: recupera un uso de Segundo aliento, Acción súbita y PG de los dados gastados. No se pueden gastar más de {available} dados.</p>

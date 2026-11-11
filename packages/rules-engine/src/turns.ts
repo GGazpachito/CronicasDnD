@@ -42,7 +42,7 @@ export function validateTurnTracker(raw:unknown):TurnTracker{
   const actionsUsed=safeInt(o.actionsUsed,0,actionLimit,'Acciones gastadas');
   const movementUsedFeet=safeInt(o.movementUsedFeet,0,MAX_MOVE,'Movimiento gastado');
   const dashes=safeInt(o.dashes,0,actionLimit,'Acciones Correr');
-  const attackActionAttacksUsed=safeInt(o.attackActionAttacksUsed??(o.attackActionUsed?1:0),0,2,'Ataques de la acción Atacar');
+  const attackActionAttacksUsed=safeInt(o.attackActionAttacksUsed??(o.attackActionUsed?1:0),0,3,'Ataques de la acción Atacar');
   for(const k of ['active','bonusUsed','reactionUsed','attackActionUsed','lightExtraUsed','cleaveExtraUsed'])
     if(typeof o[k]!=='boolean')fail(`Bandera ${k} inválida`);
   const active=o.active as boolean;
@@ -68,7 +68,8 @@ export function validateTurnTracker(raw:unknown):TurnTracker{
  */
 export function suggestAttackTurnUsage(raw:TurnTracker, fighterLevel:number):AttackTurnUsage{
   const turn=validateTurnTracker(raw);
-  return fighterLevel>=5&&turn.active&&turn.attackActionUsed&&turn.attackActionAttacksUsed===1
+  const attacksPerAction=fighterLevel>=11?3:fighterLevel>=5?2:1;
+  return turn.active&&turn.attackActionUsed&&(turn.attackActionAttacksUsed??0)>0&&(turn.attackActionAttacksUsed??0)<attacksPerAction
     ?'extra_attack':'attack_action';
 }
 
@@ -116,7 +117,7 @@ export function moveOnTurn(raw:TurnTracker,feet:number,adjustedSpeedFeet:number)
 /** Registro declarado de un ataque: se comprueban espacios, no se inventan enemigos. */
 export function spendAttackOnTurn(raw:TurnTracker,kind:AttackTurnUsage,details:Readonly<{
   lightExtra:boolean;nickMastery:boolean;cleaveMastery:boolean;hitCreature:boolean;
-  weaponId:string;targetName:string;attackLimit?:1|2;
+  weaponId:string;targetName:string;attackLimit?:1|2|3;
 }>):TurnTracker{
   const t=validateTurnTracker(raw);
   if(kind==='untracked')return t;
@@ -130,8 +131,9 @@ export function spendAttackOnTurn(raw:TurnTracker,kind:AttackTurnUsage,details:R
     };
   }
   if(kind==='extra_attack'){
-    if(!t.attackActionUsed||details.attackLimit!==2||t.attackActionAttacksUsed!==1)fail('Ataque adicional requiere Guerrero nivel 5 y una acción Atacar con un ataque pendiente');
-    return {...t,attackActionAttacksUsed:2};
+    if(!t.attackActionUsed||!details.attackLimit||details.attackLimit<2||(t.attackActionAttacksUsed??0)<1||(t.attackActionAttacksUsed??0)>=details.attackLimit)
+      fail('No quedan ataques adicionales en esta acción Atacar');
+    return {...t,attackActionAttacksUsed:(t.attackActionAttacksUsed??0)+1};
   }
   if(!t.attackActionUsed)fail('Primero realiza una acción Atacar en este turno');
   if(kind==='light_bonus'||kind==='light_nick'){
