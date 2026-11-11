@@ -4,7 +4,7 @@ import {useRef,useState} from 'react';
 import type {CalculatedFighterSheet} from '../../../../packages/rules-engine/src/sheet';
 import {hasEquippedShield,type InventoryState} from '../../../../packages/rules-engine/src/inventory';
 import type {CombatState} from '../../../../packages/rules-engine/src/combat';
-import type {AttackTurnUsage} from '../../../../packages/rules-engine/src/turns';
+import {suggestAttackTurnUsage,type AttackTurnUsage} from '../../../../packages/rules-engine/src/turns';
 import {conditionKinds,evaluateConditionRoll,initialConditionLedger} from '../../../../packages/rules-engine/src/conditions';
 import type {MartialChoices} from '../../../../packages/rules-engine/src/martial';
 import {calculateOwnedWeaponAttack,ownedWeaponChoices,resolveWeaponAttack,WEAPON_STATS,type AttackResolution,type WeaponAttackProfile} from '../../../../packages/rules-engine/src/attacks';
@@ -15,7 +15,7 @@ const signed=(n:number)=>n>=0?`+${n}`:`${n}`;
 const DAMAGE_LABELS={bludgeoning:'contundente',piercing:'perforante',slashing:'cortante'};
 export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,canRecord}:Props){
   const [wanted,setWanted]=useState<string|null>(null);
-  const [attackUsage,setAttackUsage]=useState<AttackTurnUsage>('attack_action');
+  const [attackUsage,setAttackUsage]=useState<{stepKey:string;value:AttackTurnUsage}|null>(null);
   const [targetName,setTargetName]=useState('');
   const [targetSize,setTargetSize]=useState<CreatureSize>('unknown');
   const [targetIsCreature,setTargetIsCreature]=useState(true);
@@ -50,8 +50,17 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
   const choice=owned.find(item=>item.selectionId===wanted)??owned[0];
   const id=choice?.weaponId;
   const w=id?WEAPON_STATS[id]:null;
-  const tracked=Boolean(combat?.turn?.number);
-  const effectiveUsage:AttackTurnUsage=tracked?attackUsage:'untracked';
+  const turn=combat?.turn;
+  const tracked=Boolean(turn?.number);
+  // Tras confirmar un ataque cambia nextId; así no queda seleccionado el modo
+  // del golpe anterior y se propone el segundo ataque de la misma acción.
+  const stepKey=`${turn?.number??0}:${combat?.nextId??0}:${turn?.actionsUsed??0}:${turn?.attackActionAttacksUsed??0}`;
+  const suggestedUsage:AttackTurnUsage=turn&&sheet?suggestAttackTurnUsage(turn,sheet.level):'attack_action';
+  const effectiveUsage:AttackTurnUsage=tracked
+    ?(attackUsage?.stepKey===stepKey?attackUsage.value:suggestedUsage)
+    :'untracked';
+  const extraAttackReady=tracked&&sheet!==null&&sheet.level>=5&&turn?.active===true&&
+    turn.attackActionUsed&&turn.attackActionAttacksUsed===1;
   const vexActive=hasVexAdvantage(combat?.masteryEffects,targetName);
   let profile:WeaponAttackProfile|null=null;
   let profileError='';
@@ -66,7 +75,7 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
       ...(distance.trim()?{targetDistanceFeet:Number(distance)}:{}),
     });}catch(e){profileError=e instanceof Error?e.message:'Ataque inválido';}
   }
-  const rollKey=JSON.stringify({profile,d20,otherD20,ac,dice});
+  const rollKey=JSON.stringify({profile,d20,otherD20,ac,dice,effectiveUsage,stepKey});
   const resolved=computed?.key===rollKey?computed.value:null;
   const previewDamage=resolved?.damageTotal===null||resolved?.damageTotal===undefined?null:
     (effectiveUsage==='cleave_extra'&&profile?.mastery==='Cleave'
@@ -77,7 +86,7 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
   const setResolved=(value:AttackResolution|null)=>{setComputed(value?{key:rollKey,value}:null);if(!value){confirmedRef.current=false;setConfirmation('');}};
   const incompatibleShield=Boolean(inventory&&hasEquippedShield(inventory)&&profile?.twoHanded);
   const ammoCount=profile?.ammunition?inventory?.items.find(i=>i.id===profile!.ammunition)?.quantity??0:null;
-  function onChangeWeapon(next:string){setAttackUsage('attack_action');setWanted(next);setUseDex(false);setThrown(false);setTwoHands(false);setOtherWeapon(false);setLightExtra(false);setResolved(null);setError('');setDice('');}
+  function onChangeWeapon(next:string){setAttackUsage(null);setWanted(next);setUseDex(false);setThrown(false);setTwoHands(false);setOtherWeapon(false);setLightExtra(false);setResolved(null);setError('');setDice('');}
   function calculate(){
     if(!profile||incompatibleShield||blockedByConditions)return;
     try{
@@ -100,7 +109,7 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
     <div className="save-panel-head"><div><span className="eyebrow">FASE 4.13 · MAESTRÍAS</span><h2>Ataques con armas</h2></div><span className="save-label">Cálculo local</span></div>
     <p className="muted-note">Solo aparecen armas que posees. «Calcular tirada» no altera el personaje; «Confirmar ataque» registra el resultado y consume una unidad de munición si corresponde.</p>
     {!sheet&&<p className="save-error" role="alert">Completa primero la creación del personaje.</p>}
-    {sheet&&!martial&&<p className="save-error" role="alert">Selecciona un estilo de combate y tres maestrías en el apartado Equipo.</p>}
+    {sheet&&!martial&&<p className="save-error" role="alert">Selecciona un estilo de combate y las maestrías en Equipo.</p>}
     {sheet&&martial&&owned.length===0&&<p className="muted-note">No tienes armas. Adquiere o añade alguna desde el inventario para mostrar ataques.</p>}
     {sheet&&martial&&choice&&<>
       <div className="attack-form-grid">
@@ -113,15 +122,20 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
           <option value="unknown">Desconocido</option><option value="tiny">Diminuto</option><option value="small">Pequeño</option><option value="medium">Mediano</option><option value="large">Grande</option><option value="huge">Enorme</option><option value="gargantuan">Gargantuesco</option>
         </select></label>
       </div>
+      {tracked&&sheet.level>=5&&turn?.active&&<p className={extraAttackReady?'info-line':'muted-note'} role="status">
+        Acción Atacar: {turn.attackActionAttacksUsed??(turn.attackActionUsed?1:0)} de 2 ataques registrados en la última acción Atacar.
+        {extraAttackReady?' Te queda el segundo ataque de esta misma acción. Se seleccionará automáticamente aunque ya tengas 0 acciones disponibles.':' El primer golpe gasta una acción; el segundo no consume otra.'}
+      </p>}
       {tracked&&<div className="attack-form-grid">
-        <label className="field"><span>Gasto de acción al confirmar este ataque</span><select value={attackUsage} onChange={e=>{setAttackUsage(e.target.value as AttackTurnUsage);setResolved(null);}}>
+        <label className="field"><span>Gasto de acción al confirmar este ataque</span><select value={effectiveUsage} onChange={e=>{setAttackUsage({stepKey,value:e.target.value as AttackTurnUsage});setResolved(null);}}>
           <option value="attack_action">Acción Atacar (gasta 1 acción)</option>
+          {sheet.level>=5&&<option value="extra_attack">Ataque adicional de nivel 5 (sin gastar otra acción)</option>}
           <option value="light_bonus">Ataque extra Ligera (gasta acción adicional)</option>
           <option value="light_nick">Ataque extra Ligera con Mella (sin acción adicional)</option>
           <option value="cleave_extra">Ataque extra Tajo (sin acción)</option>
           <option value="reaction">Ataque de reacción</option>
         </select></label>
-        <p className="muted-note">Inicia tu turno en «Tu turno de combate». Mella y Ligera requieren una acción Atacar previa; Tajo requiere un impacto previo con esa arma a una criatura diferente. La geometría y el arma de la otra mano se comprueban en mesa. Las acciones ya gastadas no pueden utilizarse otra vez.</p>
+        <p className="muted-note">Inicia tu turno en «Tu turno de combate». En nivel 5, después de confirmar el primer ataque, se propondrá automáticamente Ataque adicional. Puedes elegir otra modalidad en el desplegable si necesitas una acción diferente (por ejemplo, Acción súbita). Mella y Ligera requieren una acción Atacar previa; Tajo requiere un impacto previo con esa arma a una criatura diferente. La geometría y el arma de la otra mano se comprueban en mesa. Las acciones ya gastadas no pueden utilizarse otra vez.</p>
       </div>}
       <div className="attack-options"><label><input type="checkbox" checked={targetIsCreature} onChange={e=>{setTargetIsCreature(e.target.checked);setResolved(null);}}/> El objetivo es una criatura (no un objeto)</label></div>
       {vexActive&&targetIsCreature&&<p className="info-line">Hostigar vigente contra «{targetName}»: aporta ventaja a este ataque (puede quedar cancelada por desventaja). El gestor lo retira al final de tu siguiente turno, salvo efectos antiguos sin fecha.</p>}

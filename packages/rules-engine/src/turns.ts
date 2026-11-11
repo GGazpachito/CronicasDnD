@@ -11,6 +11,8 @@ export type TurnTracker=Readonly<{
   movementUsedFeet:number;
   dashes:number;
   attackActionUsed:boolean;
+  /** Ataques usados en la última acción Atacar, opcional en guardados antiguos. */
+  attackActionAttacksUsed?:number;
   lightExtraUsed:boolean;
   cleaveExtraUsed:boolean;
   /** El golpe anterior con Tajo permite intentar el golpe adicional, si el DM confirma la geometría. */
@@ -18,7 +20,7 @@ export type TurnTracker=Readonly<{
   cleaveFirstTarget:string|null;
 }>;
 export type TurnSlot='action'|'bonus'|'reaction'|'dash';
-export type AttackTurnUsage='attack_action'|'light_bonus'|'light_nick'|'cleave_extra'|'reaction'|'untracked';
+export type AttackTurnUsage='extra_attack'|'attack_action'|'light_bonus'|'light_nick'|'cleave_extra'|'reaction'|'untracked';
 const MAX_TURNS=100_000;
 const MAX_MOVE=1_000;
 function fail(message:string):never{throw new RangeError(message);}
@@ -28,24 +30,26 @@ function safeInt(value:unknown,min:number,max:number,label:string):number{
 }
 export function initialTurnTracker():TurnTracker{return {
   number:0,active:false,actionLimit:1,actionsUsed:0,bonusUsed:false,reactionUsed:false,movementUsedFeet:0,
-  dashes:0,attackActionUsed:false,lightExtraUsed:false,cleaveExtraUsed:false,cleaveReadyWeapon:null,cleaveFirstTarget:null,
+  dashes:0,attackActionUsed:false,attackActionAttacksUsed:0,lightExtraUsed:false,cleaveExtraUsed:false,cleaveReadyWeapon:null,cleaveFirstTarget:null,
 };}
 export function validateTurnTracker(raw:unknown):TurnTracker{
   if(!raw||typeof raw!=='object'||Array.isArray(raw))fail('Estado de turno inválido');
   const o=raw as Record<string,unknown>;
   const keys=Object.keys(initialTurnTracker());
-  if(Object.keys(o).some(k=>!keys.includes(k))||keys.some(k=>!Object.hasOwn(o,k)))fail('Campos de turno inválidos');
+  if(Object.keys(o).some(k=>!keys.includes(k))||keys.filter(k=>k!=='attackActionAttacksUsed').some(k=>!Object.hasOwn(o,k)))fail('Campos de turno inválidos');
   const number=safeInt(o.number,0,MAX_TURNS,'Número de turno');
   const actionLimit=safeInt(o.actionLimit,1,2,'Límite de acciones') as 1|2;
   const actionsUsed=safeInt(o.actionsUsed,0,actionLimit,'Acciones gastadas');
   const movementUsedFeet=safeInt(o.movementUsedFeet,0,MAX_MOVE,'Movimiento gastado');
   const dashes=safeInt(o.dashes,0,actionLimit,'Acciones Correr');
+  const attackActionAttacksUsed=safeInt(o.attackActionAttacksUsed??(o.attackActionUsed?1:0),0,2,'Ataques de la acción Atacar');
   for(const k of ['active','bonusUsed','reactionUsed','attackActionUsed','lightExtraUsed','cleaveExtraUsed'])
     if(typeof o[k]!=='boolean')fail(`Bandera ${k} inválida`);
   const active=o.active as boolean;
   if(number===0&&(active||actionsUsed||o.bonusUsed||o.reactionUsed||movementUsedFeet||dashes||o.attackActionUsed||o.lightExtraUsed||o.cleaveExtraUsed||actionLimit!==1))fail('No se puede utilizar un turno que no ha comenzado');
   if(dashes>actionsUsed)fail('Correr requiere una acción gastada');
   if(o.attackActionUsed&&actionsUsed===0)fail('Falta acción Atacar');
+  if(Boolean(o.attackActionUsed)!==(attackActionAttacksUsed>0))fail('Ataques de la acción Atacar incoherentes');
   if(o.lightExtraUsed&&!o.attackActionUsed)fail('El ataque Ligera requiere la acción Atacar');
   if(o.cleaveExtraUsed&&!o.attackActionUsed)fail('Tajo requiere la acción Atacar');
   if(o.cleaveReadyWeapon!==null&&(typeof o.cleaveReadyWeapon!=='string'||!o.cleaveReadyWeapon.trim()||o.cleaveReadyWeapon.length>60))fail('Arma preparada para Tajo inválida');
@@ -54,10 +58,20 @@ export function validateTurnTracker(raw:unknown):TurnTracker{
   if(o.cleaveExtraUsed&&o.cleaveReadyWeapon!==null)fail('Tajo ya utilizado');
   if(o.cleaveReadyWeapon!==null&&!o.attackActionUsed)fail('Tajo requiere impacto con la acción Atacar');
   return {number,active,actionLimit,actionsUsed,bonusUsed:o.bonusUsed as boolean,reactionUsed:o.reactionUsed as boolean,
-    movementUsedFeet,dashes,attackActionUsed:o.attackActionUsed as boolean,lightExtraUsed:o.lightExtraUsed as boolean,
+    movementUsedFeet,dashes,attackActionUsed:o.attackActionUsed as boolean,attackActionAttacksUsed,lightExtraUsed:o.lightExtraUsed as boolean,
     cleaveExtraUsed:o.cleaveExtraUsed as boolean,cleaveReadyWeapon:o.cleaveReadyWeapon as string|null,
     cleaveFirstTarget:o.cleaveFirstTarget as string|null};
 }
+/** Sugiere la modalidad del siguiente golpe sin gastar otra acción.
+ * El usuario puede elegir manualmente otra modalidad (p. ej. Acción súbita).
+ * La selección se recalcula tras cada ataque confirmado y al cambiar de turno.
+ */
+export function suggestAttackTurnUsage(raw:TurnTracker, fighterLevel:number):AttackTurnUsage{
+  const turn=validateTurnTracker(raw);
+  return fighterLevel>=5&&turn.active&&turn.attackActionUsed&&turn.attackActionAttacksUsed===1
+    ?'extra_attack':'attack_action';
+}
+
 export function startTurnTracker(raw:TurnTracker):TurnTracker{
   const t=validateTurnTracker(raw);
   if(t.active)fail('Termina tu turno actual antes de iniciar otro');
@@ -102,7 +116,7 @@ export function moveOnTurn(raw:TurnTracker,feet:number,adjustedSpeedFeet:number)
 /** Registro declarado de un ataque: se comprueban espacios, no se inventan enemigos. */
 export function spendAttackOnTurn(raw:TurnTracker,kind:AttackTurnUsage,details:Readonly<{
   lightExtra:boolean;nickMastery:boolean;cleaveMastery:boolean;hitCreature:boolean;
-  weaponId:string;targetName:string;
+  weaponId:string;targetName:string;attackLimit?:1|2;
 }>):TurnTracker{
   const t=validateTurnTracker(raw);
   if(kind==='untracked')return t;
@@ -110,10 +124,14 @@ export function spendAttackOnTurn(raw:TurnTracker,kind:AttackTurnUsage,details:R
   if(!t.active)fail('Primero inicia tu turno para registrar este tipo de ataque');
   if(kind==='attack_action'){
     const next=spendTurnSlot(t,'action');
-    return {...next,attackActionUsed:true,
+    return {...next,attackActionUsed:true,attackActionAttacksUsed:1,
       ...(details.cleaveMastery&&details.hitCreature&&details.targetName.trim()&&!t.cleaveExtraUsed
         ?{cleaveReadyWeapon:details.weaponId,cleaveFirstTarget:details.targetName.trim()}:{}),
     };
+  }
+  if(kind==='extra_attack'){
+    if(!t.attackActionUsed||details.attackLimit!==2||t.attackActionAttacksUsed!==1)fail('Ataque adicional requiere Guerrero nivel 5 y una acción Atacar con un ataque pendiente');
+    return {...t,attackActionAttacksUsed:2};
   }
   if(!t.attackActionUsed)fail('Primero realiza una acción Atacar en este turno');
   if(kind==='light_bonus'||kind==='light_nick'){
