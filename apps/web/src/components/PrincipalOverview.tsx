@@ -78,7 +78,6 @@ export default function PrincipalOverview({ result, error, input, adventure, out
 
   const { sheet, inventory, origin } = result;
   const current = !outOfSync ? adventure : null;
-  const hp = current?.fighter.hitPoints.current;
   const diceLeft = current ? sheet.hitDice.total - current.spentHitDice : null;
   const trained = new Set<Skill>([
     ...input.fighterSkills,
@@ -97,16 +96,18 @@ export default function PrincipalOverview({ result, error, input, adventure, out
     sheet.savingThrowBonuses, sheet.savingThrowRollModes, sheet.initiative, sheet.initiativeRollMode,
   ]);
 
-  function runAdventureAction(action: AdventureAction) {
-    if (!current) return;
+  function runAdventureAction(action: AdventureAction): boolean {
+    if (!current) return false;
     try {
       const updated = applyAdventureAction(current, action, sheet);
       onAdventureChange(updated.state);
       setActionError(null);
       setActionNote(updated.description);
+      return true;
     } catch (reason) {
       setActionError(reason instanceof Error ? reason.message : "No se ha podido registrar la acción");
       setActionNote(null);
+      return false;
     }
   }
 
@@ -137,9 +138,10 @@ export default function PrincipalOverview({ result, error, input, adventure, out
     </div>
     <div className="overview-vitals" aria-label="Valores principales">
       <section className="overview-vital overview-vital-hp">
-        <span>PUNTOS DE GOLPE</span><strong>{hp ?? "—"}<small> / {sheet.maximumHitPoints}</small></strong>
-        <p>PG actuales / máximos</p>
-        <div className="overview-mini-info"><span>Temporales: {current?.temporaryHitPoints ?? "—"}</span><span>Dados: {diceLeft ?? "—"}/{sheet.hitDice.total} d{sheet.hitDice.die}</span></div>
+        <span>PUNTOS DE GOLPE</span>
+        <PrincipalHealthControls state={current} sheet={sheet} onAction={runAdventureAction}
+          onError={(message) => { setActionError(message); setActionNote(null); }}/>
+        <div className="overview-mini-info"><span>Dados: {diceLeft ?? "—"}/{sheet.hitDice.total} d{sheet.hitDice.die}</span></div>
       </section>
       <section className="overview-vital"><span>CLASE DE ARMADURA</span><strong>{sheet.armorClass}</strong><p>{sheet.armorClassDetails.formula}</p></section>
       <section className="overview-vital overview-vital-initiative"><span>INICIATIVA</span><strong>{signed(sheet.initiative)}</strong><p>{modeName(sheet.initiativeRollMode)}</p>
@@ -148,7 +150,6 @@ export default function PrincipalOverview({ result, error, input, adventure, out
       </section>
     </div>
 
-    <PrincipalHealthControls state={current} sheet={sheet} onAction={runAdventureAction}/>
     {actionError && <div className="overview-action-message is-error" role="alert">{actionError}</div>}
     {actionNote && !outOfSync && <div className="overview-action-message" role="status">{actionNote} Guarda los cambios desde «Mis personajes» cuando quieras conservarlos en PostgreSQL.</div>}
 

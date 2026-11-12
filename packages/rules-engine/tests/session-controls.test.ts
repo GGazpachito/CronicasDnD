@@ -81,3 +81,49 @@ describe('Actualización 39: una única sesión de partida', () => {
     expect(JSON.stringify(before)).toBe(serialized);
   });
 });
+
+
+describe('Ajuste 39.1: PG temporales por variaciones con signo', () => {
+  it('permite aumentar y disminuir el contador manual sin alterar los PG normales', () => {
+    const initial = apply(start(), { type: 'temporary_hp', amount: 8 });
+    const increased = apply(initial, { type: 'adjust_temporary_hp', amount: 3 });
+    expect(increased.temporaryHitPoints).toBe(11);
+    expect(increased.fighter.hitPoints).toEqual(initial.fighter.hitPoints);
+    const decreased = apply(increased, { type: 'adjust_temporary_hp', amount: -5 });
+    expect(decreased.temporaryHitPoints).toBe(6);
+    expect(decreased.fighter.hitPoints).toEqual(initial.fighter.hitPoints);
+  });
+  it('un ajuste negativo no permite bajar de cero y un aumento respeta el máximo', () => {
+    const reduced = apply(start(), { type: 'adjust_temporary_hp', amount: -3 });
+    expect(reduced.temporaryHitPoints).toBe(0);
+    const max = apply(reduced, { type: 'adjust_temporary_hp', amount: 100000 });
+    expect(max.temporaryHitPoints).toBe(100000);
+    expect(apply(max, { type: 'adjust_temporary_hp', amount: 1 }).temporaryHitPoints).toBe(100000);
+  });
+  it('rechaza cifras no enteras, sin cambio o fuera de rango y campos no previstos', () => {
+    for (const amount of [0, 1.5, Number.NaN, 100001, -100001]) {
+      expect(() => apply(start(), { type: 'adjust_temporary_hp', amount })).toThrow();
+    }
+    expect(() => apply(start(), { type: 'adjust_temporary_hp', amount: 2, other: true } as never)).toThrow();
+  });
+  it('los PG temporales siguen sin acumularse al recibir efectos nuevos', () => {
+    const existing = apply(start(), { type: 'temporary_hp', amount: 8 });
+    expect(apply(existing, { type: 'temporary_hp', amount: 5 }).temporaryHitPoints).toBe(8);
+    expect(apply(existing, { type: 'temporary_hp', amount: 12 }).temporaryHitPoints).toBe(12);
+  });
+  it('daño negativo de la hoja consume temporales antes de bajar PG actuales', () => {
+    const hp = apply(start(), { type: 'temporary_hp', amount: 5 });
+    const damaged = apply(hp, { type: 'damage', amount: 7 });
+    expect(damaged.temporaryHitPoints).toBe(0);
+    expect(damaged.fighter.hitPoints.current).toBe(hp.fighter.hitPoints.current - 2);
+    const healed = apply(damaged, { type: 'heal', amount: 2 });
+    expect(healed.fighter.hitPoints.current).toBe(hp.fighter.hitPoints.current);
+  });
+  it('el contador de temporales se conserva en el guardado v2', () => {
+    const updated = apply(start(), { type: 'adjust_temporary_hp', amount: 9 });
+    const saved = makeCharacterSnapshot(input, updated);
+    const loaded = validateCharacterSnapshot(JSON.parse(JSON.stringify(saved)));
+    expect(loaded.adventure.temporaryHitPoints).toBe(9);
+    expect(validateAdventureState(loaded.adventure, sheet()).temporaryHitPoints).toBe(9);
+  });
+});

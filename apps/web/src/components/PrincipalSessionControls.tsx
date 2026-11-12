@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ChangeEvent } from "react";
+import { useId, useState, type ChangeEvent, type KeyboardEvent, type PointerEvent } from "react";
 import type { AdventureAction, AdventureState } from "../../../../packages/rules-engine/src/adventure";
 import type { CalculatedFighterSheet } from "../../../../packages/rules-engine/src/sheet";
 import { rollDie } from "../../../../packages/rules-engine/src/dice";
@@ -8,35 +8,113 @@ import { rollDie } from "../../../../packages/rules-engine/src/dice";
 type SessionProps = {
   state: AdventureState | null;
   sheet: CalculatedFighterSheet;
-  onAction: (action: AdventureAction) => void;
+  /** Devuelve true únicamente si el motor acepta el cambio. */
+  onAction: (action: AdventureAction) => boolean;
 };
 
-/** Controles manuales: no replican ningún valor persistente de PG ni de recursos. */
-export function PrincipalHealthControls({ state, sheet, onAction }: SessionProps) {
-  const [amount, setAmount] = useState(5);
+type SignedAdjusterProps = {
+  title: string;
+  current: number | null;
+  maximum?: number;
+  disabled: boolean;
+  onAdjust: (delta: number) => boolean;
+  onError: (message: string) => void;
+};
+
+/** Campo temporal: jamás almacena una segunda copia de los PG del personaje. */
+function SignedHitPointAdjuster({ title, current, maximum, disabled, onAdjust, onError }: SignedAdjusterProps) {
+  const id = useId();
+  const [draft, setDraft] = useState("");
+  const ready = !disabled && current !== null;
+
+  function adjust(delta: number) {
+    if (!ready) return;
+    if (delta === 0) { setDraft(""); return; }
+    if (onAdjust(delta)) setDraft("");
+  }
+
+  function commit() {
+    const text = draft.trim();
+    if (!text || !ready) return;
+    if (!/^[+-]?\d+$/.test(text)) {
+      onError(`Introduce un número entero para ${title.toLowerCase()}, por ejemplo +5 o -3.`);
+      return;
+    }
+    const delta = Number(text);
+    if (!Number.isSafeInteger(delta) || Math.abs(delta) > 100_000) {
+      onError("El cambio debe estar entre -100000 y +100000 PG.");
+      return;
+    }
+    adjust(delta);
+  }
+
+  function onInputKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commit();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      setDraft("");
+    } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+      // También funcionan las flechas del teclado sin necesitar confirmar nada.
+      event.preventDefault();
+      adjust(event.key === "ArrowUp" ? 1 : -1);
+    }
+  }
+
+  return <div className="overview-hp-stat">
+    <label htmlFor={id} className="overview-hp-label">{title}</label>
+    <div className="overview-hp-reading" aria-live="polite" aria-atomic="true">
+      <strong>{current ?? "—"}</strong>{maximum !== undefined && <small> / {maximum}</small>}
+    </div>
+    <div className="overview-hp-input-group">
+      <input id={id} type="text" inputMode="numeric" autoComplete="off" spellCheck={false}
+        placeholder="+5 / -5" value={draft} disabled={!ready}
+        aria-label={`Variación de ${title.toLowerCase()}: positivo suma, negativo resta`}
+        onChange={(event: ChangeEvent<HTMLInputElement>) => setDraft(event.target.value)}
+        onKeyDown={onInputKeyDown} onBlur={commit}/>
+      <div className="overview-hp-stepper">
+        <button type="button" disabled={!ready || (maximum !== undefined && current! >= maximum) || (maximum === undefined && current! >= 100_000)}
+          aria-label={`Aumentar ${title.toLowerCase()} en 1`}
+          onPointerDown={(event: PointerEvent<HTMLButtonElement>) => event.preventDefault()}
+          onClick={() => adjust(1)}>▲</button>
+        <button type="button" disabled={!ready || (maximum === undefined && current === 0)}
+          aria-label={`Reducir ${title.toLowerCase()} en 1`}
+          onPointerDown={(event: PointerEvent<HTMLButtonElement>) => event.preventDefault()}
+          onClick={() => adjust(-1)}>▼</button>
+      </div>
+    </div>
+  </div>;
+}
+
+type HealthProps = SessionProps & { onError: (message: string) => void };
+
+/** Los PG y los PG temporales se ajustan desde la cabecera, sin un panel separado. */
+export function PrincipalHealthControls({ state, sheet, onAction, onError }: HealthProps) {
   const [critical, setCritical] = useState(false);
   const [fortitude, setFortitude] = useState(false);
   const hasFortitude = sheet.features.includes("epic_boon_fortitude");
   const canUseFortitude = hasFortitude && !state?.combat.fortitudeHealUsed &&
     (state?.fighter.hitPoints.current ?? 0) < sheet.maximumHitPoints;
-  const ready = Boolean(state);
+  const current = state?.fighter.hitPoints.current ?? null;
+  const temporary = state?.temporaryHitPoints ?? null;
 
-  return <section className="overview-panel overview-quick-health panel" aria-label="Gestionar puntos de golpe">
-    <div className="overview-panel-heading"><h3>Gestionar puntos de golpe</h3><span>Registro manual</span></div>
-    <p className="overview-panel-note">Las cantidades afectan a la partida al pulsar una acción. El daño se aplica primero a los PG temporales; la curación nunca supera los PG máximos.</p>
-    <div className="overview-quick-fields">
-      <label><span>Cantidad de PG</span><input type="number" min="1" max="100000" step="1" value={amount} onChange={(e: ChangeEvent<HTMLInputElement>) => setAmount(Number(e.target.value))} disabled={!ready}/></label>
-      <label className="overview-quick-check"><input type="checkbox" checked={critical} onChange={(e: ChangeEvent<HTMLInputElement>) => setCritical(e.target.checked)} disabled={!ready}/><span>Daño crítico (si ya estás a 0 PG)</span></label>
-      {hasFortitude && <label className="overview-quick-check"><input type="checkbox" checked={canUseFortitude && fortitude} onChange={(e: ChangeEvent<HTMLInputElement>) => setFortitude(e.target.checked)} disabled={!ready || !canUseFortitude}/><span>Aplicar Fortaleza épica a esta curación</span></label>}
+  function updateHealth(delta: number) {
+    if (delta < 0) return onAction({ type: "damage", amount: -delta, critical: current === 0 && critical });
+    return onAction({ type: "heal", amount: delta, fortitudeBonus: canUseFortitude && fortitude });
+  }
+
+  return <div className="overview-health-inline" aria-label="Ajustar puntos de golpe">
+    <div className="overview-health-pair">
+      <SignedHitPointAdjuster title="PG actuales" current={current} maximum={sheet.maximumHitPoints}
+        disabled={!state} onAdjust={updateHealth} onError={onError}/>
+      <SignedHitPointAdjuster title="PG temporales" current={temporary}
+        disabled={!state} onAdjust={(delta) => onAction({ type: "adjust_temporary_hp", amount: delta })} onError={onError}/>
     </div>
-    <div className="overview-quick-actions">
-      <button type="button" disabled={!ready} onClick={() => onAction({ type: "damage", amount, critical })}>Registrar daño</button>
-      <button type="button" disabled={!ready} onClick={() => onAction({ type: "heal", amount, fortitudeBonus: canUseFortitude && fortitude })}>Curar</button>
-      <button type="button" disabled={!ready} onClick={() => onAction({ type: "temporary_hp", amount })}>Recibir PG temporales</button>
-      <button type="button" className="overview-quick-subtle" disabled={!ready || state!.temporaryHitPoints === 0} onClick={() => onAction({ type: "clear_temporary_hp" })}>Retirar temporales</button>
-    </div>
-    <p className="overview-panel-note">Los efectos de muerte, concentración y Fortaleza se resuelven con el motor existente. La decisión de aplicar cada efecto es del jugador.</p>
-  </section>;
+    <p className="overview-health-hint">Escribe <b>+5</b> o <b>-5</b> y pulsa Intro, o usa las flechas para cambiar 1 PG al instante. El daño consume primero los temporales.</p>
+    {state && current === 0 && <label className="overview-quick-check overview-hp-option"><input type="checkbox" checked={critical} onChange={(event: ChangeEvent<HTMLInputElement>) => setCritical(event.target.checked)}/><span>Daño crítico mientras estás a 0 PG</span></label>}
+    {hasFortitude && <label className="overview-quick-check overview-hp-option"><input type="checkbox" checked={canUseFortitude && fortitude} onChange={(event: ChangeEvent<HTMLInputElement>) => setFortitude(event.target.checked)} disabled={!state || !canUseFortitude}/><span>Aplicar Fortaleza épica al curar</span></label>}
+  </div>;
 }
 
 type ResourceProps = SessionProps & { onOpenTools: () => void; onError: (message: string) => void };

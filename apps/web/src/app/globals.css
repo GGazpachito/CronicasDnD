@@ -298,3 +298,30 @@
 .overview-action-message{border:1px solid #628b76;background:#22382e;border-radius:10px;padding:12px 16px;color:#e2f3e2;font-size:12px;line-height:1.5}
 .overview-action-message.is-error{border-color:#a66b5e;background:#422c2d;color:#ffd3c8}
 @media(max-width:610px){.overview-quick-fields,.overview-quick-resource-fields{align-items:stretch}.overview-quick-fields>label:not(.overview-quick-check){flex:1 1 100%}.overview-quick-fields input[type=number],.overview-quick-resource-fields input[type=number]{width:100%;max-width:none}.overview-quick-actions button{flex:1 1 115px}}
+
+/* Ajuste 39.1: edición de vida dentro de la tarjeta, con incrementos firmados. */
+.overview-vital-hp{justify-content:flex-start;gap:8px}
+.overview-health-inline{width:100%;min-width:0}
+.overview-health-pair{display:grid;grid-template-columns:1fr 1fr;gap:9px;min-width:0}
+.overview-hp-stat{display:flex;flex-direction:column;gap:7px;min-width:0}
+.overview-hp-label{display:block;color:#e8d0bd;font-size:11px;font-weight:750}
+.overview-hp-reading{display:flex;align-items:baseline;gap:3px;white-space:nowrap;min-height:40px}
+.overview-hp-reading strong{font:700 clamp(27px,3vw,42px)/1.05 Georgia,serif;color:#fff0df;min-width:0}
+.overview-hp-reading small{font:400 12px system-ui,sans-serif;color:#c8bdaf}
+.overview-hp-input-group{display:flex;align-items:stretch;min-width:0;max-width:210px;border:1px solid #b08e66;border-radius:9px;background:#182331;overflow:hidden}
+.overview-hp-input-group:focus-within{outline:2px solid #dfb677;outline-offset:2px}
+.overview-hp-input-group input{min-width:0;width:100%;height:46px;padding:7px 9px;border:0!important;outline:none!important;background:transparent!important;color:#fff2dd!important;font-weight:700;font-size:14px;font-variant-numeric:tabular-nums}
+.overview-hp-input-group input::placeholder{color:#b6a99f;opacity:1;font-weight:500}
+.overview-hp-input-group input:disabled{opacity:.5}
+.overview-hp-stepper{display:grid;grid-template-rows:1fr 1fr;flex:0 0 33px;border-left:1px solid #706257}
+.overview-hp-stepper button{display:grid;place-items:center;min-width:33px;min-height:23px;padding:0;border:0;border-radius:0;background:#354554;color:#fce2be;font-size:12px;line-height:1;cursor:pointer;touch-action:manipulation}
+.overview-hp-stepper button+button{border-top:1px solid #706257}
+.overview-hp-stepper button:hover:not(:disabled){background:#52627a}
+.overview-hp-stepper button:focus-visible{outline:2px solid #f5d092;outline-offset:-3px}
+.overview-hp-stepper button:disabled{color:#8f9196;opacity:.5;cursor:not-allowed}
+.overview-health-hint{margin:10px 0 0;font-size:10px;color:#ded0c4;line-height:1.5}
+.overview-health-hint b{color:#ffdfac}
+.overview-hp-option{display:flex;margin:8px 0 0;font-size:11px}
+@media(max-width:790px){.overview-hp-reading strong{font-size:30px}}
+@media(max-width:610px){.overview-health-pair{gap:12px}.overview-hp-reading strong{font-size:36px}.overview-hp-input-group{max-width:none}}
+@media(max-width:420px){.overview-hp-reading strong{font-size:30px}.overview-hp-input-group input{padding:6px;font-size:12px}.overview-hp-stepper{flex-basis:30px}.overview-hp-stepper button{min-width:30px}}

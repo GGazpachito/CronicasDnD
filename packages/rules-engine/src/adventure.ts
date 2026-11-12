@@ -28,6 +28,7 @@ export type AdventureAction =
   | Readonly<{type:'damage'; amount:number; critical?:boolean}>
   | Readonly<{type:'heal'; amount:number;fortitudeBonus?:boolean}>
   | Readonly<{type:'temporary_hp'; amount:number}>
+  | Readonly<{type:'adjust_temporary_hp'; amount:number}>
   | Readonly<{type:'clear_temporary_hp'}>
   | Readonly<{type:'gain_heroic_inspiration'}>
   | Readonly<{type:'spend_heroic_inspiration'}>
@@ -195,6 +196,16 @@ export function applyAdventureAction(source:AdventureState,action:AdventureActio
       if(state.survival!.death.dead)throw new RangeError('El personaje está muerto');
       // El receptor puede mantener los anteriores; aquí conservamos el mayor, nunca se suman.
       return {state:{...state,temporaryHitPoints:Math.max(state.temporaryHitPoints,amount)},description:'PG temporales actualizados (no se acumulan).'};
+    }
+    case 'adjust_temporary_hp':{
+      onlyKeys(action,['type','amount'],'Ajuste de PG temporales');
+      const amount=requireInteger(action.amount,'Cambio de PG temporales',-100_000,100_000);
+      if(amount===0)throw new RangeError('Indica una variación distinta de cero');
+      if(amount>0&&state.survival!.death.dead)throw new RangeError('No se pueden otorgar PG temporales a un personaje muerto');
+      // Corrección manual del contador: no equivale a recibir un nuevo efecto,
+      // que continúa gestionándose mediante temporary_hp (sin acumulación).
+      const next=Math.max(0,Math.min(100_000,state.temporaryHitPoints+amount));
+      return {state:{...state,temporaryHitPoints:next},description:`PG temporales ajustados: ${state.temporaryHitPoints} → ${next}.`};
     }
     case 'clear_temporary_hp':{
       onlyKeys(action,['type'],'Retirar PG temporales');
