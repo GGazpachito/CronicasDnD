@@ -5,7 +5,8 @@ import { rollD20, type D20Mode, type D20Result } from "../../../../packages/rule
 import { ABILITIES, type Ability } from "../../../../packages/rules-engine/src/abilities";
 import { SKILLS, SKILL_ABILITIES, type Skill } from "../../../../packages/rules-engine/src/proficiencies";
 import { BACKGROUNDS, type GuidedFighterInput, type GuidedFighterResult } from "../../../../packages/rules-engine/src/guided";
-import type { AdventureState } from "../../../../packages/rules-engine/src/adventure";
+import { applyAdventureAction, type AdventureAction, type AdventureState } from "../../../../packages/rules-engine/src/adventure";
+import { PrincipalHealthControls, PrincipalResourceControls, PrincipalInspirationControls } from "./PrincipalSessionControls";
 import { WEAPONS } from "../../../../packages/rules-engine/src/martial";
 import type { WeaponId } from "../../../../packages/rules-engine/src/martial";
 
@@ -21,7 +22,6 @@ const SKILL_NAMES: Record<Skill, string> = {
   persuasion: "Persuasión", religion: "Religión", sleight_of_hand: "Juego de manos",
   stealth: "Sigilo", survival: "Supervivencia",
 };
-const RESOURCE_NAMES = { second_wind: "Segundo aliento", action_surge: "Acción súbita", indomitable: "Indomable" } as const;
 const signed = (n: number) => n >= 0 ? `+${n}` : String(n);
 const modeName = (m: D20Mode) => m === "advantage" ? "Ventaja" : m === "disadvantage" ? "Desventaja" : "Normal";
 
@@ -54,16 +54,19 @@ type Props = {
   input: GuidedFighterInput;
   adventure: AdventureState | null;
   outOfSync: boolean;
+  onAdventureChange: (state: AdventureState) => void;
   onEdit: (step: number) => void;
   onOpenTools: (target: "attacks" | "resources") => void;
 };
 
 /** Lectura pura de la misma hoja calculada y la misma sesión que usa el editor. */
-export default function PrincipalOverview({ result, error, input, adventure, outOfSync, onEdit, onOpenTools }: Props) {
+export default function PrincipalOverview({ result, error, input, adventure, outOfSync, onAdventureChange, onEdit, onOpenTools }: Props) {
   // Solo resultados efímeros de tiradas. Ninguna característica, PG o recurso se duplica aquí.
   const [circumstanceMode, setCircumstanceMode] = useState<D20Mode>("normal");
   const [rolls, setRolls] = useState<Partial<Record<RollArea, RollRecord>>>({});
   const [rollError, setRollError] = useState<string | null>(null);
+  const [actionNote, setActionNote] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   if (!result) {
     return <section className="overview-unavailable panel" role="alert">
@@ -93,6 +96,19 @@ export default function PrincipalOverview({ result, error, input, adventure, out
     sheet.name, sheet.level, sheet.abilityScores, sheet.skillBonuses, sheet.skillRollModes,
     sheet.savingThrowBonuses, sheet.savingThrowRollModes, sheet.initiative, sheet.initiativeRollMode,
   ]);
+
+  function runAdventureAction(action: AdventureAction) {
+    if (!current) return;
+    try {
+      const updated = applyAdventureAction(current, action, sheet);
+      onAdventureChange(updated.state);
+      setActionError(null);
+      setActionNote(updated.description);
+    } catch (reason) {
+      setActionError(reason instanceof Error ? reason.message : "No se ha podido registrar la acción");
+      setActionNote(null);
+    }
+  }
 
   function throwD20(area: RollArea, label: string, modifier: number, sheetMode: D20Mode) {
     try {
@@ -131,6 +147,10 @@ export default function PrincipalOverview({ result, error, input, adventure, out
         <RollSummary record={rolls.initiative} sheetKey={sheetKey}/>
       </section>
     </div>
+
+    <PrincipalHealthControls state={current} sheet={sheet} onAction={runAdventureAction}/>
+    {actionError && <div className="overview-action-message is-error" role="alert">{actionError}</div>}
+    {actionNote && !outOfSync && <div className="overview-action-message" role="status">{actionNote} Guarda los cambios desde «Mis personajes» cuando quieras conservarlos en PostgreSQL.</div>}
 
     <section className="overview-abilities panel" aria-label="Características">
       <div className="overview-panel-heading"><h3>Características</h3><span>Competencia <b>{signed(sheet.proficiencyBonus)}</b></span></div>
@@ -177,16 +197,7 @@ export default function PrincipalOverview({ result, error, input, adventure, out
           <p className="overview-panel-note">El inventario aún no distingue armas empuñadas. Ataques y daño siguen disponibles en las herramientas existentes.</p>
           <button className="overview-link" type="button" onClick={() => onOpenTools("attacks")}>Abrir panel de ataques</button>
         </section>
-        <section className="overview-panel panel" aria-label="Recursos de clase">
-          <div className="overview-panel-heading"><h3>Recursos</h3><span>Usos disponibles</span></div>
-          <div className="overview-records">{(Object.keys(RESOURCE_NAMES) as (keyof typeof RESOURCE_NAMES)[]).map(id => {
-            const res = sheet.resources[id];
-            if (!res) return null;
-            return <div className="overview-record" key={id}><span>{RESOURCE_NAMES[id]}</span><strong>{current?.fighter.resources[id]?.current ?? "—"}/{res.maximum}</strong></div>;
-          })}</div>
-          <p className="overview-panel-note">Los usos se modifican desde las herramientas de partida, sin crear otro contador.</p>
-          <button className="overview-link" type="button" onClick={() => onOpenTools("resources")}>Gestionar recursos</button>
-        </section>
+        <PrincipalResourceControls state={current} sheet={sheet} onAction={runAdventureAction} onOpenTools={() => onOpenTools("resources")} onError={setActionError}/>
       </div>
     </div>
 
@@ -194,7 +205,7 @@ export default function PrincipalOverview({ result, error, input, adventure, out
       <section className="overview-panel panel"><h3>Percepción pasiva</h3><strong className="overview-spotlight">{passivePerception(sheet.skillBonuses.perception, perceptionMode)}</strong><p className="overview-panel-note">10 + Percepción {signed(sheet.skillBonuses.perception)}{perceptionMode !== "normal" ? ` · ${modeName(perceptionMode)} ${perceptionMode === "advantage" ? "+5" : "−5"}` : ""}</p></section>
       <section className="overview-panel panel"><h3>Movimiento y origen</h3><strong className="overview-spotlight">{origin.speedFeet} <small>pies</small></strong><p className="overview-panel-note">Tamaño {origin.size === "medium" ? "mediano" : "pequeño"} · Guerrero nivel {sheet.level}</p></section>
       <section className="overview-panel panel"><h3>Salvaciones de muerte</h3><div className="overview-death-counts"><span>Éxitos: {death?.successes ?? "—"}/3</span><span>Fallos: {death?.failures ?? "—"}/3</span></div><p className="overview-panel-note">{death?.dead ? "Personaje fallecido" : death?.stable ? "Personaje estable" : "Registro disponible en Supervivencia"}</p></section>
-      <section className="overview-panel panel"><h3>Defensas e inspiración</h3><p className="overview-panel-note">El resumen automático de resistencias, inmunidades e inspiración todavía no está conectado. No se muestran valores inventados.</p></section>
+      <PrincipalInspirationControls state={current} sheet={sheet} onAction={runAdventureAction}/>
     </div>
     {sheet.warnings.length > 0 && <div className="overview-warning" role="status">{sheet.warnings.includes("heavy_armor_strength_requirement_unmet") && <p>No se cumple el requisito de Fuerza de la armadura pesada.</p>}{sheet.warnings.includes("armor_stealth_disadvantage") && <p>La armadura impone desventaja en Sigilo.</p>}</div>}
   </div>;

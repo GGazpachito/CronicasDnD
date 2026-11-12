@@ -5,7 +5,7 @@
 import type { CalculatedFighterSheet } from './sheet';
 import {ABILITIES,type Ability} from './abilities';
 import {validateMagicWards,type MagicWardEntry} from './magic-wards';
-import { initialCombatState,validateCombatState,spendCombatSlot,grantCombatActionSurge,type CombatState } from './combat';
+import { initialCombatState,validateCombatState,spendCombatSlot,grantCombatActionSurge,spendHeroicInspiration,type CombatState } from './combat';
 import {longRestConditionUpdate,initialConditionLedger,conditionCapabilities} from './conditions';
 import {advanceSurvivalRound,concentrationDC,damageAtZero,deathSavingThrow,initialSurvivalState,
   recordConcentrationDamage,recoverFromStable,resetDeathTrack,resolveConcentration,startConcentration,
@@ -28,6 +28,9 @@ export type AdventureAction =
   | Readonly<{type:'damage'; amount:number; critical?:boolean}>
   | Readonly<{type:'heal'; amount:number;fortitudeBonus?:boolean}>
   | Readonly<{type:'temporary_hp'; amount:number}>
+  | Readonly<{type:'clear_temporary_hp'}>
+  | Readonly<{type:'gain_heroic_inspiration'}>
+  | Readonly<{type:'spend_heroic_inspiration'}>
   | Readonly<{type:'second_wind'; d10:number;fortitudeBonus?:boolean}>
   | Readonly<{type:'action_surge'}>
   | Readonly<{type:'tactical_mind'; originalTotal:number; difficultyClass:number; d10:number}>
@@ -192,6 +195,19 @@ export function applyAdventureAction(source:AdventureState,action:AdventureActio
       if(state.survival!.death.dead)throw new RangeError('El personaje está muerto');
       // El receptor puede mantener los anteriores; aquí conservamos el mayor, nunca se suman.
       return {state:{...state,temporaryHitPoints:Math.max(state.temporaryHitPoints,amount)},description:'PG temporales actualizados (no se acumulan).'};
+    }
+    case 'clear_temporary_hp':{
+      onlyKeys(action,['type'],'Retirar PG temporales');
+      return {state:{...state,temporaryHitPoints:0},description:'PG temporales retirados por decisión del jugador.'};
+    }
+    case 'gain_heroic_inspiration':{
+      onlyKeys(action,['type'],'Recibir Inspiración heroica');
+      if(state.combat.heroicInspiration)throw new RangeError('Ya tienes Inspiración heroica disponible');
+      return {state:{...state,combat:{...state.combat,heroicInspiration:true}},description:'Inspiración heroica anotada; no se ha realizado ninguna tirada.'};
+    }
+    case 'spend_heroic_inspiration':{
+      onlyKeys(action,['type'],'Gastar Inspiración heroica');
+      return {state:{...state,combat:spendHeroicInspiration(state.combat)},description:'Inspiración heroica gastada; repite el dado manualmente y usa el nuevo resultado.'};
     }
     case 'second_wind':{
       onlyKeys(action,['type','d10','fortitudeBonus'],'Segundo aliento');

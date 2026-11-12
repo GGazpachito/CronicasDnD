@@ -278,3 +278,23 @@
 @keyframes overview-die-pop{from{opacity:.3;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
 @media(max-width:610px){.overview-dice-toolbar{padding:15px}.overview-dice-toolbar label{flex:1 1 100%}.overview-record{gap:6px}.overview-roll-actions{gap:5px}.overview-roll-button{padding:6px;min-width:47px}}
 @media(prefers-reduced-motion:reduce){.overview-die{animation:none}.overview-roll-button:active{transform:none}}
+
+
+/* Actualización 39: acciones explícitas sobre el mismo estado de partida. */
+.overview-quick-health .overview-panel-note:first-of-type{margin-top:0}
+.overview-quick-fields{display:flex;align-items:end;flex-wrap:wrap;gap:12px 22px;margin-top:16px}
+.overview-quick-fields>label:not(.overview-quick-check),.overview-quick-resource-fields>label{display:flex;flex-direction:column;gap:5px;color:#ead6b5;font-size:12px;font-weight:700}
+.overview-quick-fields input[type=number],.overview-quick-resource-fields input[type=number]{max-width:150px;min-width:105px;min-height:38px;border:1px solid #786a54;border-radius:8px;background:#1c2937;color:#f6e6ca;padding:8px}
+.overview-quick-check{display:inline-flex;align-items:center;gap:7px;min-width:0;font-size:12px;color:#d8dfe5;line-height:1.5;cursor:pointer;margin:10px 0}
+.overview-quick-check input{accent-color:#cda667;width:16px;height:16px;flex:none}
+.overview-quick-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:13px}
+.overview-quick-actions button,.overview-quick-resource-fields>button{background:#304455;border:1px solid #9b8157;border-radius:8px;color:#ffe0ac;padding:9px 12px;min-height:38px;font-size:12px;font-weight:700;cursor:pointer}
+.overview-quick-actions button:hover:not(:disabled),.overview-quick-resource-fields>button:hover:not(:disabled){background:#3c5368}
+.overview-quick-actions button:disabled,.overview-quick-resource-fields>button:disabled{opacity:.45;cursor:not-allowed}
+.overview-quick-actions .overview-quick-subtle{border-color:#54606e;color:#d3d6da;background:#263442}
+.overview-quick-resource-fields{display:flex;flex-wrap:wrap;align-items:end;gap:8px;margin-top:14px}
+.overview-quick-resource-fields>button{white-space:nowrap}
+.overview-inspiration-value{display:block;margin-top:12px;color:#f4d6a0;font:700 19px Georgia,serif}
+.overview-action-message{border:1px solid #628b76;background:#22382e;border-radius:10px;padding:12px 16px;color:#e2f3e2;font-size:12px;line-height:1.5}
+.overview-action-message.is-error{border-color:#a66b5e;background:#422c2d;color:#ffd3c8}
+@media(max-width:610px){.overview-quick-fields,.overview-quick-resource-fields{align-items:stretch}.overview-quick-fields>label:not(.overview-quick-check){flex:1 1 100%}.overview-quick-fields input[type=number],.overview-quick-resource-fields input[type=number]{width:100%;max-width:none}.overview-quick-actions button{flex:1 1 115px}}

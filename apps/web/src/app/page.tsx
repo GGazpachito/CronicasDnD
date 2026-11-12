@@ -359,7 +359,7 @@ export default function Home(){
   return <main className="app-shell">
     <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Hoja digital · D&D 2024</span></div></div><div className="status"><span className="status-dot"/> Edición local · Guardado manual</div></header>
     <div className="content">
-      <p className="sheet-release-note">ACTUALIZACIÓN 37 · HOJA PRINCIPAL DE CONSULTA</p>
+      <p className="sheet-release-note">ACTUALIZACIÓN 39 · HOJA PRINCIPAL INTERACTIVA</p>
       <CharacterHeader
         name={name}
         level={level}
@@ -372,8 +372,8 @@ export default function Home(){
       <SaveLoadPanel input={input} adventure={sessionCheck.outOfSync?null:sessionCheck.state} valid={Boolean(output.result&&!sessionCheck.outOfSync)} onLoad={loadSavedSnapshot}/>
       <CharacterTabs activeTab={activeTab} onChange={setActiveTab}/>
       <section id="sheet-panel-principal" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-principal" hidden={activeTab!=='principal'}>
-        <div className="sheet-section-heading"><div><span className="eyebrow">PÁGINA PRINCIPAL</span><h2>Tu hoja de personaje</h2><p>Valores calculados por el motor. Las tiradas y controles directos llegarán en las siguientes fases.</p></div></div>
-      <PrincipalOverview result={output.result} error={output.error} input={input} adventure={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onEdit={openEditorAt} onOpenTools={openExistingTools}/>
+        <div className="sheet-section-heading"><div><span className="eyebrow">PÁGINA PRINCIPAL</span><h2>Tu hoja de personaje</h2><p>Valores calculados por el motor, tiradas manuales y gestión directa del estado de partida.</p></div></div>
+      <PrincipalOverview result={output.result} error={output.error} input={input} adventure={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onAdventureChange={setAdventure} onEdit={openEditorAt} onOpenTools={openExistingTools}/>
       <details id="existing-play-tools" ref={toolsDetailsRef} className="legacy-tools panel">
         <summary>Herramientas existentes de partida y combate <span>8 módulos conservados</span></summary>
         <p className="muted-note">Estos sistemas siguen disponibles mientras rediseñamos la hoja. La pestaña Combate completa se desarrollará más adelante.</p>
