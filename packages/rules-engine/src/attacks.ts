@@ -114,7 +114,7 @@ export function calculateWeaponAttack(
   sheet:CalculatedFighterSheet, weaponId:WeaponId, style:FightingStyleId|readonly FightingStyleId[],
   masteries:readonly WeaponId[], options:WeaponAttackOptions={}
 ):WeaponAttackProfile {
-  if(!sheet||sheet.classId!=='fighter'||sheet.ruleset!=='dnd-2024'||sheet.level<1||sheet.level>17)throw new RangeError('Hoja de Guerrero 2024 nivel 1–17 requerida');
+  if(!sheet||sheet.classId!=='fighter'||sheet.ruleset!=='dnd-2024'||sheet.level<1||sheet.level>19)throw new RangeError('Hoja de Guerrero 2024 nivel 1–19 requerida');
   if(!isWeapon(weaponId))throw new RangeError('Arma desconocida');
   const styles:readonly FightingStyleId[]=typeof style==='string'?[style]:style;
   if(!Array.isArray(styles)||styles.length<1||styles.length>(sheet.level>=7?2:1)||new Set(styles).size!==styles.length||styles.some(s=>!['archery','blind_fighting','defense','dueling','great_weapon_fighting','interception','protection','thrown_weapon_fighting','two_weapon_fighting','unarmed_fighting'].includes(s)))throw new RangeError('Estilos de combate desconocidos, duplicados o no desbloqueados');
@@ -269,4 +269,17 @@ export function calculateOwnedWeaponAttack(sheet:CalculatedFighterSheet,inventor
     damageModifier:base.damageModifier+improvement,
     magicWeaponInstanceId:choice.magicWeaponInstanceId,magicEnhancement:improvement,
     notes:[...base.notes,`Bonificador +${improvement} por esta arma mágica. No se duplica en críticos ni en Rozar.`]};
+}
+
+/** Dados reales de daño de un fallo convertido en impacto por Pericia en combate.
+ * Sigue siendo un fallo ORIGINAL; recordWeaponAttack cambiará el impacto al confirmar.
+ * No transforma el 1 natural en crítico ni duplica modificadores fijos.
+ */
+export function preparePeerlessAimDamage(profile:WeaponAttackProfile,result:AttackResolution,rolls:readonly number[]):AttackResolution{
+  if(result.hit!==false||result.critical)throw new RangeError('Pericia en combate requiere fallo no crítico');
+  const count=result.damageDiceNeeded;
+  if(!Array.isArray(rolls)||rolls.length!==count)throw new RangeError(`Para convertir el fallo necesitas ${count} dados de daño`);
+  for(const n of rolls)integerBetween(n,1,profile.damageDice?.sides??1,'Dado de daño');
+  const sum=rolls.reduce((total,n)=>total+(profile.greatWeaponFighting?Math.max(3,n):n),profile.fixedDamage+profile.damageModifier);
+  return {...result,damageTotal:Math.max(0,sum),grazeDamage:null,notes:[...result.notes,'Pericia en combate: fallo convertido en impacto, sin crítico.']};
 }

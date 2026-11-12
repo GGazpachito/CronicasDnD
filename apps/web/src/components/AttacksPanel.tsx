@@ -7,10 +7,10 @@ import {hasStudiedAdvantage,type CombatState} from '../../../../packages/rules-e
 import {suggestAttackTurnUsage,type AttackTurnUsage} from '../../../../packages/rules-engine/src/turns';
 import {conditionKinds,evaluateConditionRoll,initialConditionLedger} from '../../../../packages/rules-engine/src/conditions';
 import {WEAPONS,type MartialChoices} from '../../../../packages/rules-engine/src/martial';
-import {calculateOwnedWeaponAttack,ownedWeaponChoices,resolveWeaponAttack,WEAPON_STATS,type AttackResolution,type WeaponAttackProfile} from '../../../../packages/rules-engine/src/attacks';
+import {calculateOwnedWeaponAttack,ownedWeaponChoices,resolveWeaponAttack,preparePeerlessAimDamage,WEAPON_STATS,type AttackResolution,type WeaponAttackProfile} from '../../../../packages/rules-engine/src/attacks';
 import {evaluateWeaponMastery,hasVexAdvantage,type CreatureSize,type MasteryContext} from '../../../../packages/rules-engine/src/mastery-effects';
 
-type Props={sheet:CalculatedFighterSheet|null;inventory:InventoryState|null;martial:MartialChoices|null;combat:CombatState|null;onRecord:(profile:WeaponAttackProfile,resolution:AttackResolution,context:MasteryContext,usage:AttackTurnUsage)=>void;canRecord:boolean};
+type Props={sheet:CalculatedFighterSheet|null;inventory:InventoryState|null;martial:MartialChoices|null;combat:CombatState|null;onRecord:(profile:WeaponAttackProfile,resolution:AttackResolution,context:MasteryContext,usage:AttackTurnUsage,usePeerlessAim?:boolean)=>void;canRecord:boolean};
 const signed=(n:number)=>n>=0?`+${n}`:`${n}`;
 const DAMAGE_LABELS={bludgeoning:'contundente',piercing:'perforante',slashing:'cortante'};
 export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,canRecord}:Props){
@@ -20,6 +20,7 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
   const [targetSize,setTargetSize]=useState<CreatureSize>('unknown');
   const [targetIsCreature,setTargetIsCreature]=useState(true);
   const [damageDealt,setDamageDealt]=useState(true);
+  const [usePeerlessAim,setUsePeerlessAim]=useState(false);
   const [tacticalMastery,setTacticalMastery]=useState<''|'Push'|'Sap'|'Slow'>('');
   const [useDex,setUseDex]=useState(false);
   const [thrown,setThrown]=useState(false);
@@ -84,8 +85,10 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
   const previewDamage=resolved?.damageTotal===null||resolved?.damageTotal===undefined?null:
     (effectiveUsage==='cleave_extra'&&profile?.mastery==='Cleave'
       ?Math.max(0,resolved.damageTotal-Math.max(0,profile.abilityModifier)):resolved.damageTotal);
+  const peerlessReady=Boolean(sheet?.features.includes('epic_boon_combat_prowess')&&!combat?.peerlessAimUsed&&resolved?.hit===false);
+  const peerlessSelected=peerlessReady&&usePeerlessAim;
   const activeMasteryContext:MasteryContext={targetName:targetName.trim(),targetSize,targetIsCreature,
-    dealtDamage:Boolean(damageDealt&&resolved?.hit===true&&resolved.damageTotal!==null&&resolved.damageTotal>0)};
+    dealtDamage:Boolean(damageDealt&&resolved&&(resolved.hit===true||peerlessSelected)&&resolved.damageTotal!==null&&resolved.damageTotal>0)};
   const masteryPreview=profile&&resolved?evaluateWeaponMastery(profile,resolved,activeMasteryContext):null;
   const setResolved=(value:AttackResolution|null)=>{setComputed(value?{key:rollKey,value}:null);if(!value){confirmedRef.current=false;setConfirmation('');}};
   const incompatibleShield=Boolean(inventory&&hasEquippedShield(inventory)&&profile?.twoHanded);
@@ -106,7 +109,9 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
   }
   function confirm(){
     if(!profile||!resolved||!canRecord||blockedByConditions||confirmedRef.current)return;
-    try{onRecord(profile,resolved,activeMasteryContext,effectiveUsage);confirmedRef.current=true;setComputed(null);setError('');setConfirmation('Ataque anotado y munición descontada cuando corresponde. Guarda el personaje para conservarlo.');}
+    try{
+      const effectiveResolution=peerlessSelected?preparePeerlessAimDamage(profile,resolved,dice.trim()?dice.split(/[\s,;]+/).map(Number):[]):resolved;
+      onRecord(profile,effectiveResolution,{...activeMasteryContext,dealtDamage:Boolean(damageDealt&&effectiveResolution.damageTotal!==null&&effectiveResolution.damageTotal>0&&((resolved.hit===true)||peerlessSelected))},effectiveUsage,peerlessSelected);confirmedRef.current=true;setUsePeerlessAim(false);setComputed(null);setError('');setConfirmation('Ataque anotado y munición descontada cuando corresponde. Guarda el personaje para conservarlo.');}
     catch(e){setError(e instanceof Error?e.message:'No se pudo registrar el ataque');}
   }
   return <section className="attack-panel panel" aria-label="Ataques con armas">
@@ -203,7 +208,8 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
           {(profile.mastery==='Vex'||profile.mastery==='Slow')&&resolved.hit===true&&resolved.damageTotal===null&&<p className="muted-note">Introduce los resultados de daño y vuelve a calcular para activar esta maestría; no se presume daño a criaturas sin tirada resuelta.</p>}
           {masteryPreview?.pending&&!targetName.trim()&&<p className="muted-note">Escribe un nombre de objetivo para conservar el efecto pendiente.</p>}
         </div>}
-        {resolved&&<button type="button" className="attack-confirm" disabled={!canRecord||incompatibleShield||blockedByConditions||Boolean(profile.ammunition&&ammoCount===0)} onClick={confirm}>Confirmar ataque y registrar</button>}
+        {resolved&&<>{sheet?.features.includes('epic_boon_combat_prowess')&&resolved?.hit===false&&<label className="switch-field"><span>Pericia en combate: convertir este fallo en impacto {combat?.peerlessAimUsed?'(ya utilizada hasta tu siguiente turno)':''}</span><input type="checkbox" checked={peerlessSelected} disabled={!peerlessReady} onChange={e=>setUsePeerlessAim(e.target.checked)}/></label>}
+        <button type="button" className="attack-confirm" disabled={!canRecord||incompatibleShield||blockedByConditions||Boolean(profile.ammunition&&ammoCount===0)} onClick={confirm}>Confirmar ataque y registrar</button></>}
         {confirmation&&<p role="status" className="save-success">{confirmation}</p>}
         <ul className="attack-notes">{profile.notes.map((n,i)=><li key={`${id}-${i}`}>{n}</li>)}</ul>
       </>}

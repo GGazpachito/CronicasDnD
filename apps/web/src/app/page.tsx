@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import {EPIC_BOONS,type EpicBoonId} from "../../../../packages/rules-engine/src/epic-boons";
 import SaveLoadPanel from "../components/SaveLoadPanel";
 import PlayPanel from "../components/PlayPanel";
 import SurvivalPanel from "../components/SurvivalPanel";
@@ -40,7 +41,7 @@ const ARMOR_OPTIONS: ReadonlyArray<{id:ArmorId|null;name:string}> = [
 {id:'half_plate',name:'Media armadura'},{id:'ring_mail',name:'Cota de anillas'},{id:'chain_mail',name:'Cota de malla'},
 {id:'splint',name:'Bandas'},{id:'plate',name:'Placas'}
 ];
-const FEATURES:Record<string,string>={ability_score_improvement:'Mejora de característica (nivel 4)',extra_attack:'Ataque adicional (nivel 5)',tactical_shift:'Desplazamiento táctico (nivel 5)',fighting_style:'Estilo de combate',second_wind:'Segundo aliento',weapon_mastery:'Maestría de armas',action_surge:'Acción súbita',tactical_mind:'Mente táctica',champion_improved_critical:'Crítico mejorado',champion_remarkable_athlete:'Atleta extraordinario',ability_score_improvement_level_6:'Mejora de característica (nivel 6)',champion_additional_fighting_style:'Estilo de combate adicional (Campeón nivel 7)',ability_score_improvement_level_8:'Mejora de característica (nivel 8)',indomitable:'Indomable (nivel 9)',tactical_master:'Dominio táctico (nivel 9)',champion_heroic_warrior:'Guerrero heroico (Campeón nivel 10)',two_extra_attacks:'Dos ataques adicionales (nivel 11)',ability_score_improvement_level_12:'Mejora de característica (nivel 12)',studied_attacks:'Ataques estudiados (nivel 13)',ability_score_improvement_level_14:'Mejora de característica (nivel 14)',champion_superior_critical:'Crítico superior (Campeón nivel 15): 18–20',ability_score_improvement_level_16:'Mejora de característica (nivel 16)',weapon_mastery_sixth:'Sexta maestría de armas (nivel 16)',action_surge_two_uses:'Acción súbita (2 usos, nivel 17)',indomitable_three_uses:'Indomable (3 usos, nivel 17)'};
+const FEATURES:Record<string,string>={ability_score_improvement:'Mejora de característica (nivel 4)',extra_attack:'Ataque adicional (nivel 5)',tactical_shift:'Desplazamiento táctico (nivel 5)',fighting_style:'Estilo de combate',second_wind:'Segundo aliento',weapon_mastery:'Maestría de armas',action_surge:'Acción súbita',tactical_mind:'Mente táctica',champion_improved_critical:'Crítico mejorado',champion_remarkable_athlete:'Atleta extraordinario',ability_score_improvement_level_6:'Mejora de característica (nivel 6)',champion_additional_fighting_style:'Estilo de combate adicional (Campeón nivel 7)',ability_score_improvement_level_8:'Mejora de característica (nivel 8)',indomitable:'Indomable (nivel 9)',tactical_master:'Dominio táctico (nivel 9)',champion_heroic_warrior:'Guerrero heroico (Campeón nivel 10)',two_extra_attacks:'Dos ataques adicionales (nivel 11)',ability_score_improvement_level_12:'Mejora de característica (nivel 12)',studied_attacks:'Ataques estudiados (nivel 13)',ability_score_improvement_level_14:'Mejora de característica (nivel 14)',champion_superior_critical:'Crítico superior (Campeón nivel 15): 18–20',ability_score_improvement_level_16:'Mejora de característica (nivel 16)',weapon_mastery_sixth:'Sexta maestría de armas (nivel 16)',action_surge_two_uses:'Acción súbita (2 usos, nivel 17)',indomitable_three_uses:'Indomable (3 usos, nivel 17)',champion_survivor:'Superviviente (Campeón nivel 18)',epic_boon:'Beneficio épico (nivel 19)',epic_boon_combat_prowess:'Pericia en combate',epic_boon_fortitude:'Fortaleza',epic_boon_speed:'Velocidad'};
 const FEATS = ORIGIN_FEATS;
 const originFeatName=(x:string)=>({magic_initiate_cleric:'Iniciado en la Magia (Clérigo)',magic_initiate_wizard:'Iniciado en la Magia (Mago)',...ORIGIN_FEATS} as Record<string,string>)[x]??x;
 const signed=(n:number)=>n>=0?`+${n}`:String(n);
@@ -71,6 +72,8 @@ export default function Home(){
   const [asi16Mode,setAsi16Mode]=useState<'plus_two'|'two_ones'>('plus_two');
   const [asi16First,setAsi16First]=useState<Ability>('intelligence');
   const [asi16Second,setAsi16Second]=useState<Ability>('dexterity');
+  const [epicBoon,setEpicBoon]=useState<EpicBoonId|''>('');
+  const [epicAbility,setEpicAbility]=useState<Ability>('strength');
   const [levelMessage,setLevelMessage]=useState('');
   const [levelRecovery,setLevelRecovery]=useState<SupportedFighterLevel|null>(null);
   const [background,setBackground]=useState<BackgroundId>('soldier');
@@ -146,9 +149,10 @@ export default function Home(){
     ...(level>=12?{level12Improvement:{mode:asi12Mode,first:asi12First,...(asi12Mode==='two_ones'?{second:asi12Second}:{})}}:{}),
     ...(level>=14?{level14Improvement:{mode:asi14Mode,first:asi14First,...(asi14Mode==='two_ones'?{second:asi14Second}:{})}}:{}),
     ...(level>=16?{level16Improvement:{mode:asi16Mode,first:asi16First,...(asi16Mode==='two_ones'?{second:asi16Second}:{})}}:{}),
+    ...(level>=19&&epicBoon?{epicBoon:{id:epicBoon,ability:epicAbility}}:{}),
     assignedAbilities:scores,increaseMode:mode,plusTwoAbility:two,plusOneAbility:one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,elfLineage:lineage,elfSenseSkill:elfSkill,elfSpellAbility:elfSpell,armor,shield,inventoryActions:activeActions,martial:{fightingStyle:style,...(level>=7?{additionalFightingStyle:additionalStyle as FightingStyleId}:{}),weaponMasteries:masteries,startingPackage:starter},
     backgroundEquipment:{startingPackage:backgroundPackage,...(background==='soldier'?{gamingSet:soldierGamingSet}:{})}};
-  const output=useMemo(()=>{try{return {result:calculateGuidedFighter(input),error:null};}catch(e){return {result:null,error:e instanceof Error?e.message:'Error al crear el personaje'};}},[name,level,asiMode,asiFirst,asiSecond,asi6Mode,asi6First,asi6Second,asi8Mode,asi8First,asi8Second,asi12Mode,asi12First,asi12Second,asi14Mode,asi14First,asi14Second,asi16Mode,asi16First,asi16Second,additionalStyle,background,species,scores,mode,two,one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,lineage,elfSkill,elfSpell,armor,shield,style,masteries,starter,backgroundPackage,soldierGamingSet,activeActions]);
+  const output=useMemo(()=>{try{return {result:calculateGuidedFighter(input),error:null};}catch(e){return {result:null,error:e instanceof Error?e.message:'Error al crear el personaje'};}},[name,level,asiMode,asiFirst,asiSecond,asi6Mode,asi6First,asi6Second,asi8Mode,asi8First,asi8Second,asi12Mode,asi12First,asi12Second,asi14Mode,asi14First,asi14Second,asi16Mode,asi16First,asi16Second,epicBoon,epicAbility,additionalStyle,background,species,scores,mode,two,one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,lineage,elfSkill,elfSpell,armor,shield,style,masteries,starter,backgroundPackage,soldierGamingSet,activeActions]);
   function loadSavedInput(saved:GuidedFighterInput){
     setName(saved.name);setLevel(saved.level);setLevelMessage('');setLevelRecovery(null);
     setAsiMode(saved.level4Improvement?.mode??'plus_two');setAsiFirst(saved.level4Improvement?.first??'strength');
@@ -162,7 +166,7 @@ export default function Home(){
     setAsi14Mode(saved.level14Improvement?.mode??'plus_two');setAsi14First(saved.level14Improvement?.first??'charisma');
     setAsi14Second(saved.level14Improvement?.second??'dexterity');
     setAsi16Mode(saved.level16Improvement?.mode??'plus_two');setAsi16First(saved.level16Improvement?.first??'intelligence');
-    setAsi16Second(saved.level16Improvement?.second??'dexterity');setBackground(saved.background);setSpecies(saved.species);
+    setAsi16Second(saved.level16Improvement?.second??'dexterity');setEpicBoon(saved.epicBoon?.id??'');setEpicAbility(saved.epicBoon?.ability??'strength');setBackground(saved.background);setSpecies(saved.species);
     setScores({...saved.assignedAbilities});setMode(saved.increaseMode);setTwo(saved.plusTwoAbility);setOne(saved.plusOneAbility);
     setFighterSkills([...saved.fighterSkills]);setHumanSkill(saved.humanSkill??'investigation');
     setHumanFeat(saved.humanFeat??'tough');setHumanSize(saved.humanSize??'medium');
@@ -211,6 +215,7 @@ export default function Home(){
       ...(next>=12?{level12Improvement:{mode:asi12Mode,first:asi12First,...(asi12Mode==='two_ones'?{second:asi12Second}:{})}}:{}),
       ...(next>=14?{level14Improvement:{mode:asi14Mode,first:asi14First,...(asi14Mode==='two_ones'?{second:asi14Second}:{})}}:{}),
       ...(next>=16?{level16Improvement:{mode:asi16Mode,first:asi16First,...(asi16Mode==='two_ones'?{second:asi16Second}:{})}}:{}),
+      ...(next>=19&&epicBoon?{epicBoon:{id:epicBoon,ability:epicAbility}}:{}),
       martial:{...input.martial!,weaponMasteries:chosenMasteries,
         ...(next>=7?{additionalFightingStyle:additionalStyle as FightingStyleId}:{})}};
     return {value,masteries:chosenMasteries};
@@ -232,6 +237,7 @@ export default function Home(){
     }
     if(next!==level+1){setLevelMessage('Sube exactamente un nivel cada vez.');return;}
     if(!output.result?.sheet){setLevelMessage(`No se puede subir: ${output.error??'revisa las elecciones del personaje'}`);return;}
+    if(next===19&&!epicBoon){setLevelMessage('Antes de subir al nivel 19, elige un beneficio épico en Características.');return;}
     if(next===16&&!sixthMastery){
       setLevelMessage('Para alcanzar el nivel 16, elige una sexta maestría en Equipo.');return;
     }
@@ -284,11 +290,12 @@ export default function Home(){
         `Nivel ${next} alcanzado. Se ha creado una sesión de combate nueva. Antes de guardar, verifica los PG y recursos actuales.`);
     }catch(e){setLevelMessage(`La recuperación no ha podido subir de nivel: ${e instanceof Error?e.message:'error desconocido'}`);}
   }
-  function confirmWeaponAttack(profile:WeaponAttackProfile,resolution:AttackResolution,context:MasteryContext,usage:AttackTurnUsage){
+  function confirmWeaponAttack(profile:WeaponAttackProfile,resolution:AttackResolution,context:MasteryContext,usage:AttackTurnUsage,usePeerlessAim=false){
     if(!sheet||!sessionCheck.state||sessionCheck.outOfSync||!output.result?.inventory)throw new RangeError('Primero valida y sincroniza el personaje');
     if(sessionCheck.state.fighter.hitPoints.current===0)throw new RangeError('A 0 PG no se pueden registrar ataques: revisa el estado del personaje');
     if(!conditionCapabilities(sessionCheck.state.combat.conditions??initialConditionLedger()).canTakeAction)throw new RangeError('Las condiciones impiden registrar ataques');
-    const result=recordWeaponAttack(sessionCheck.state.combat,output.result.inventory,profile,resolution,context,usage,sheet.level);
+    if(usePeerlessAim&&!sheet.features.includes('epic_boon_combat_prowess'))throw new RangeError('No tienes Pericia en combate');
+    const result=recordWeaponAttack(sessionCheck.state.combat,output.result.inventory,profile,resolution,context,usage,sheet.level,usePeerlessAim,sheet.features.includes('epic_boon_combat_prowess'));
     const nextActions=result.inventoryAction?[...activeActions,result.inventoryAction]:activeActions;
     replayInventory(starting,FIGHTER_PACKAGES[starter].initialArmor,nextActions);
     if(result.inventoryAction)setInventoryEdits({key:inventoryKey,actions:nextActions});
@@ -330,14 +337,14 @@ export default function Home(){
   return <main className="app-shell">
     <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Creador guiado · D&D 2024</span></div></div><div className="status"><span className="status-dot"/> Motor conectado · Guardado local</div></header>
     <div className="content">
-      <div className="intro"><div><span className="eyebrow">ACTUALIZACIÓN 33 / PROGRESIÓN DEL GUERRERO</span><h1>Da forma a <em>tu aventurero.</em></h1><p>Guerrero de niveles 1–17. Tus decisiones de origen se validan y se reflejan en la hoja calculada.</p></div><span className="edition">PHB 2024 + SRD</span></div>
+      <div className="intro"><div><span className="eyebrow">ACTUALIZACIÓN 34 / SUPERVIVIENTE Y BENEFICIO ÉPICO</span><h1>Da forma a <em>tu aventurero.</em></h1><p>Guerrero de niveles 1–19. Tus decisiones de origen se validan y se reflejan en la hoja calculada.</p></div><span className="edition">PHB 2024 + SRD</span></div>
       <SaveLoadPanel input={input} adventure={sessionCheck.outOfSync?null:sessionCheck.state} valid={Boolean(output.result&&!sessionCheck.outOfSync)} onLoad={loadSavedSnapshot}/>
       <PlayPanel sheet={sheet??null} state={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
       <SurvivalPanel sheet={sheet??null} state={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
       <MagicWardsPanel inventory={output.result?.inventory??null} outOfSync={sessionCheck.outOfSync} onInventoryAction={transact}/>
       <IncomingAttacksPanel sheet={sheet??null} state={sessionCheck.state} species={output.result?.origin.species??null} inventory={output.result?.inventory??null} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
       <ConditionsPanel combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} outOfSync={sessionCheck.outOfSync} onChange={handleCombatChange} baseSpeed={output.result?.origin.speedFeet??30}/>
-      <TurnPanel fighterLevel={sheet?.level??level} heroicWarrior={sheet?.features.includes('champion_heroic_warrior')??false} combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} outOfSync={sessionCheck.outOfSync} onChange={handleCombatChange} baseSpeedFeet={output.result?.origin.speedFeet??30} hitPoints={sessionCheck.state?.fighter.hitPoints.current??0}/>
+      <TurnPanel fighterLevel={sheet?.level??level} heroicWarrior={sheet?.features.includes('champion_heroic_warrior')??false} epicSpeed={sheet?.features.includes('epic_boon_speed')??false} combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} outOfSync={sessionCheck.outOfSync} onChange={handleCombatChange} baseSpeedFeet={output.result?.origin.speedFeet??30} hitPoints={sessionCheck.state?.fighter.hitPoints.current??0}/>
       <AttacksPanel combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} sheet={sheet??null} inventory={output.result?.inventory??null} martial={input.martial??null} onRecord={confirmWeaponAttack} canRecord={Boolean(sheet&&!sessionCheck.outOfSync&&sessionCheck.state&&sessionCheck.state.fighter.hitPoints.current>0&&conditionCapabilities(sessionCheck.state.combat.conditions??initialConditionLedger()).canTakeAction)}/>
       <CombatPanel combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} outOfSync={sessionCheck.outOfSync} onChange={handleCombatChange}/>
       <nav className="wizard-tabs" aria-label="Pasos de creación">{STEPS.map((s,i)=><button type="button" key={s} className={step===i?'active':''} aria-current={step===i?'step':undefined} onClick={()=>setStep(i)}><span>{String(i+1).padStart(2,'0')}</span>{s}</button>)}</nav>
@@ -354,7 +361,7 @@ export default function Home(){
                 <div className="level-stepper-display" role="status" aria-live="polite" aria-atomic="true">
                   <span className="level-stepper-eyebrow">NIVEL ACTUAL</span>
                   <strong className="level-stepper-number">{level}</strong>
-                  <span className="level-stepper-range">Guerrero · 1 a 17</span>
+                  <span className="level-stepper-range">Guerrero · 1 a 19</span>
                 </div>
                 <button type="button" className="level-stepper-arrow" aria-label="Subir un nivel" title="Subir un nivel" disabled={adjacentFighterLevel(level,1)===null}
                   onClick={()=>{const next=adjacentFighterLevel(level,1);if(next!==null)selectFighterLevel(next);}}><span aria-hidden="true">→</span></button>
@@ -368,7 +375,7 @@ export default function Home(){
                 <small>El estilo debe ser distinto del primero. La elección se consolida al subir a 7.</small>
               </label>}
             </div>
-            {level>=3&&<div className="info-line">Subclase: Campeón. Próximo nivel: {level===17?'pendiente de ampliar':level+1}.</div>}
+            {level>=3&&<div className="info-line">Subclase: Campeón. Próximo nivel: {level===19?'pendiente de ampliar':level+1}.</div>}
             {output.error&&<p className="save-error" role="alert">La hoja actual de nivel {level} tiene un error que impide la progresión o el guardado: {output.error}</p>}
             {sessionCheck.outOfSync&&<p className="save-error" role="alert">Nivel {level} sin sincronizar: han cambiado los PG máximos o el estado de partida. Al intentar subir se solicitará confirmar la sincronización sin borrar la sesión.</p>}
             {levelMessage&&<p className="level-stepper-message" role="alert">{levelMessage}</p>}
@@ -446,6 +453,16 @@ export default function Home(){
               {asi16Mode==='two_ones'&&<label className="field"><span>Segunda característica (nivel 16)</span><select value={asi16Second} onChange={e=>{setAsi16Second(e.target.value as Ability);setLevelMessage('');}}>{ABILITIES.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label>}
             </>}
           </>}
+            {step===2&&level>=18&&<><div className="divider"/><div className="section-label"><h3>Beneficio épico · nivel 19</h3><span>{level>=19?'Aplicado':'Elección para subir'}</span></div>
+              <p className="muted-note">Elige una dote épica disponible y la característica que aumenta en +1 (hasta 30). Hemos automatizado inicialmente tres opciones. No se asigna ninguna por defecto.</p>
+              <label className="field"><span>Dote de beneficio épico</span><select value={epicBoon} onChange={e=>{setEpicBoon(e.target.value as EpicBoonId|'');setLevelMessage('');}}>
+                <option value="">Selecciona tu beneficio épico</option>{Object.entries(EPIC_BOONS).map(([id,name])=><option key={id} value={id}>{name}</option>)}
+              </select></label>
+              <label className="field"><span>Característica que aumenta +1</span><select value={epicAbility} onChange={e=>{setEpicAbility(e.target.value as Ability);setLevelMessage('');}}>{ABILITIES.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label>
+              {epicBoon==='fortitude'&&<p className="info-line">Fortaleza: +40 PG máximos. Al recuperar PG, puedes añadir tu modificador de Constitución una vez hasta tu siguiente turno.</p>}
+              {epicBoon==='speed'&&<p className="info-line">Velocidad: +30 pies y puedes Destrabarte como acción adicional (resuelve el fin de Agarrado con el DM).</p>}
+              {epicBoon==='combat_prowess'&&<p className="info-line">Pericia en combate: puedes convertir una tirada de ataque fallida en impacto una vez hasta el inicio de tu siguiente turno.</p>}
+            </>}
           {step===3&&<>
             <p className="muted-note">El Guerrero elige dos habilidades. El trasfondo ya concede dos competencias adicionales.</p>
             {([0,1] as const).map(i=><label key={i} className="field"><span>Habilidad del Guerrero {i+1}</span><select value={fighterSkills[i]} onChange={e=>setSkillAt(i,e.target.value as Skill)}>{validSkills(background).map(s=><option key={s} value={s}>{SKILL_NAMES[s]}</option>)}</select></label>)}

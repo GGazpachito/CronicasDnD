@@ -37,3 +37,5 @@ export * from './mastery-effects';
 export * from './turns';
 
 export * from './progression';
+
+export * from './epic-boons';

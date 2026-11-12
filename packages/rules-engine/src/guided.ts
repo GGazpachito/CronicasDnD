@@ -10,6 +10,7 @@ import { validateMagicInitiate, grantsFromMagicInitiate, elfLineageSpells, type 
 import { combineStartingInventory, validateBackgroundEquipment, GAMING_SETS, type BackgroundEquipmentChoice, type StartingInventory } from './background-equipment';
 import { replayInventory, equippedArmor, hasEquippedShield, type InventoryAction, type InventoryState } from './inventory';
 import {collectMagicWardBonuses} from './magic-wards';
+import {applyEpicBoon,type EpicBoonChoice} from './epic-boons';
 import {applyFighterLevel4Improvement,applyFighterLevel6Improvement,applyFighterLevel8Improvement,applyFighterLevel12Improvement,applyFighterLevel14Improvement,applyFighterLevel16Improvement,type FighterLevel4Improvement,type FighterLevel6Improvement,type FighterLevel8Improvement,type FighterLevel12Improvement,type FighterLevel14Improvement,type FighterLevel16Improvement} from './progression';
 
 export const FIGHTER_SKILL_OPTIONS: readonly Skill[] = [
@@ -31,7 +32,7 @@ export const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8] as const;
 
 export type GuidedFighterInput = Readonly<{
   name: string;
-  level: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17;
+  level: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19;
   /** Solo desde el nivel 4; otras dotes generales quedan fuera de este incremento. */
   level4Improvement?: FighterLevel4Improvement;
   /** Segunda mejora independiente desde nivel 6. */
@@ -44,6 +45,8 @@ export type GuidedFighterInput = Readonly<{
   level14Improvement?:FighterLevel14Improvement;
   /** Sexta mejora independiente, desde nivel 16. */
   level16Improvement?:FighterLevel16Improvement;
+  /** Beneficio épico elegido explícitamente a nivel 19. */
+  epicBoon?:EpicBoonChoice;
   background: BackgroundId;
   species: SpeciesId;
   /** Puntuaciones antes de los aumentos por trasfondo. */
@@ -94,7 +97,7 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
   const bg = BACKGROUNDS[input.background];
   if (!bg) fail('Trasfondo no disponible');
   if (!['human','dwarf','elf'].includes(input.species)) fail('Especie no disponible');
-  if (![1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17].includes(input.level)) fail('Solo Guerrero nivel 1 a 17');
+  if (![1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19].includes(input.level)) fail('Solo Guerrero nivel 1 a 19');
   if (!input.name?.trim() || input.name.length > 120) fail('Introduce un nombre válido');
   if (!input.assignedAbilities || typeof input.assignedAbilities !== 'object') fail('Faltan características');
   const assigned = ABILITIES.map(a => input.assignedAbilities[a]);
@@ -121,7 +124,9 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
   const level8Scores=input.level>=8 ? applyFighterLevel8Improvement(level6Scores,input.level8Improvement!) : level6Scores;
   const level12Scores=input.level>=12 ? applyFighterLevel12Improvement(level8Scores,input.level12Improvement!) : level8Scores;
   const level14Scores=input.level>=14 ? applyFighterLevel14Improvement(level12Scores,input.level14Improvement!) : level12Scores;
-  const improvedScores=input.level>=16 ? applyFighterLevel16Improvement(level14Scores,input.level16Improvement!) : level14Scores;
+  const level16Scores=input.level>=16 ? applyFighterLevel16Improvement(level14Scores,input.level16Improvement!) : level14Scores;
+  if(input.level<19&&input.epicBoon!==undefined)fail('El beneficio épico solo está disponible al nivel 19');
+  const improvedScores=input.level>=19?applyEpicBoon(level16Scores,input.epicBoon!):level16Scores;
   if (!Array.isArray(input.fighterSkills) || input.fighterSkills.length!==2 || new Set(input.fighterSkills).size!==2 || input.fighterSkills.some(s=>!isSkill(s)||!FIGHTER_SKILL_OPTIONS.includes(s))) fail('Elige dos habilidades distintas de la lista del Guerrero');
   // Se exige una elección libre diferente si ya concede esa competencia el trasfondo.
   const skills = new Set<Skill>(bg.skills as readonly Skill[]);
@@ -199,6 +204,8 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
   const martial = input.martial===undefined ? undefined : validateMartialChoices(input.martial,input.level>=16?6:input.level>=10?5:input.level>=4?4:3,input.level>=7);
   if (!martial) pending.push('Estilo de combate, tres maestrías y equipo inicial aún no seleccionados');
   if (martial && martial.fightingStyle !== 'defense') pending.push('El estilo de combate se utiliza en el panel de ataques cuando corresponde; las reacciones y sentidos especiales siguen pendientes');
+  if(input.level>=19)pending.push('Otras dotes de beneficio épico y dotes alternativas al nivel 19: catálogo pendiente; disponibles Pericia en combate, Fortaleza y Velocidad');
+  if(input.level>=19&&input.epicBoon?.id==='speed')pending.push('Velocidad épica: Destrabarse como acción adicional requiere confirmación manual del DM; la velocidad +30 sí se aplica');
   if(input.level>=4)pending.push('Dotes generales alternativas a Mejora de característica: catálogo pendiente; en esta fase solo se admite esa dote en niveles 4, 6, 8, 12, 14 y 16');
   if(input.level>=7&&martial?.additionalFightingStyle)pending.push('Segundo estilo del Campeón: los efectos situacionales y reacciones siguen requiriendo resolución manual');
   if(input.level>=5)pending.push('Desplazamiento táctico: el movimiento sin ataques de oportunidad de Segundo aliento debe resolverse con el DM');
@@ -222,12 +229,15 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
     id:'guided-preview',name:input.name.trim(),ruleset:'dnd-2024',fighterLevel:input.level,
     baseAbilities:improvedScores,baseProficiencies:{skills:[...skills],savingThrows:['strength','constitution']},
     modifiers:[...modifiers,...fightingStyleModifiers,...magicModifiers],hpMethod:'fixed',equipment:{armor:input.armor,shieldEquipped:input.shield,shieldTrained:true},
-    bonusHitPointsPerLevel,
+    bonusHitPointsPerLevel,bonusHitPointsFlat:input.level>=19&&input.epicBoon?.id==='fortitude'?40:0,
     ...(input.level>=3?{subclass:'champion' as const}:{})
   };
-  const sheet=calculateFighterSheet(character);
+  const baseSheet=calculateFighterSheet(character);
+  const sheet=input.level>=19&&input.epicBoon
+    ?{...baseSheet,features:[...baseSheet.features,`epic_boon_${input.epicBoon.id}`]}
+    :baseSheet;
   const bgTool=bgEquipment?.gamingSet?GAMING_SETS[bgEquipment.gamingSet]:bg.tool;
-  return {sheet,origin:{background:input.background,species:input.species,feat:bg.feat,...(extraFeat?{additionalFeat:extraFeat}:{}),size,speedFeet,tools:[bgTool,...extraTools.map(t=>TOOL_NAMES[t])],...(luckPointsMaximum!==undefined?{luckPointsMaximum}:{})},spells,pendingAutomation:pending,
+  return {sheet,origin:{background:input.background,species:input.species,feat:bg.feat,...(extraFeat?{additionalFeat:extraFeat}:{}),size,speedFeet:speedFeet+(input.level>=19&&input.epicBoon?.id==='speed'?30:0),tools:[bgTool,...extraTools.map(t=>TOOL_NAMES[t])],...(luckPointsMaximum!==undefined?{luckPointsMaximum}:{})},spells,pendingAutomation:pending,
     ...(startingInventory?{startingInventory}:{}),
     ...(inventory?{inventory}:{}),
     ...(martial ? {martial:{choices:martial,gold:FIGHTER_PACKAGES[martial.startingPackage].gold,inventory:FIGHTER_PACKAGES[martial.startingPackage].items,masteries:martial.weaponMasteries.map(id=>({weapon:WEAPONS[id].name,property:WEAPONS[id].mastery}))}} : {})};

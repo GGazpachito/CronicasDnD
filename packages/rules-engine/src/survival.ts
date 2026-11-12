@@ -62,11 +62,11 @@ export function concentrationDC(damageTaken:number):number{
   return Math.min(30,Math.max(10,Math.floor(amount/2)));
 }
 export function resetDeathTrack():DeathTrack{return emptyDeath();}
-export function deathSavingThrow(death:DeathTrack,d20:number,d20Penalty=0):Readonly<{death:DeathTrack;regainHP:boolean;message:string}>{
+export function deathSavingThrow(death:DeathTrack,d20:number,d20Penalty=0,survivor=false):Readonly<{death:DeathTrack;regainHP:boolean;message:string}>{
   const n=int(d20,1,20,'Dado de salvación de muerte');
   int(d20Penalty,-12,0,'Penalización al d20 por agotamiento');
   if(death.dead||death.stable)fail('No se realizan salvaciones de muerte si está muerto o estable');
-  if(n===20)return {death:emptyDeath(),regainHP:true,message:'20 natural: recupera 1 PG y termina la agonía.'};
+  if((survivor&&n>=18)||n===20)return {death:emptyDeath(),regainHP:true,message:survivor&&n<20?'Superviviente: 18–20 natural equivale a 20, recuperas 1 PG.':'20 natural: recupera 1 PG y termina la agonía.'};
   const success=n+d20Penalty>=10?1:0;
   const failure=n===1?2:success===0?1:0;
   const successes=death.successes+success;

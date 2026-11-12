@@ -31,7 +31,9 @@ describe('Actualización 32 · niveles 14 y 15',()=>{
    expect(adjacentFighterLevel(13,1)).toBe(14);
    expect(adjacentFighterLevel(14,1)).toBe(15);
    expect(adjacentFighterLevel(15,1)).toBe(16);
-   expect(adjacentFighterLevel(17,1)).toBeNull();
+   expect(adjacentFighterLevel(17,1)).toBe(18);
+    expect(adjacentFighterLevel(18,1)).toBe(19);
+    expect(adjacentFighterLevel(19,1)).toBeNull();
    expect(adjacentFighterLevel(15,-1)).toBe(14);
  });
  it('nivel 14 exige una quinta mejora y no se puede adelantar',()=>{

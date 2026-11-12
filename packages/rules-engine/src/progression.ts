@@ -58,10 +58,10 @@ export function applyFighterLevel16Improvement(scores:AbilityScores,choice:Fight
 /** Niveles de Guerrero admitidos por el creador actual. El control visual solo da un paso.
  * Devuelve null en los extremos, para deshabilitar la flecha correspondiente.
  */
-export type SupportedFighterLevel = 1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17;
+export type SupportedFighterLevel = 1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19;
 export function adjacentFighterLevel(level:SupportedFighterLevel,direction:-1|1):SupportedFighterLevel|null {
-  if(!Number.isInteger(level)||level<1||level>17)throw new RangeError('Nivel de Guerrero no reconocido');
+  if(!Number.isInteger(level)||level<1||level>19)throw new RangeError('Nivel de Guerrero no reconocido');
   if(direction!==-1&&direction!==1)throw new RangeError('La navegación solo permite subir o bajar un nivel');
   const next=level+direction;
-  return next>=1&&next<=17?next as SupportedFighterLevel:null;
+  return next>=1&&next<=19?next as SupportedFighterLevel:null;
 }

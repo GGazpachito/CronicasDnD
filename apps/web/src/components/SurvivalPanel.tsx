@@ -8,6 +8,7 @@ import type {CalculatedFighterSheet} from '../../../../packages/rules-engine/src
 type Props={sheet:CalculatedFighterSheet|null;state:AdventureState|null;outOfSync:boolean;onChange:(next:AdventureState)=>void};
 export default function SurvivalPanel({sheet,state,outOfSync,onChange}:Props){
   const [d20,setD20]=useState(12);
+  const [secondD20,setSecondD20]=useState(14);
   const [medicine,setMedicine]=useState(10);
   const [recoveryDie,setRecoveryDie]=useState(2);
   const [elapsed,setElapsed]=useState(2);
@@ -31,6 +32,7 @@ export default function SurvivalPanel({sheet,state,outOfSync,onChange}:Props){
     }catch(e){setMessage('');setError(e instanceof Error?e.message:'Operación inválida');}
   }
   const atZero=ready&&hp===0;
+  const survivor=Boolean(sheet?.features.includes('champion_survivor'));
   return <section className="play-panel panel" aria-label="Muerte y concentración">
     <div className="save-panel-head"><div><span className="eyebrow">FASE 4.6 · ESTADO DE PARTIDA</span><h2>Muerte y concentración</h2></div><span className="save-label">Guardado manual</span></div>
     <p className="muted-note">Las salvaciones se introducen después de tirar los dados. Los cambios se guardan pulsando <strong>Actualizar guardado</strong> en «Mis personajes». El director de juego decide cuándo corresponde realizar cada tirada.</p>
@@ -46,7 +48,8 @@ export default function SurvivalPanel({sheet,state,outOfSync,onChange}:Props){
         <div className="play-action-group"><h3>Salvaciones contra muerte</h3>
           <p className="muted-note">Cada turno a 0 PG, si no estás estable ni muerto: 10 o más tras penalizaciones es éxito. Un 1 natural son dos fallos; un 20 natural recupera 1 PG. El agotamiento penaliza esta tirada d20.</p>
           <label className="field"><span>Resultado natural del d20</span><input type="number" min="1" max="20" step="1" value={d20} onChange={e=>setD20(Number(e.target.value))}/></label>
-          <button type="button" disabled={!atZero||death.stable||death.dead} onClick={()=>act({type:'death_save',d20})}>Registrar salvación de muerte</button>
+          {survivor&&<><label className="field"><span>Segundo d20 (Superviviente: ventaja)</span><input type="number" min="1" max="20" step="1" value={secondD20} onChange={e=>setSecondD20(Number(e.target.value))}/></label><p className="info-line">Superviviente: se utiliza el dado mayor. Un 18, 19 o 20 natural recupera 1 PG, incluso con agotamiento.</p></>}
+          <button type="button" disabled={!atZero||death.stable||death.dead} onClick={()=>act({type:'death_save',d20,...(survivor?{secondD20}:{})})}>Registrar salvación de muerte</button>
           <p className="muted-note">Tres éxitos estabilizan; tres fallos provocan la muerte. Si recibes daño a 0 PG, usa el apartado «PG y daño» e indica si fue crítico.</p>
         </div>
         <div className="play-action-group"><h3>Estabilización y recuperación</h3>

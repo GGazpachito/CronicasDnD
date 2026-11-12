@@ -27,6 +27,7 @@ export type CombatAttackEntry = Readonly<{
   grazeDamage:number|null;
   damageType:DamageType;
   ammunitionSpent:AmmoId|null;
+  peerlessAimApplied?:boolean;
 }>;
 export type StudiedTarget = Readonly<{
   id:number; sourceAttackId:number; round:number; target:string;sourceTurn?:number;
@@ -66,6 +67,10 @@ export type CombatState = Readonly<{
   studiedAttacks?:readonly StudiedTarget[];
   /** Campeón 10: recurso de Inspiración heroica, que persiste hasta gastarse. */
   heroicInspiration?:boolean;
+  /** Beneficio épico Pericia en combate: un fallo se convierte en impacto hasta el inicio del próximo turno. */
+  peerlessAimUsed?:boolean;
+  /** Beneficio épico Fortaleza: PG adicionales curados hasta el inicio del siguiente turno. */
+  fortitudeHealUsed?:boolean;
 }>;
 const MAX_ATTACKS=100;
 const MAX_EFFECTS=30;
@@ -108,6 +113,7 @@ export function startCharacterTurn(state:CombatState,heroicWarrior=false):Combat
   const masteryEffects=s.masteryEffects?.filter(e=>!(e.sourceTurn!==undefined&&e.sourceTurn<turn.number&&
     (e.mastery==='Sap'||e.mastery==='Slow')));
   return {...s,turn,...(masteryEffects?{masteryEffects}:{}),
+    peerlessAimUsed:false,fortitudeHealUsed:false,
     ...(heroicWarrior?{heroicInspiration:true}:{})};
 }
 /** Hostigar creado en el turno N caduca al TERMINAR el turno N+1. */
@@ -132,6 +138,15 @@ export function grantCombatActionSurge(state:CombatState):CombatState{
   const s=validateCombatState(state);
   return {...s,turn:grantActionSurgeSlot(s.turn??initialTurnTracker())};
 }
+/** Beneficio épico de Velocidad: Destrabarse como acción adicional elimina Agarrado.
+ * El DM sigue resolviendo movimiento, enemigos y ataques de oportunidad.
+ */
+export function useEpicSpeedDisengage(state:CombatState):CombatState{
+  const s=spendCombatSlot(state,'bonus');
+  const ledger=s.conditions??initialConditionLedger();
+  const withoutGrapples={...ledger,instances:ledger.instances.filter(x=>x.kind!=='grappled')};
+  return {...s,conditions:validateConditionLedger(withoutGrapples,s.nextId)};
+}
 export function moveCombatCharacter(state:CombatState,feet:number,effectiveSpeedFeet:number):CombatState{
   const s=validateCombatState(state);
   return {...s,turn:moveOnTurn(s.turn??initialTurnTracker(),feet,effectiveSpeedFeet)};
@@ -140,7 +155,7 @@ export function moveCombatCharacter(state:CombatState,feet:number,effectiveSpeed
 /** Valida y clona estados cargados de PostgreSQL (no confia en el JSON recibido). */
 export function validateCombatState(value:unknown):CombatState{
   if(!record(value))fail('Estado de combate inválido');
-  exactKeys(value,['round','nextId','attacks','effects',...(value.conditions===undefined?[]:['conditions']),...(value.receivedAttacks===undefined?[]:['receivedAttacks']),...(value.masteryEffects===undefined?[]:['masteryEffects']),...(value.studiedAttacks===undefined?[]:['studiedAttacks']),...(value.turn===undefined?[]:['turn']),...(value.heroicInspiration===undefined?[]:['heroicInspiration'])],'Combate');
+  exactKeys(value,['round','nextId','attacks','effects',...(value.conditions===undefined?[]:['conditions']),...(value.receivedAttacks===undefined?[]:['receivedAttacks']),...(value.masteryEffects===undefined?[]:['masteryEffects']),...(value.studiedAttacks===undefined?[]:['studiedAttacks']),...(value.turn===undefined?[]:['turn']),...(value.heroicInspiration===undefined?[]:['heroicInspiration']),...(value.peerlessAimUsed===undefined?[]:['peerlessAimUsed']),...(value.fortitudeHealUsed===undefined?[]:['fortitudeHealUsed'])],'Combate');
   const round=bounded(value.round,1,MAX_ROUNDS,'Ronda');
   const nextId=bounded(value.nextId,1,MAX_ID,'Siguiente ID');
   if(!Array.isArray(value.attacks)||value.attacks.length>MAX_ATTACKS)fail('Historial de ataques demasiado largo');
@@ -150,7 +165,8 @@ export function validateCombatState(value:unknown):CombatState{
     if(!record(raw))fail('Ataque registrado inválido');
     exactKeys(raw,['id','round','weaponId','naturalRoll','attackTotal','critical','hit','damageTotal','grazeDamage','damageType','ammunitionSpent',
       ...(raw.magicWeaponInstanceId===undefined?[]:['magicWeaponInstanceId']),
-      ...(raw.magicEnhancement===undefined?[]:['magicEnhancement']),...(raw.targetName===undefined?[]:['targetName']),...(raw.masteryNote===undefined?[]:['masteryNote'])],'Ataque');
+      ...(raw.magicEnhancement===undefined?[]:['magicEnhancement']),...(raw.targetName===undefined?[]:['targetName']),...(raw.masteryNote===undefined?[]:['masteryNote']),...(raw.peerlessAimApplied===undefined?[]:['peerlessAimApplied'])],'Ataque');
+    if(raw.peerlessAimApplied!==undefined&&(typeof raw.peerlessAimApplied!=='boolean'||(raw.peerlessAimApplied&&raw.hit!==true)))fail('Pericia en combate del historial inválida');
     const id=bounded(raw.id,1,nextId-1,'ID de ataque');
     if(seen.has(id)||id<=previous)fail('Historial de ataques desordenado o duplicado');
     seen.add(id);previous=id;
@@ -173,7 +189,8 @@ export function validateCombatState(value:unknown):CombatState{
       damageTotal,grazeDamage,damageType:stats.damageType,ammunitionSpent:ammo as AmmoId|null,
       ...(raw.magicWeaponInstanceId===undefined?{}:{magicWeaponInstanceId:raw.magicWeaponInstanceId as string,magicEnhancement:raw.magicEnhancement as 1|2|3}),
       ...(raw.targetName===undefined?{}:{targetName:raw.targetName as string}),
-      ...(raw.masteryNote===undefined?{}:{masteryNote:raw.masteryNote as string})};
+      ...(raw.masteryNote===undefined?{}:{masteryNote:raw.masteryNote as string}),
+      ...(raw.peerlessAimApplied===undefined?{}:{peerlessAimApplied:raw.peerlessAimApplied as boolean})};
   });
   const effects:TrackedEffect[]=value.effects.map((raw:unknown)=>{
     if(!record(raw))fail('Efecto registrado inválido');
@@ -259,25 +276,32 @@ export function validateCombatState(value:unknown):CombatState{
   }
   const turn=value.turn===undefined?undefined:validateTurnTracker(value.turn);
   if(value.heroicInspiration!==undefined&&typeof value.heroicInspiration!=='boolean')fail('Inspiración heroica inválida');
+  if(value.peerlessAimUsed!==undefined&&typeof value.peerlessAimUsed!=='boolean')fail('Uso de Pericia en combate inválido');
+  if(value.fortitudeHealUsed!==undefined&&typeof value.fortitudeHealUsed!=='boolean')fail('Uso de Fortaleza inválido');
   if(turn&&masteryEffects?.some(e=>e.sourceTurn!==undefined&&e.sourceTurn>turn.number))fail('El origen de la maestría es posterior al turno actual');
   if(studiedAttacks?.some(e=>e.sourceTurn!==undefined&&(!turn||e.sourceTurn>turn.number)))fail('Turno de Ataques estudiados incoherente');
-  return {round,nextId,attacks,effects,...(conditions?{conditions}:{}),...(receivedAttacks?{receivedAttacks}:{}),...(masteryEffects?{masteryEffects}:{}),...(studiedAttacks?{studiedAttacks}:{}),...(turn?{turn}:{}),...(value.heroicInspiration===undefined?{}:{heroicInspiration:value.heroicInspiration as boolean})};
+  return {round,nextId,attacks,effects,...(conditions?{conditions}:{}),...(receivedAttacks?{receivedAttacks}:{}),...(masteryEffects?{masteryEffects}:{}),...(studiedAttacks?{studiedAttacks}:{}),...(turn?{turn}:{}),...(value.heroicInspiration===undefined?{}:{heroicInspiration:value.heroicInspiration as boolean}),
+    ...(value.peerlessAimUsed===undefined?{}:{peerlessAimUsed:value.peerlessAimUsed as boolean}),
+    ...(value.fortitudeHealUsed===undefined?{}:{fortitudeHealUsed:value.fortitudeHealUsed as boolean})};
 }
 
 /** Registrar un ataque y descontar su municion forman una sola operacion logica.
  * Devuelve la accion de inventario que se debe anadir al diario persistente, nunca la ejecuta dos veces.
  */
 export function recordWeaponAttack(
-  state:CombatState, inventory:InventoryState, profile:WeaponAttackProfile, resolution:AttackResolution, context?:MasteryContext, usage:AttackTurnUsage='untracked',fighterLevel=3,
+  state:CombatState, inventory:InventoryState, profile:WeaponAttackProfile, resolution:AttackResolution, context?:MasteryContext, usage:AttackTurnUsage='untracked',fighterLevel=3,usePeerlessAim=false,hasPeerlessBoon=false,
 ):Readonly<{combat:CombatState;inventoryAction:InventoryAction|null}> {
   const combat=validateCombatState(state);
+  if(usePeerlessAim&&(fighterLevel<19||!hasPeerlessBoon||combat.peerlessAimUsed||resolution.hit!==false))
+    fail('Pericia en combate requiere nivel 19, un fallo contra criatura y un uso disponible');
+  const finalResolution=usePeerlessAim?{...resolution,hit:true,grazeDamage:null}:resolution;
   const validatedContext=context===undefined?undefined:validateMasteryContext(context);
-  const mastery=validatedContext?evaluateWeaponMastery(profile,resolution,validatedContext):null;
+  const mastery=validatedContext?evaluateWeaponMastery(profile,finalResolution,validatedContext):null;
   if(combat.nextId>=MAX_ID)fail('Limite del historial de combate alcanzado');
   if(usage!=='untracked'&&!combat.turn)fail('Inicia el seguimiento de turnos para utilizar acciones de combate');
   const nextTurn=combat.turn?spendAttackOnTurn(combat.turn,usage,{
     lightExtra:profile.lightExtraAttack,nickMastery:profile.mastery==='Nick',cleaveMastery:profile.mastery==='Cleave',
-    hitCreature:resolution.hit===true&&validatedContext?.targetIsCreature===true,
+    hitCreature:finalResolution.hit===true&&validatedContext?.targetIsCreature===true,
     weaponId:profile.weaponId,targetName:validatedContext?.targetName??'',attackLimit:fighterLevel>=11?3:fighterLevel>=5?2:1,
   }):undefined;
   if(!profile||!resolution||!weapon(profile.weaponId))fail('Perfil de ataque inválido');
@@ -291,24 +315,24 @@ export function recordWeaponAttack(
       fail('El arma mágica ya no está disponible o su instancia no coincide');
   }else if(profile.magicEnhancement!==undefined)fail('Bonificador mágico sin arma identificada');
   else if(!inventory.items.some(i=>i.id===profile.weaponId&&i.quantity>=1))fail('El personaje no posee esta arma');
-  if(typeof resolution.critical!=='boolean'||(resolution.hit!==null&&typeof resolution.hit!=='boolean'))fail('Resultado de ataque inválido');
-  const originalDamage=optionalDamage(resolution.damageTotal,'Daño');
+  if(typeof finalResolution.critical!=='boolean'||(finalResolution.hit!==null&&typeof finalResolution.hit!=='boolean'))fail('Resultado de ataque inválido');
+  const originalDamage=optionalDamage(finalResolution.damageTotal,'Daño');
   // Tajo: se omite el modificador POSITIVO de característica en el ataque adicional;
   // las mejoras mágicas de arma no se pierden. El resultado de los dados sigue intacto.
   const damageTotal=usage==='cleave_extra'&&originalDamage!==null
     ?Math.max(0,originalDamage-Math.max(0,profile.abilityModifier)):originalDamage;
-  const grazeDamage=optionalDamage(resolution.grazeDamage,'Rozar');
+  const grazeDamage=optionalDamage(finalResolution.grazeDamage,'Rozar');
   const ammo=profile.ammunition??null;
   const inventoryAction:InventoryAction|null=ammo?{type:'remove',itemId:ammo as InventoryItemId,quantity:1}:null;
   // Prevalidacion atomica: si no existe municion, no se anade ningun evento.
   if(inventoryAction)applyInventoryAction(inventory,inventoryAction);
   const entry:CombatAttackEntry={id:combat.nextId,round:combat.round,weaponId:profile.weaponId,
-    naturalRoll:bounded(resolution.naturalRoll,1,20,'d20'),attackTotal:bounded(resolution.attackTotal,-1000,1000,'Total de ataque'),
-    critical:resolution.critical,hit:resolution.hit,damageTotal,grazeDamage,
+    naturalRoll:bounded(finalResolution.naturalRoll,1,20,'d20'),attackTotal:bounded(finalResolution.attackTotal,-1000,1000,'Total de ataque'),
+    critical:finalResolution.critical,hit:finalResolution.hit,damageTotal,grazeDamage,
     damageType:stats.damageType,ammunitionSpent:ammo,
     ...(magic===undefined?{}:{magicWeaponInstanceId:magic,magicEnhancement:profile.magicEnhancement}),
     ...(validatedContext?.targetName?{targetName:validatedContext.targetName}:{}),
-    ...(mastery?.mastery?{masteryNote:mastery.message}:{})};
+    ...(mastery?.mastery?{masteryNote:mastery.message}:{}),...(usePeerlessAim?{peerlessAimApplied:true}:{})};
   // Una ventaja previa de Hostigar se consume en el siguiente ataque contra ESA criatura,
   // incluso si el impacto falla. No consume ventajas asociadas a otros objetivos.
   const remaining=(combat.masteryEffects??[]).filter(e=>!(validatedContext?.targetName&&validatedContext.targetIsCreature&&e.mastery==='Vex'&&
@@ -319,7 +343,7 @@ export function recordWeaponAttack(
     ?remaining.filter(e=>!(e.mastery===pending.mastery&&e.target.toLocaleLowerCase('es')===pending.target.toLocaleLowerCase('es')))
     :remaining;
   if(pending&&unique.length>=30)fail('Demasiados efectos de maestría pendientes');
-  const studiedCandidate=fighterLevel>=13&&validatedContext?.targetIsCreature===true&&Boolean(validatedContext.targetName)&&resolution.hit===false;
+  const studiedCandidate=fighterLevel>=13&&validatedContext?.targetIsCreature===true&&Boolean(validatedContext.targetName)&&finalResolution.hit===false;
   const studiedRemaining=(combat.studiedAttacks??[]).filter(e=>!(validatedContext?.targetIsCreature&&validatedContext.targetName&&hasStudiedAdvantage([e],validatedContext.targetName)));
   if(studiedCandidate&&studiedRemaining.length>=30)fail('Demasiados Ataques estudiados pendientes');
   const extraEvents=(pending?1:0)+(studiedCandidate?1:0);
@@ -330,7 +354,7 @@ export function recordWeaponAttack(
     target:validatedContext!.targetName,...(combat.turn&&combat.turn.number>0?{sourceTurn:combat.turn.number}:{})}]:studiedRemaining;
   return {inventoryAction,combat:{...combat,nextId:combat.nextId+1+extraEvents,attacks:[...combat.attacks,entry].slice(-MAX_ATTACKS),
     ...(validatedContext?{masteryEffects:newEffects}:{}),
-    ...(validatedContext&&fighterLevel>=13?{studiedAttacks:newStudied}:{}),...(nextTurn?{turn:nextTurn}:{})}};
+    ...(validatedContext&&fighterLevel>=13?{studiedAttacks:newStudied}:{}),...(nextTurn?{turn:nextTurn}:{}),...(usePeerlessAim?{peerlessAimUsed:true}:{})}};
 }
 
 /** Cancelación manual de Ataques estudiados (p. ej., el DM indica que expiró). */

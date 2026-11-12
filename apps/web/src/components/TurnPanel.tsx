@@ -1,12 +1,12 @@
 'use client';
 
 import {useState} from 'react';
-import {startCharacterTurn,endCharacterTurn,spendCombatSlot,moveCombatCharacter,spendHeroicInspiration,type CombatState} from '../../../../packages/rules-engine/src/combat';
+import {startCharacterTurn,endCharacterTurn,spendCombatSlot,moveCombatCharacter,useEpicSpeedDisengage,spendHeroicInspiration,type CombatState} from '../../../../packages/rules-engine/src/combat';
 import {conditionCapabilities,initialConditionLedger} from '../../../../packages/rules-engine/src/conditions';
 import {initialTurnTracker} from '../../../../packages/rules-engine/src/turns';
 
-type Props={fighterLevel:number;heroicWarrior:boolean;combat:CombatState|null;outOfSync:boolean;onChange:(combat:CombatState)=>void;baseSpeedFeet:number;hitPoints:number};
-export default function TurnPanel({fighterLevel,heroicWarrior,combat,outOfSync,onChange,baseSpeedFeet,hitPoints}:Props){
+type Props={fighterLevel:number;heroicWarrior:boolean;epicSpeed?:boolean;combat:CombatState|null;outOfSync:boolean;onChange:(combat:CombatState)=>void;baseSpeedFeet:number;hitPoints:number};
+export default function TurnPanel({fighterLevel,heroicWarrior,epicSpeed=false,combat,outOfSync,onChange,baseSpeedFeet,hitPoints}:Props){
   const [feet,setFeet]=useState(5);
   const [error,setError]=useState('');
   const [message,setMessage]=useState('');
@@ -30,9 +30,14 @@ export default function TurnPanel({fighterLevel,heroicWarrior,combat,outOfSync,o
         <button type="button" disabled={turn.active||hitPoints===0||cap.deadByExhaustion} onClick={()=>change(c=>startCharacterTurn(c,heroicWarrior),heroicWarrior?'Turno iniciado: Guerrero heroico concede Inspiración heroica si no la tenías.':'Turno iniciado.')}>Iniciar mi turno</button>
         <button type="button" disabled={!turn.active} onClick={()=>change(endCharacterTurn,'Turno terminado.')}>Terminar mi turno</button>
       </div>
+      {fighterLevel>=18&&<p className="info-line">Superviviente: al comenzar tu turno, si tienes 1 o más PG y estás a la mitad o menos de los PG máximos, recuperas automáticamente 5 + modificador de CON. Se reflejará en «Jugar con tu personaje».</p>}
       {heroicWarrior&&<div className="play-action-group"><h3>Guerrero heroico · Campeón nivel 10</h3>
         <p className="muted-note">Inspiración heroica: {combat?.heroicInspiration?'Disponible':'No disponible'}. Al empezar tu turno de combate, la recuperas si no la tienes. Al gastarla, puedes volver a tirar un dado que acabes de tirar y debes usar el nuevo resultado.</p>
         <button type="button" disabled={!ready||!combat?.heroicInspiration} onClick={()=>change(spendHeroicInspiration,'Inspiración heroica gastada; resuelve la repetición del dado en mesa.')}>Gastar Inspiración heroica</button>
+      </div>}
+      {epicSpeed&&<div className="play-action-group"><h3>Beneficio épico de Velocidad</h3>
+        <p className="muted-note">Puedes Destrabarte con una acción adicional, terminando también todas las fuentes de la condición Agarrado. Los ataques de oportunidad y el movimiento se resuelven en mesa.</p>
+        <button type="button" disabled={!canAct||!cap.canTakeBonusAction||turn.bonusUsed} onClick={()=>change(useEpicSpeedDisengage,'Destrabarse como acción adicional: condición Agarrado eliminada.')}>Destrabarse (acción adicional)</button>
       </div>}
       {turn.number>0&&<>
         <div className="turn-stats" aria-label="Recursos de turno">
