@@ -41,7 +41,7 @@ const ARMOR_OPTIONS: ReadonlyArray<{id:ArmorId|null;name:string}> = [
 {id:'half_plate',name:'Media armadura'},{id:'ring_mail',name:'Cota de anillas'},{id:'chain_mail',name:'Cota de malla'},
 {id:'splint',name:'Bandas'},{id:'plate',name:'Placas'}
 ];
-const FEATURES:Record<string,string>={ability_score_improvement:'Mejora de característica (nivel 4)',extra_attack:'Ataque adicional (nivel 5)',tactical_shift:'Desplazamiento táctico (nivel 5)',fighting_style:'Estilo de combate',second_wind:'Segundo aliento',weapon_mastery:'Maestría de armas',action_surge:'Acción súbita',tactical_mind:'Mente táctica',champion_improved_critical:'Crítico mejorado',champion_remarkable_athlete:'Atleta extraordinario',ability_score_improvement_level_6:'Mejora de característica (nivel 6)',champion_additional_fighting_style:'Estilo de combate adicional (Campeón nivel 7)',ability_score_improvement_level_8:'Mejora de característica (nivel 8)',indomitable:'Indomable (nivel 9)',tactical_master:'Dominio táctico (nivel 9)',champion_heroic_warrior:'Guerrero heroico (Campeón nivel 10)',two_extra_attacks:'Dos ataques adicionales (nivel 11)',ability_score_improvement_level_12:'Mejora de característica (nivel 12)',studied_attacks:'Ataques estudiados (nivel 13)',ability_score_improvement_level_14:'Mejora de característica (nivel 14)',champion_superior_critical:'Crítico superior (Campeón nivel 15): 18–20',ability_score_improvement_level_16:'Mejora de característica (nivel 16)',weapon_mastery_sixth:'Sexta maestría de armas (nivel 16)',action_surge_two_uses:'Acción súbita (2 usos, nivel 17)',indomitable_three_uses:'Indomable (3 usos, nivel 17)',champion_survivor:'Superviviente (Campeón nivel 18)',epic_boon:'Beneficio épico (nivel 19)',epic_boon_combat_prowess:'Pericia en combate',epic_boon_fortitude:'Fortaleza',epic_boon_speed:'Velocidad'};
+const FEATURES:Record<string,string>={ability_score_improvement:'Mejora de característica (nivel 4)',extra_attack:'Ataque adicional (nivel 5)',tactical_shift:'Desplazamiento táctico (nivel 5)',fighting_style:'Estilo de combate',second_wind:'Segundo aliento',weapon_mastery:'Maestría de armas',action_surge:'Acción súbita',tactical_mind:'Mente táctica',champion_improved_critical:'Crítico mejorado',champion_remarkable_athlete:'Atleta extraordinario',ability_score_improvement_level_6:'Mejora de característica (nivel 6)',champion_additional_fighting_style:'Estilo de combate adicional (Campeón nivel 7)',ability_score_improvement_level_8:'Mejora de característica (nivel 8)',indomitable:'Indomable (nivel 9)',tactical_master:'Dominio táctico (nivel 9)',champion_heroic_warrior:'Guerrero heroico (Campeón nivel 10)',two_extra_attacks:'Dos ataques adicionales (nivel 11)',ability_score_improvement_level_12:'Mejora de característica (nivel 12)',studied_attacks:'Ataques estudiados (nivel 13)',ability_score_improvement_level_14:'Mejora de característica (nivel 14)',champion_superior_critical:'Crítico superior (Campeón nivel 15): 18–20',ability_score_improvement_level_16:'Mejora de característica (nivel 16)',weapon_mastery_sixth:'Sexta maestría de armas (nivel 16)',action_surge_two_uses:'Acción súbita (2 usos, nivel 17)',indomitable_three_uses:'Indomable (3 usos, nivel 17)',champion_survivor:'Superviviente (Campeón nivel 18)',epic_boon:'Beneficio épico (nivel 19)',epic_boon_combat_prowess:'Pericia en combate',epic_boon_fortitude:'Fortaleza',epic_boon_speed:'Velocidad',three_extra_attacks:'Tres ataques adicionales (nivel 20): cuatro ataques por acción Atacar'};
 const FEATS = ORIGIN_FEATS;
 const originFeatName=(x:string)=>({magic_initiate_cleric:'Iniciado en la Magia (Clérigo)',magic_initiate_wizard:'Iniciado en la Magia (Mago)',...ORIGIN_FEATS} as Record<string,string>)[x]??x;
 const signed=(n:number)=>n>=0?`+${n}`:String(n);
@@ -337,7 +337,7 @@ export default function Home(){
   return <main className="app-shell">
     <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Creador guiado · D&D 2024</span></div></div><div className="status"><span className="status-dot"/> Motor conectado · Guardado local</div></header>
     <div className="content">
-      <div className="intro"><div><span className="eyebrow">ACTUALIZACIÓN 34 / SUPERVIVIENTE Y BENEFICIO ÉPICO</span><h1>Da forma a <em>tu aventurero.</em></h1><p>Guerrero de niveles 1–19. Tus decisiones de origen se validan y se reflejan en la hoja calculada.</p></div><span className="edition">PHB 2024 + SRD</span></div>
+      <div className="intro"><div><span className="eyebrow">ACTUALIZACIÓN 35 / GUERRERO NIVEL 20</span><h1>Da forma a <em>tu aventurero.</em></h1><p>Guerrero de niveles 1–20. Tus decisiones de origen se validan y se reflejan en la hoja calculada.</p></div><span className="edition">PHB 2024 + SRD</span></div>
       <SaveLoadPanel input={input} adventure={sessionCheck.outOfSync?null:sessionCheck.state} valid={Boolean(output.result&&!sessionCheck.outOfSync)} onLoad={loadSavedSnapshot}/>
       <PlayPanel sheet={sheet??null} state={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
       <SurvivalPanel sheet={sheet??null} state={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
@@ -361,7 +361,7 @@ export default function Home(){
                 <div className="level-stepper-display" role="status" aria-live="polite" aria-atomic="true">
                   <span className="level-stepper-eyebrow">NIVEL ACTUAL</span>
                   <strong className="level-stepper-number">{level}</strong>
-                  <span className="level-stepper-range">Guerrero · 1 a 19</span>
+                  <span className="level-stepper-range">Guerrero · 1 a 20</span>
                 </div>
                 <button type="button" className="level-stepper-arrow" aria-label="Subir un nivel" title="Subir un nivel" disabled={adjacentFighterLevel(level,1)===null}
                   onClick={()=>{const next=adjacentFighterLevel(level,1);if(next!==null)selectFighterLevel(next);}}><span aria-hidden="true">→</span></button>
@@ -375,7 +375,7 @@ export default function Home(){
                 <small>El estilo debe ser distinto del primero. La elección se consolida al subir a 7.</small>
               </label>}
             </div>
-            {level>=3&&<div className="info-line">Subclase: Campeón. Próximo nivel: {level===19?'pendiente de ampliar':level+1}.</div>}
+            {level>=3&&<div className="info-line">Subclase: Campeón. Próximo nivel: {level===20?'nivel máximo':level+1}.</div>}
             {output.error&&<p className="save-error" role="alert">La hoja actual de nivel {level} tiene un error que impide la progresión o el guardado: {output.error}</p>}
             {sessionCheck.outOfSync&&<p className="save-error" role="alert">Nivel {level} sin sincronizar: han cambiado los PG máximos o el estado de partida. Al intentar subir se solicitará confirmar la sincronización sin borrar la sesión.</p>}
             {levelMessage&&<p className="level-stepper-message" role="alert">{levelMessage}</p>}

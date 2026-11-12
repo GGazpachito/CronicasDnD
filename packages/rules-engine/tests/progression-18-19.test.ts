@@ -30,9 +30,10 @@ const sheet=(input:GuidedFighterInput)=>calc(input).sheet;
 const damage=(input:GuidedFighterInput,amount:number)=>applyAdventureAction(initialAdventureState(sheet(input)),{type:'damage',amount},sheet(input)).state;
 
 describe('Actualización 34: Superviviente y beneficio épico',()=>{
-  it('las flechas admiten 17→18→19 y se detienen en 19',()=>{
+  it('las flechas admiten 17→18→19 y continúan hasta 20',()=>{
     expect(adjacentFighterLevel(17,1)).toBe(18);expect(adjacentFighterLevel(18,1)).toBe(19);
-    expect(adjacentFighterLevel(19,1)).toBeNull();expect(adjacentFighterLevel(19,-1)).toBe(18);
+    expect(adjacentFighterLevel(19,1)).toBe(20);
+    expect(adjacentFighterLevel(20,1)).toBeNull();expect(adjacentFighterLevel(19,-1)).toBe(18);
   });
   it('a nivel 18 se obtiene Superviviente una sola vez',()=>{
     const s=sheet(at18());expect(s.features).toContain('champion_survivor');

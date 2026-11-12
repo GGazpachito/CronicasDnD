@@ -1,4 +1,4 @@
-/** Fase 4.3 · Ataques con armas D&D 2024, niveles 1–17 del Guerrero.
+/** Fase 4.3 · Ataques con armas D&D 2024, niveles 1–20 del Guerrero.
  * Datos mecánicos normalizados del PHB 2024, pp. 12, 25-28, 96, 209-210, 213-215.
  * Calculador puro: no modifica criaturas, inventarios ni estados de partida.
  */
@@ -114,7 +114,7 @@ export function calculateWeaponAttack(
   sheet:CalculatedFighterSheet, weaponId:WeaponId, style:FightingStyleId|readonly FightingStyleId[],
   masteries:readonly WeaponId[], options:WeaponAttackOptions={}
 ):WeaponAttackProfile {
-  if(!sheet||sheet.classId!=='fighter'||sheet.ruleset!=='dnd-2024'||sheet.level<1||sheet.level>19)throw new RangeError('Hoja de Guerrero 2024 nivel 1–19 requerida');
+  if(!sheet||sheet.classId!=='fighter'||sheet.ruleset!=='dnd-2024'||sheet.level<1||sheet.level>20)throw new RangeError('Hoja de Guerrero 2024 nivel 1–20 requerida');
   if(!isWeapon(weaponId))throw new RangeError('Arma desconocida');
   const styles:readonly FightingStyleId[]=typeof style==='string'?[style]:style;
   if(!Array.isArray(styles)||styles.length<1||styles.length>(sheet.level>=7?2:1)||new Set(styles).size!==styles.length||styles.some(s=>!['archery','blind_fighting','defense','dueling','great_weapon_fighting','interception','protection','thrown_weapon_fighting','two_weapon_fighting','unarmed_fighting'].includes(s)))throw new RangeError('Estilos de combate desconocidos, duplicados o no desbloqueados');

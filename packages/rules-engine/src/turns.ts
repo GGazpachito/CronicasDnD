@@ -42,7 +42,7 @@ export function validateTurnTracker(raw:unknown):TurnTracker{
   const actionsUsed=safeInt(o.actionsUsed,0,actionLimit,'Acciones gastadas');
   const movementUsedFeet=safeInt(o.movementUsedFeet,0,MAX_MOVE,'Movimiento gastado');
   const dashes=safeInt(o.dashes,0,actionLimit,'Acciones Correr');
-  const attackActionAttacksUsed=safeInt(o.attackActionAttacksUsed??(o.attackActionUsed?1:0),0,3,'Ataques de la acción Atacar');
+  const attackActionAttacksUsed=safeInt(o.attackActionAttacksUsed??(o.attackActionUsed?1:0),0,4,'Ataques de la acción Atacar');
   for(const k of ['active','bonusUsed','reactionUsed','attackActionUsed','lightExtraUsed','cleaveExtraUsed'])
     if(typeof o[k]!=='boolean')fail(`Bandera ${k} inválida`);
   const active=o.active as boolean;
@@ -68,7 +68,7 @@ export function validateTurnTracker(raw:unknown):TurnTracker{
  */
 export function suggestAttackTurnUsage(raw:TurnTracker, fighterLevel:number):AttackTurnUsage{
   const turn=validateTurnTracker(raw);
-  const attacksPerAction=fighterLevel>=11?3:fighterLevel>=5?2:1;
+  const attacksPerAction=fighterLevel>=20?4:fighterLevel>=11?3:fighterLevel>=5?2:1;
   return turn.active&&turn.attackActionUsed&&(turn.attackActionAttacksUsed??0)>0&&(turn.attackActionAttacksUsed??0)<attacksPerAction
     ?'extra_attack':'attack_action';
 }
@@ -117,7 +117,7 @@ export function moveOnTurn(raw:TurnTracker,feet:number,adjustedSpeedFeet:number)
 /** Registro declarado de un ataque: se comprueban espacios, no se inventan enemigos. */
 export function spendAttackOnTurn(raw:TurnTracker,kind:AttackTurnUsage,details:Readonly<{
   lightExtra:boolean;nickMastery:boolean;cleaveMastery:boolean;hitCreature:boolean;
-  weaponId:string;targetName:string;attackLimit?:1|2|3;
+  weaponId:string;targetName:string;attackLimit?:1|2|3|4;
 }>):TurnTracker{
   const t=validateTurnTracker(raw);
   if(kind==='untracked')return t;

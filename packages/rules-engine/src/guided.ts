@@ -32,7 +32,7 @@ export const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8] as const;
 
 export type GuidedFighterInput = Readonly<{
   name: string;
-  level: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19;
+  level: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20;
   /** Solo desde el nivel 4; otras dotes generales quedan fuera de este incremento. */
   level4Improvement?: FighterLevel4Improvement;
   /** Segunda mejora independiente desde nivel 6. */
@@ -97,7 +97,7 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
   const bg = BACKGROUNDS[input.background];
   if (!bg) fail('Trasfondo no disponible');
   if (!['human','dwarf','elf'].includes(input.species)) fail('Especie no disponible');
-  if (![1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19].includes(input.level)) fail('Solo Guerrero nivel 1 a 19');
+  if (![1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20].includes(input.level)) fail('Solo Guerrero nivel 1 a 20');
   if (!input.name?.trim() || input.name.length > 120) fail('Introduce un nombre válido');
   if (!input.assignedAbilities || typeof input.assignedAbilities !== 'object') fail('Faltan características');
   const assigned = ABILITIES.map(a => input.assignedAbilities[a]);

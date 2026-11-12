@@ -58,7 +58,7 @@ export default function TurnPanel({fighterLevel,heroicWarrior,epicSpeed=false,co
           <button type="button" disabled={!canAct||speed===0||!Number.isInteger(feet)||feet<1||feet>movementRemaining} onClick={()=>change(c=>moveCombatCharacter(c,feet,speed),`${feet} pies recorridos.`)}>Registrar movimiento</button>
           <p className="muted-note">Velocidad actual: {speed} pies · Correr: {turn.dashes} vez/veces · Movimiento usado: {turn.movementUsedFeet}. Introduce el coste real en pies, incluido terreno difícil. No se calculan posiciones sobre un mapa.</p>
         </div>
-        <p className="muted-note">Ataques: {turn.attackActionUsed?`acción Atacar: ${turn.attackActionAttacksUsed??1} de {fighterLevel>=11?3:fighterLevel>=5?2:1} ataque(s) confirmado(s)`:'acción Atacar pendiente'} · Ataque extra Ligera: {turn.lightExtraUsed?'usado':'no usado'} · Ataque extra Tajo: {turn.cleaveExtraUsed?'usado':'no usado'}. Elige el gasto correspondiente en «Ataques con armas» antes de confirmar.</p>
+        <p className="muted-note">Ataques: {turn.attackActionUsed?`acción Atacar: ${turn.attackActionAttacksUsed??1} de {fighterLevel>=20?4:fighterLevel>=11?3:fighterLevel>=5?2:1} ataque(s) confirmado(s)`:'acción Atacar pendiente'} · Ataque extra Ligera: {turn.lightExtraUsed?'usado':'no usado'} · Ataque extra Tajo: {turn.cleaveExtraUsed?'usado':'no usado'}. Elige el gasto correspondiente en «Ataques con armas» antes de confirmar.</p>
         {turn.cleaveReadyWeapon&&!turn.cleaveExtraUsed&&<p className="info-line">Tajo disponible tras impactar a «{turn.cleaveFirstTarget}»: comprueba que la segunda criatura esté a 5 pies de la primera y a tu alcance.</p>}
       </>}
     </>}

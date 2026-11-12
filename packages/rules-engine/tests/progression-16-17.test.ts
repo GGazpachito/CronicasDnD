@@ -33,7 +33,8 @@ describe('Actualización 33 · Guerrero niveles 16 y 17',()=>{
     expect(adjacentFighterLevel(16,1)).toBe(17);
     expect(adjacentFighterLevel(17,1)).toBe(18);
     expect(adjacentFighterLevel(18,1)).toBe(19);
-    expect(adjacentFighterLevel(19,1)).toBeNull();
+    expect(adjacentFighterLevel(19,1)).toBe(20);
+    expect(adjacentFighterLevel(20,1)).toBeNull();
     expect(adjacentFighterLevel(17,-1)).toBe(16);
   });
   it('la sexta maestría y la mejora se desbloquean juntas en nivel 16',()=>{

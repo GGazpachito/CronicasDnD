@@ -189,13 +189,15 @@ describe('Guerrero y Campeón, niveles 10 y 11',()=>{
     expect(game.turn?.attackActionAttacksUsed).toBe(3);
     expect(game.attacks).toHaveLength(6);
   });
-  it('la validación del turno admite tres golpes y rechaza cuatro',()=>{
+  it('la validación admite hasta cuatro golpes, y el nivel 11 limita a tres',()=>{
     let t=startTurnTracker(initialTurn());const args={...detail,attackLimit:3 as const};
     t=spendAttackOnTurn(t,'attack_action',args);
     t=spendAttackOnTurn(t,'extra_attack',args);
     t=spendAttackOnTurn(t,'extra_attack',args);
     expect(validateTurnTracker(t).attackActionAttacksUsed).toBe(3);
-    expect(()=>validateTurnTracker({...t,attackActionAttacksUsed:4})).toThrow();
+    expect(validateTurnTracker({...t,attackActionAttacksUsed:4}).attackActionAttacksUsed).toBe(4);
+    expect(()=>validateTurnTracker({...t,attackActionAttacksUsed:5})).toThrow();
+    expect(()=>spendAttackOnTurn(t,'extra_attack',args)).toThrow();
   });
 });
 function initialTurn(){return {number:0,active:false,actionLimit:1 as const,actionsUsed:0,bonusUsed:false,reactionUsed:false,movementUsedFeet:0,dashes:0,attackActionUsed:false,attackActionAttacksUsed:0,lightExtraUsed:false,cleaveExtraUsed:false,cleaveReadyWeapon:null,cleaveFirstTarget:null};}

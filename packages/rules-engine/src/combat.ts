@@ -302,7 +302,7 @@ export function recordWeaponAttack(
   const nextTurn=combat.turn?spendAttackOnTurn(combat.turn,usage,{
     lightExtra:profile.lightExtraAttack,nickMastery:profile.mastery==='Nick',cleaveMastery:profile.mastery==='Cleave',
     hitCreature:finalResolution.hit===true&&validatedContext?.targetIsCreature===true,
-    weaponId:profile.weaponId,targetName:validatedContext?.targetName??'',attackLimit:fighterLevel>=11?3:fighterLevel>=5?2:1,
+    weaponId:profile.weaponId,targetName:validatedContext?.targetName??'',attackLimit:fighterLevel>=20?4:fighterLevel>=11?3:fighterLevel>=5?2:1,
   }):undefined;
   if(!profile||!resolution||!weapon(profile.weaponId))fail('Perfil de ataque inválido');
   const stats=WEAPON_STATS[profile.weaponId];

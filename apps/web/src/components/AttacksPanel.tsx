@@ -63,7 +63,7 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
     ?(attackUsage?.stepKey===stepKey?attackUsage.value:suggestedUsage)
     :'untracked';
   const extraAttackReady=tracked&&sheet!==null&&sheet.level>=5&&turn?.active===true&&
-    turn.attackActionUsed&&(turn.attackActionAttacksUsed??0)<(sheet.level>=11?3:2);
+    turn.attackActionUsed&&(turn.attackActionAttacksUsed??0)<(sheet.level>=20?4:sheet.level>=11?3:2);
   const vexActive=hasVexAdvantage(combat?.masteryEffects,targetName);
   const studiedActive=Boolean(sheet&&sheet.level>=13&&hasStudiedAdvantage(combat?.studiedAttacks,targetName));
   let profile:WeaponAttackProfile|null=null;
@@ -132,7 +132,7 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
         </select></label>
       </div>
       {tracked&&sheet.level>=5&&turn?.active&&<p className={extraAttackReady?'info-line':'muted-note'} role="status">
-        Acción Atacar: {turn.attackActionAttacksUsed??(turn.attackActionUsed?1:0)} de {sheet.level>=11?3:sheet.level>=5?2:1} ataques registrados en la última acción Atacar.
+        Acción Atacar: {turn.attackActionAttacksUsed??(turn.attackActionUsed?1:0)} de {sheet.level>=20?4:sheet.level>=11?3:sheet.level>=5?2:1} ataques registrados en la última acción Atacar.
         {extraAttackReady?' Puedes usar el siguiente ataque de la misma acción sin gastar otra; se seleccionará automáticamente.':' El primer golpe gasta una acción; el segundo no consume otra.'}
       </p>}
       {tracked&&<div className="attack-form-grid">

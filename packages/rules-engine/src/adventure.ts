@@ -83,6 +83,11 @@ export function validateAdventureState(value:unknown,sheet:CalculatedFighterShee
   const temporaryHitPoints=requireInteger(value.temporaryHitPoints,'PG temporales',0,100_000);
   const spentHitDice=requireInteger(value.spentHitDice,'Dados de golpe gastados',0,sheet.hitDice.total);
   const combat=value.combat===undefined?initialCombatState():validateCombatState(value.combat);
+  // La validación del turno permite el máximo global (4), pero la hoja debe
+  // respetar el límite real desbloqueado en este nivel.
+  const attacksPerAction=sheet.level>=20?4:sheet.level>=11?3:sheet.level>=5?2:1;
+  if(combat.turn&&(combat.turn.attackActionAttacksUsed??(combat.turn.attackActionUsed?1:0))>attacksPerAction)
+    throw new RangeError('La sesión contiene más ataques por acción Atacar de los permitidos a este nivel');
   const magicWards=value.magicWards===undefined?[]:validateMagicWards(value.magicWards);
   const survival=value.survival===undefined?initialSurvivalState():validateSurvivalState(value.survival,fighter.hitPoints.current);
   if(survival.concentration&&!conditionCapabilities(combat.conditions??initialConditionLedger()).canConcentrate)
@@ -324,8 +329,8 @@ export function resourceDisplay(state:AdventureState,sheet:CalculatedFighterShee
  */
 export function advanceAdventureLevel(source:AdventureState,oldSheet:CalculatedFighterSheet,newSheet:CalculatedFighterSheet):AdventureState{
   const before=validateAdventureState(source,oldSheet);
-  if(oldSheet.classId!=='fighter'||newSheet.classId!=='fighter'||newSheet.level!==oldSheet.level+1||newSheet.level>19)
-    throw new RangeError('Solo se permite subir un nivel del Guerrero hasta 19');
+  if(oldSheet.classId!=='fighter'||newSheet.classId!=='fighter'||newSheet.level!==oldSheet.level+1||newSheet.level>20)
+    throw new RangeError('Solo se permite subir un nivel del Guerrero hasta 20');
   if(oldSheet.id!==newSheet.id||oldSheet.name!==newSheet.name)throw new RangeError('La progresión debe mantener la identidad del personaje');
   const fighter=advanceFighterLevel(before.fighter,newSheet.level,newSheet.maximumHitPoints);
   return validateAdventureState({...before,fighter},newSheet);
