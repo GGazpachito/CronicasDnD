@@ -1,4 +1,4 @@
-/** Paso 05. Recursos persistentes del Guerrero (niveles 1-15), D&D 2024.
+/** Paso 05. Recursos persistentes del Guerrero (niveles 1-17), D&D 2024.
  * Funciones puras. Ninguna operación restaura recursos salvo descansos explícitos.
  */
 export type FighterResourceId = 'second_wind' | 'action_surge' | 'indomitable';
@@ -17,15 +17,15 @@ function integer(value: unknown, name: string, minimum: number, maximum: number)
   }
   return value;
 }
-function fighterLevel(value: number): number { return integer(value, 'fighterLevel', 1, 15); }
+function fighterLevel(value: number): number { return integer(value, 'fighterLevel', 1, 17); }
 
 /** Los máximos se derivan del nivel, jamás del estado persistido. */
 export function fighterResourceMaximum(level: number, id: FighterResourceId): number {
   const n = fighterLevel(level);
   switch (id) {
     case 'second_wind': return n >= 10 ? 4 : n >= 4 ? 3 : 2;
-    case 'action_surge': return n >= 2 ? 1 : 0;
-    case 'indomitable': return n >= 13 ? 2 : n >= 9 ? 1 : 0;
+    case 'action_surge': return n >= 17 ? 2 : n >= 2 ? 1 : 0;
+    case 'indomitable': return n >= 17 ? 3 : n >= 13 ? 2 : n >= 9 ? 1 : 0;
     default: throw new TypeError('Recurso no reconocido');
   }
 }
@@ -39,7 +39,7 @@ export function initialFighterState(level: number, maximumHitPoints: number): Fi
     hitPoints: { current: hp, maximum: hp },
     resources: {
       second_wind: { current: fighterResourceMaximum(n,'second_wind') },
-      ...(n >= 2 ? { action_surge: { current: 1 } } : {}),
+      ...(n >= 2 ? { action_surge: { current: fighterResourceMaximum(n,'action_surge') } } : {}),
       ...(n >= 9 ? { indomitable: { current: fighterResourceMaximum(n,'indomitable') } } : {}),
     },
   };
@@ -91,7 +91,7 @@ export function finishFighterRest(state: FighterState, rest: RecoveryReason): Fi
   const secondWind = rest === 'long_rest' ? maxWind : Math.min(maxWind, currentSecondWind + 1);
   const next = changeResource(state, 'second_wind', secondWind);
   if (state.fighterLevel === 1) return next;
-  const surged=changeResource(next, 'action_surge', 1);
+  const surged=changeResource(next, 'action_surge', fighterResourceMaximum(state.fighterLevel,'action_surge'));
   return rest==='long_rest'&&state.fighterLevel>=9?changeResource(surged,'indomitable',fighterResourceMaximum(state.fighterLevel,'indomitable')):surged;
 }
 
@@ -155,6 +155,10 @@ export function advanceFighterLevel(state: FighterState, nextLevel: number, newM
       ...(level === 2 ? { action_surge: { current: 1 } } : {}),
       ...(level === 9 ? { indomitable: { current: 1 } } : {}),
       ...(level === 13 ? { indomitable: { current: Math.min(2,(state.resources.indomitable?.current??0)+1) } } : {}),
+      ...(level === 17 ? {
+        action_surge:{current:Math.min(2,(state.resources.action_surge?.current??0)+1)},
+        indomitable:{current:Math.min(3,(state.resources.indomitable?.current??0)+1)},
+      } : {}),
     },
   };
 }

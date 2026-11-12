@@ -47,14 +47,14 @@ export type MartialChoices = Readonly<{
   weaponMasteries: readonly WeaponId[];
   startingPackage: StartingPackageId;
 }>;
-export function validateMartialChoices(value: unknown, expectedMasteries:3|4|5=3, requireAdditionalStyle=false): MartialChoices {
+export function validateMartialChoices(value: unknown, expectedMasteries:3|4|5|6=3, requireAdditionalStyle=false): MartialChoices {
   if (!value || typeof value!=='object') throw new RangeError('Selecciona las opciones marciales del Guerrero');
   const v=value as Partial<MartialChoices>;
   if (typeof v.fightingStyle!=='string' || !Object.prototype.hasOwnProperty.call(FIGHTING_STYLES,v.fightingStyle)) throw new RangeError('Estilo de combate inválido');
   if(requireAdditionalStyle){
     if(typeof v.additionalFightingStyle!=='string'||!Object.hasOwn(FIGHTING_STYLES,v.additionalFightingStyle)||v.additionalFightingStyle===v.fightingStyle) throw new RangeError('Campeón nivel 7: elige un segundo estilo distinto del primero');
   }else if(v.additionalFightingStyle!==undefined)throw new RangeError('El segundo estilo solo se desbloquea en Campeón nivel 7');
-  if (!Array.isArray(v.weaponMasteries) || v.weaponMasteries.length!==expectedMasteries || new Set(v.weaponMasteries).size!==expectedMasteries || v.weaponMasteries.some(w=>typeof w!=='string'||!Object.prototype.hasOwnProperty.call(WEAPONS,w))) throw new RangeError(`El Guerrero debe elegir exactamente ${expectedMasteries===3?'tres':expectedMasteries===4?'cuatro':'cinco'} armas distintas para Maestría`);
+  if (!Array.isArray(v.weaponMasteries) || v.weaponMasteries.length!==expectedMasteries || new Set(v.weaponMasteries).size!==expectedMasteries || v.weaponMasteries.some(w=>typeof w!=='string'||!Object.prototype.hasOwnProperty.call(WEAPONS,w))) throw new RangeError(`El Guerrero debe elegir exactamente ${expectedMasteries===3?'tres':expectedMasteries===4?'cuatro':expectedMasteries===5?'cinco':'seis'} armas distintas para Maestría`);
   if (typeof v.startingPackage!=='string' || !Object.prototype.hasOwnProperty.call(FIGHTER_PACKAGES,v.startingPackage)) throw new RangeError('Paquete de equipo inicial inválido');
   return v as MartialChoices;
 }

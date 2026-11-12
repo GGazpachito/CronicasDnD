@@ -1,4 +1,4 @@
-/** Fase 4.3 · Ataques con armas D&D 2024, niveles 1–15 del Guerrero.
+/** Fase 4.3 · Ataques con armas D&D 2024, niveles 1–17 del Guerrero.
  * Datos mecánicos normalizados del PHB 2024, pp. 12, 25-28, 96, 209-210, 213-215.
  * Calculador puro: no modifica criaturas, inventarios ni estados de partida.
  */
@@ -114,11 +114,11 @@ export function calculateWeaponAttack(
   sheet:CalculatedFighterSheet, weaponId:WeaponId, style:FightingStyleId|readonly FightingStyleId[],
   masteries:readonly WeaponId[], options:WeaponAttackOptions={}
 ):WeaponAttackProfile {
-  if(!sheet||sheet.classId!=='fighter'||sheet.ruleset!=='dnd-2024'||sheet.level<1||sheet.level>15)throw new RangeError('Hoja de Guerrero 2024 nivel 1–15 requerida');
+  if(!sheet||sheet.classId!=='fighter'||sheet.ruleset!=='dnd-2024'||sheet.level<1||sheet.level>17)throw new RangeError('Hoja de Guerrero 2024 nivel 1–17 requerida');
   if(!isWeapon(weaponId))throw new RangeError('Arma desconocida');
   const styles:readonly FightingStyleId[]=typeof style==='string'?[style]:style;
   if(!Array.isArray(styles)||styles.length<1||styles.length>(sheet.level>=7?2:1)||new Set(styles).size!==styles.length||styles.some(s=>!['archery','blind_fighting','defense','dueling','great_weapon_fighting','interception','protection','thrown_weapon_fighting','two_weapon_fighting','unarmed_fighting'].includes(s)))throw new RangeError('Estilos de combate desconocidos, duplicados o no desbloqueados');
-  if(!Array.isArray(masteries)||masteries.length!==(sheet.level>=10?5:sheet.level>=4?4:3)||new Set(masteries).size!==(sheet.level>=10?5:sheet.level>=4?4:3)||masteries.some(x=>!isWeapon(x)))throw new RangeError('Maestrías de Guerrero inválidas para su nivel');
+  if(!Array.isArray(masteries)||masteries.length!==(sheet.level>=16?6:sheet.level>=10?5:sheet.level>=4?4:3)||new Set(masteries).size!==(sheet.level>=16?6:sheet.level>=10?5:sheet.level>=4?4:3)||masteries.some(x=>!isWeapon(x)))throw new RangeError('Maestrías de Guerrero inválidas para su nivel');
   if(!options||typeof options!=='object'||Array.isArray(options))throw new RangeError('Opciones de ataque inválidas');
   for(const key of Object.keys(options))if(!['ability','thrown','twoHanded','lightExtraAttack','otherWeaponHeld','adjacentEnemy','advantage','conditionAdvantage','conditionDisadvantage','conditionD20Penalty','targetDistanceFeet','tacticalMastery'].includes(key))throw new RangeError('Opción de ataque desconocida');
   for(const key of ['thrown','twoHanded','lightExtraAttack','otherWeaponHeld','adjacentEnemy','advantage','conditionAdvantage','conditionDisadvantage'] as const)if(options[key]!==undefined&&typeof options[key]!=='boolean')throw new RangeError(`${key} debe ser booleano`);

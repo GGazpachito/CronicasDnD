@@ -27,10 +27,11 @@ const sheet=(input:GuidedFighterInput)=>calculateGuidedFighter(input).sheet;
 const profile=(input:GuidedFighterInput)=>calculateWeaponAttack(sheet(input),'greatsword',['defense','archery'],input.martial!.weaponMasteries);
 
 describe('Actualización 32 · niveles 14 y 15',()=>{
- it('el indicador avanza 13→14→15 y bloquea el máximo',()=>{
+ it('el indicador avanza 13→14→15 y permite continuar hasta 17',()=>{
    expect(adjacentFighterLevel(13,1)).toBe(14);
    expect(adjacentFighterLevel(14,1)).toBe(15);
-   expect(adjacentFighterLevel(15,1)).toBeNull();
+   expect(adjacentFighterLevel(15,1)).toBe(16);
+   expect(adjacentFighterLevel(17,1)).toBeNull();
    expect(adjacentFighterLevel(15,-1)).toBe(14);
  });
  it('nivel 14 exige una quinta mejora y no se puede adelantar',()=>{

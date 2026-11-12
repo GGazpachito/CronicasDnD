@@ -1,4 +1,4 @@
-/** Paso 06: proyección pura de una hoja de Guerrero D&D 2024 (niveles 1-15).
+/** Paso 06: proyección pura de una hoja de Guerrero D&D 2024 (niveles 1-17).
  * Los datos persistidos y las elecciones son de entrada; nunca se modifican.
  */
 import { abilityModifiers, proficiencyBonus, validateAbilityScores, type Ability, type AbilityScores } from './abilities';
@@ -12,7 +12,7 @@ export type FighterCharacterInput = Readonly<{
   id: string;
   name: string;
   ruleset: 'dnd-2024';
-  fighterLevel: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15;
+  fighterLevel: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17;
   baseAbilities: AbilityScores;
   /** Competencias ya concedidas por clase, trasfondo y elecciones validadas fuera de este módulo. */
   baseProficiencies: ProficiencyGrants;
@@ -59,7 +59,7 @@ function validateIdentity(input: FighterCharacterInput): void {
   if (typeof input.id !== 'string' || !/^[a-zA-Z0-9:_-]{1,100}$/.test(input.id)) throw new TypeError('id inválido');
   if (typeof input.name !== 'string' || !input.name.trim() || input.name.length > 120) throw new TypeError('name inválido');
   if (input.ruleset !== 'dnd-2024') throw new TypeError('Esta proyección solo admite D&D 2024');
-  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].includes(input.fighterLevel)) throw new RangeError('Solo Guerrero nivel 1 a 15');
+  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17].includes(input.fighterLevel)) throw new RangeError('Solo Guerrero nivel 1 a 17');
   if (input.fighterLevel < 3 && input.subclass !== undefined) throw new RangeError('La subclase se elige a nivel 3');
   if (input.fighterLevel >= 3 && input.subclass !== 'champion') throw new TypeError('Selecciona la subclase Campeón para nivel 3');
   if (!input.baseProficiencies || typeof input.baseProficiencies !== 'object') throw new TypeError('Faltan competencias iniciales');
@@ -82,6 +82,8 @@ function fighterFeatures(level: number, subclass: 'champion' | null): readonly s
     ...(level>=12?['ability_score_improvement_level_12']:[]),
     ...(level>=13?['studied_attacks']:[]),
     ...(level>=14?['ability_score_improvement_level_14']:[]),
+    ...(level>=16?['ability_score_improvement_level_16','weapon_mastery_sixth']:[]),
+    ...(level>=17?['action_surge_two_uses','indomitable_three_uses']:[]),
     ...(subclass==='champion'&&level>=15?['champion_superior_critical']:[]),
   ];
 }

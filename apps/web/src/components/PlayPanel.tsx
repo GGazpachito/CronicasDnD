@@ -54,7 +54,7 @@ export default function PlayPanel({sheet,state,outOfSync,onChange}:Props){
         <div><span>PG temporales</span><strong>{state.temporaryHitPoints}</strong></div>
         <div><span>Dados de golpe disponibles</span><strong>{available} / {sheet.hitDice.total} d10</strong></div>
         <div><span>Segundo aliento</span><strong>{resources?.second_wind?.current ?? 0} / {resources?.second_wind?.maximum ?? 0}</strong></div>
-        {sheet.level>=2&&<div><span>Acción súbita</span><strong>{resources?.action_surge?.current ?? 0} / {resources?.indomitable?.maximum??1}</strong></div>}
+        {sheet.level>=2&&<div><span>Acción súbita</span><strong>{resources?.action_surge?.current ?? 0} / {resources?.action_surge?.maximum??1}</strong></div>}
         {sheet.level>=9&&<div><span>Indomable</span><strong>{resources?.indomitable?.current??0} / {resources?.indomitable?.maximum??1}</strong></div>}
       </div>
       {state.fighter.hitPoints.current===0&&<p className="play-warning" role="alert">El personaje está a 0 PG. Gestiona sus salvaciones contra muerte y estabilización en el panel siguiente. No puede descansar ni utilizar acciones de clase.</p>}
@@ -82,7 +82,7 @@ export default function PlayPanel({sheet,state,outOfSync,onChange}:Props){
         </div>}
         <div className="play-action-group play-rest-group"><h3>Descansos</h3>
           <label className="field"><span>Resultados de dados de golpe d10 (ej.: 6, 3); vacío = no gastar dados</span><input type="text" value={hitDieRolls} placeholder="6, 3" onChange={e=>setHitDieRolls(e.target.value)}/></label>
-          <p className="muted-note">Descanso corto: recupera un uso de Segundo aliento, Acción súbita y PG de los dados gastados. No se pueden gastar más de {available} dados.</p>
+          <p className="muted-note">Descanso corto: recupera un uso de Segundo aliento, todos los usos de Acción súbita y PG de los dados gastados. No se pueden gastar más de {available} dados.</p>
           <div className="play-buttons"><button type="button" disabled={!ready||state.fighter.hitPoints.current===0} onClick={()=>act({type:'short_rest',hitDieRolls:dice()})}>Terminar descanso corto</button><button type="button" disabled={!ready||state.fighter.hitPoints.current===0} onClick={()=>{if(window.confirm('¿Terminar un descanso largo válido según las reglas?'))act({type:'long_rest'});}}>Terminar descanso largo</button></div>
           <p className="muted-note">Descanso largo: restaura PG, dados de golpe y recursos; los PG temporales desaparecen. Los tiempos e interrupciones los confirma el DM.</p>
         </div>
