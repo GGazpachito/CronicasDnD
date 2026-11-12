@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {EPIC_BOONS,type EpicBoonId} from "../../../../packages/rules-engine/src/epic-boons";
 import SaveLoadPanel from "../components/SaveLoadPanel";
 import CharacterHeader from "../components/CharacterHeader";
+import PrincipalOverview from "../components/PrincipalOverview";
 import CharacterTabs, { type SheetTab } from "../components/CharacterTabs";
 import SheetPlaceholder from "../components/SheetPlaceholder";
 import PlayPanel from "../components/PlayPanel";
@@ -55,6 +56,8 @@ const b=BACKGROUNDS[bg];return {plusTwoAbility:b.abilities[0] as Ability,plusOne
 export default function Home(){
   const [step,setStep]=useState(0);
   const [activeTab,setActiveTab]=useState<SheetTab>("principal");
+  const editorDetailsRef=useRef<HTMLDetailsElement>(null);
+  const toolsDetailsRef=useRef<HTMLDetailsElement>(null);
   const [adventure,setAdventure]=useState<AdventureState|null>(null);
   const [name,setName]=useState('Aldric');
   const [level,setLevel]=useState<SupportedFighterLevel>(1);
@@ -341,6 +344,7 @@ export default function Home(){
   function changeMastery(index:number,value:WeaponId){setMasteries(prev=>prev.map((old,i)=>i===index?value:old));}
   // Un acceso desde otra pestaña debe abrir el editor Y llevar al control elegido.
   function openEditorAt(targetStep:number, levelControl=false){
+    editorDetailsRef.current?.setAttribute("open", "");
     setStep(targetStep);
     setActiveTab('principal');
     window.requestAnimationFrame(()=>{
@@ -348,10 +352,14 @@ export default function Home(){
         ?.scrollIntoView({behavior:'smooth',block:'start'});
     });
   }
+  function openExistingTools(target:"attacks"|"resources") {
+    toolsDetailsRef.current?.setAttribute("open", "");
+    window.requestAnimationFrame(()=>document.getElementById(target==="attacks"?"existing-attacks-panel":"existing-play-tools")?.scrollIntoView({behavior:"smooth",block:"start"}));
+  }
   return <main className="app-shell">
     <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Hoja digital · D&D 2024</span></div></div><div className="status"><span className="status-dot"/> Edición local · Guardado manual</div></header>
     <div className="content">
-      <p className="sheet-release-note">ACTUALIZACIÓN 36 · REDISEÑO POR PESTAÑAS</p>
+      <p className="sheet-release-note">ACTUALIZACIÓN 37 · HOJA PRINCIPAL DE CONSULTA</p>
       <CharacterHeader
         name={name}
         level={level}
@@ -364,8 +372,9 @@ export default function Home(){
       <SaveLoadPanel input={input} adventure={sessionCheck.outOfSync?null:sessionCheck.state} valid={Boolean(output.result&&!sessionCheck.outOfSync)} onLoad={loadSavedSnapshot}/>
       <CharacterTabs activeTab={activeTab} onChange={setActiveTab}/>
       <section id="sheet-panel-principal" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-principal" hidden={activeTab!=='principal'}>
-        <div className="sheet-section-heading"><div><span className="eyebrow">PÁGINA PRINCIPAL</span><h2>Tu hoja, en vivo</h2><p>Conservamos el editor y la hoja calculada mientras trasladamos cada módulo a su pestaña definitiva.</p></div></div>
-      <details className="legacy-tools panel">
+        <div className="sheet-section-heading"><div><span className="eyebrow">PÁGINA PRINCIPAL</span><h2>Tu hoja de personaje</h2><p>Valores calculados por el motor. Las tiradas y controles directos llegarán en las siguientes fases.</p></div></div>
+      <PrincipalOverview result={output.result} error={output.error} input={input} adventure={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onEdit={openEditorAt} onOpenTools={openExistingTools}/>
+      <details id="existing-play-tools" ref={toolsDetailsRef} className="legacy-tools panel">
         <summary>Herramientas existentes de partida y combate <span>8 módulos conservados</span></summary>
         <p className="muted-note">Estos sistemas siguen disponibles mientras rediseñamos la hoja. La pestaña Combate completa se desarrollará más adelante.</p>
         <div className="legacy-tools-content">
@@ -375,10 +384,15 @@ export default function Home(){
       <IncomingAttacksPanel sheet={sheet??null} state={sessionCheck.state} species={output.result?.origin.species??null} inventory={output.result?.inventory??null} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
       <ConditionsPanel combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} outOfSync={sessionCheck.outOfSync} onChange={handleCombatChange} baseSpeed={output.result?.origin.speedFeet??30}/>
       <TurnPanel fighterLevel={sheet?.level??level} heroicWarrior={sheet?.features.includes('champion_heroic_warrior')??false} epicSpeed={sheet?.features.includes('epic_boon_speed')??false} combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} outOfSync={sessionCheck.outOfSync} onChange={handleCombatChange} baseSpeedFeet={output.result?.origin.speedFeet??30} hitPoints={sessionCheck.state?.fighter.hitPoints.current??0}/>
+      <div id="existing-attacks-panel">
       <AttacksPanel combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} sheet={sheet??null} inventory={output.result?.inventory??null} martial={input.martial??null} onRecord={confirmWeaponAttack} canRecord={Boolean(sheet&&!sessionCheck.outOfSync&&sessionCheck.state&&sessionCheck.state.fighter.hitPoints.current>0&&conditionCapabilities(sessionCheck.state.combat.conditions??initialConditionLedger()).canTakeAction)}/>
+      </div>
       <CombatPanel combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} outOfSync={sessionCheck.outOfSync} onChange={handleCombatChange}/>
         </div>
       </details>
+      <details className="overview-editor-details" ref={editorDetailsRef}>
+        <summary>Editar personaje y consultar la hoja técnica original <span>Creación · progresión · inventario</span></summary>
+        <div className="overview-editor-content">
       <nav className="wizard-tabs" aria-label="Pasos de creación">{STEPS.map((s,i)=><button type="button" key={s} className={step===i?'active':''} aria-current={step===i?'step':undefined} onClick={()=>setStep(i)}><span>{String(i+1).padStart(2,'0')}</span>{s}</button>)}</nav>
       <div className="workspace">
         <aside id="character-editor" className="editor panel">
@@ -586,6 +600,8 @@ export default function Home(){
           </>}
         </section>
       </div>
+        </div>
+      </details>
       </section>
       <section id="sheet-panel-rasgos" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-rasgos" hidden={activeTab!=='rasgos'}>
         <SheetPlaceholder eyebrow="RASGOS · FASE 40" title="Rasgos de tu personaje"
