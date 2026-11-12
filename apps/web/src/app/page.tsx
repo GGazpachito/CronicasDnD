@@ -5,6 +5,7 @@ import {EPIC_BOONS,type EpicBoonId} from "../../../../packages/rules-engine/src/
 import SaveLoadPanel from "../components/SaveLoadPanel";
 import CharacterHeader from "../components/CharacterHeader";
 import PrincipalOverview from "../components/PrincipalOverview";
+import TraitsPanel from "../components/TraitsPanel";
 import CharacterTabs, { type SheetTab } from "../components/CharacterTabs";
 import SheetPlaceholder from "../components/SheetPlaceholder";
 import PlayPanel from "../components/PlayPanel";
@@ -359,7 +360,7 @@ export default function Home(){
   return <main className="app-shell">
     <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Hoja digital · D&D 2024</span></div></div><div className="status"><span className="status-dot"/> Edición local · Guardado manual</div></header>
     <div className="content">
-      <p className="sheet-release-note">ACTUALIZACIÓN 39 · HOJA PRINCIPAL INTERACTIVA</p>
+      <p className="sheet-release-note">ACTUALIZACIÓN 40 · RASGOS DEL PERSONAJE</p>
       <CharacterHeader
         name={name}
         level={level}
@@ -604,13 +605,7 @@ export default function Home(){
       </details>
       </section>
       <section id="sheet-panel-rasgos" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-rasgos" hidden={activeTab!=='rasgos'}>
-        <SheetPlaceholder eyebrow="RASGOS · FASE 40" title="Rasgos de tu personaje"
-          description="Esta sección reunirá los rasgos de clase, especie y dotes, con sus descripciones y efectos. Por ahora puedes consultar los rasgos calculados del Guerrero."
-          actionLabel="Abrir hoja principal" onAction={()=>setActiveTab('principal')}>
-          <div className="sheet-quick-list" aria-label="Rasgos actuales">
-            {sheet ? sheet.features.map((feature,index)=><span key={`${feature}-${index}`}>{FEATURES[feature]??feature}</span>) : <p className="muted-note">Corrige las elecciones del personaje para consultar sus rasgos.</p>}
-          </div>
-        </SheetPlaceholder>
+        <TraitsPanel input={input} result={output.result} error={output.error} onEdit={openEditorAt}/>
       </section>
       <section id="sheet-panel-equipo" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-equipo" hidden={activeTab!=='equipo'}>
         <SheetPlaceholder eyebrow="EQUIPO · FASE 41" title="Inventario y equipamiento"
