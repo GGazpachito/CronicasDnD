@@ -1,5 +1,5 @@
 import { db } from '@/lib/prisma';
-import { errorResponse,localDevelopmentOnly,readRevision,readSnapshot,validCharacterId } from '@/lib/characters-api';
+import { errorResponse,localDevelopmentOnly,readRevision,validCharacterId } from '@/lib/characters-api';
 import { validateCharacterSnapshot } from '@/lib/characters-api';
 import type { Prisma } from '@/generated/prisma/client';
 

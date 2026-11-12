@@ -3,6 +3,9 @@
 import { useMemo, useState } from "react";
 import {EPIC_BOONS,type EpicBoonId} from "../../../../packages/rules-engine/src/epic-boons";
 import SaveLoadPanel from "../components/SaveLoadPanel";
+import CharacterHeader from "../components/CharacterHeader";
+import CharacterTabs, { type SheetTab } from "../components/CharacterTabs";
+import SheetPlaceholder from "../components/SheetPlaceholder";
 import PlayPanel from "../components/PlayPanel";
 import SurvivalPanel from "../components/SurvivalPanel";
 import IncomingAttacksPanel from "../components/IncomingAttacksPanel";
@@ -51,6 +54,7 @@ const b=BACKGROUNDS[bg];return {plusTwoAbility:b.abilities[0] as Ability,plusOne
 }
 export default function Home(){
   const [step,setStep]=useState(0);
+  const [activeTab,setActiveTab]=useState<SheetTab>("principal");
   const [adventure,setAdventure]=useState<AdventureState|null>(null);
   const [name,setName]=useState('Aldric');
   const [level,setLevel]=useState<SupportedFighterLevel>(1);
@@ -116,7 +120,7 @@ export default function Home(){
   const [tradeCount,setTradeCount]=useState(1);
   const inventoryKey=[starter,background,backgroundPackage,background==='soldier'&&backgroundPackage==='a'?soldierGamingSet:''].join(':');
   const starting=useMemo(()=>combineStartingInventory(starter,validateBackgroundEquipment(background,{startingPackage:backgroundPackage,...(background==='soldier'?{gamingSet:soldierGamingSet}:{})})),[starter,background,backgroundPackage,soldierGamingSet]);
-  const activeActions=inventoryEdits.key===inventoryKey?inventoryEdits.actions:[];
+  const activeActions=useMemo(()=>inventoryEdits.key===inventoryKey?inventoryEdits.actions:[],[inventoryEdits,inventoryKey]);
   const inventory=useMemo(()=>replayInventory(starting,FIGHTER_PACKAGES[starter].initialArmor,activeActions),[starting,starter,activeActions]);
   const armor:ArmorId|null=equippedArmor(inventory);
   const shield=hasEquippedShield(inventory);
@@ -138,11 +142,12 @@ export default function Home(){
     if(next==='sage'){setBgMagicAbility('intelligence');if(humanFeat==='magic_initiate'&&humanMagicList==='wizard')changeHumanMagicList('druid');}
   }
   function changeHumanMagicList(next:SpellListId){setHumanMagicList(next);setHumanCantrips([...SPELL_LISTS[next].cantrips.slice(0,2)]);setHumanSpell(SPELL_LISTS[next].level1[0]);}
-  const backgroundMagicInitiate:MagicInitiateSelection|undefined=background==='acolyte'
+  const backgroundMagicInitiate=useMemo<MagicInitiateSelection|undefined>(()=>background==='acolyte'
     ? {list:'cleric',spellcastingAbility:bgMagicAbility,cantrips:bgClericCantrips,level1Spell:bgClericSpell}
-    : background==='sage'?{list:'wizard',spellcastingAbility:bgMagicAbility,cantrips:bgWizardCantrips,level1Spell:bgWizardSpell}:undefined;
-  const humanFeatDetails={magicInitiate:{list:humanMagicList,spellcastingAbility:humanMagicAbility,cantrips:humanCantrips,level1Spell:humanSpell},crafterTools,musicianInstruments:instruments,skilledProficiencies:skilled};
-  const input:GuidedFighterInput={name,level,background,species,
+    : background==='sage'?{list:'wizard',spellcastingAbility:bgMagicAbility,cantrips:bgWizardCantrips,level1Spell:bgWizardSpell}:undefined,
+    [background,bgMagicAbility,bgClericCantrips,bgClericSpell,bgWizardCantrips,bgWizardSpell]);
+  const humanFeatDetails=useMemo(()=>({magicInitiate:{list:humanMagicList,spellcastingAbility:humanMagicAbility,cantrips:humanCantrips,level1Spell:humanSpell},crafterTools,musicianInstruments:instruments,skilledProficiencies:skilled}),[humanMagicList,humanMagicAbility,humanCantrips,humanSpell,crafterTools,instruments,skilled]);
+  const input=useMemo<GuidedFighterInput>(()=>({name,level,background,species,
     ...(level>=4?{level4Improvement:{mode:asiMode,first:asiFirst,...(asiMode==='two_ones'?{second:asiSecond}:{})}}:{}),
     ...(level>=6?{level6Improvement:{mode:asi6Mode,first:asi6First,...(asi6Mode==='two_ones'?{second:asi6Second}:{})}}:{}),
     ...(level>=8?{level8Improvement:{mode:asi8Mode,first:asi8First,...(asi8Mode==='two_ones'?{second:asi8Second}:{})}}:{}),
@@ -151,8 +156,8 @@ export default function Home(){
     ...(level>=16?{level16Improvement:{mode:asi16Mode,first:asi16First,...(asi16Mode==='two_ones'?{second:asi16Second}:{})}}:{}),
     ...(level>=19&&epicBoon?{epicBoon:{id:epicBoon,ability:epicAbility}}:{}),
     assignedAbilities:scores,increaseMode:mode,plusTwoAbility:two,plusOneAbility:one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,elfLineage:lineage,elfSenseSkill:elfSkill,elfSpellAbility:elfSpell,armor,shield,inventoryActions:activeActions,martial:{fightingStyle:style,...(level>=7?{additionalFightingStyle:additionalStyle as FightingStyleId}:{}),weaponMasteries:masteries,startingPackage:starter},
-    backgroundEquipment:{startingPackage:backgroundPackage,...(background==='soldier'?{gamingSet:soldierGamingSet}:{})}};
-  const output=useMemo(()=>{try{return {result:calculateGuidedFighter(input),error:null};}catch(e){return {result:null,error:e instanceof Error?e.message:'Error al crear el personaje'};}},[name,level,asiMode,asiFirst,asiSecond,asi6Mode,asi6First,asi6Second,asi8Mode,asi8First,asi8Second,asi12Mode,asi12First,asi12Second,asi14Mode,asi14First,asi14Second,asi16Mode,asi16First,asi16Second,epicBoon,epicAbility,additionalStyle,background,species,scores,mode,two,one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,lineage,elfSkill,elfSpell,armor,shield,style,masteries,starter,backgroundPackage,soldierGamingSet,activeActions]);
+    backgroundEquipment:{startingPackage:backgroundPackage,...(background==='soldier'?{gamingSet:soldierGamingSet}:{})}}),[name,level,asiMode,asiFirst,asiSecond,asi6Mode,asi6First,asi6Second,asi8Mode,asi8First,asi8Second,asi12Mode,asi12First,asi12Second,asi14Mode,asi14First,asi14Second,asi16Mode,asi16First,asi16Second,epicBoon,epicAbility,additionalStyle,background,species,scores,mode,two,one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,lineage,elfSkill,elfSpell,armor,shield,style,masteries,starter,backgroundPackage,soldierGamingSet,activeActions]);
+  const output=useMemo(()=>{try{return {result:calculateGuidedFighter(input),error:null};}catch(e){return {result:null,error:e instanceof Error?e.message:'Error al crear el personaje'};}},[input]);
   function loadSavedInput(saved:GuidedFighterInput){
     setName(saved.name);setLevel(saved.level);setLevelMessage('');setLevelRecovery(null);
     setAsiMode(saved.level4Improvement?.mode??'plus_two');setAsiFirst(saved.level4Improvement?.first??'strength');
@@ -334,11 +339,36 @@ export default function Home(){
   }
   function changePackage(id:StartingPackageId){setStarter(id);setInventoryError(null);}
   function changeMastery(index:number,value:WeaponId){setMasteries(prev=>prev.map((old,i)=>i===index?value:old));}
+  // Un acceso desde otra pestaña debe abrir el editor Y llevar al control elegido.
+  function openEditorAt(targetStep:number, levelControl=false){
+    setStep(targetStep);
+    setActiveTab('principal');
+    window.requestAnimationFrame(()=>{
+      document.getElementById(levelControl?'fighter-level-stepper':'character-editor')
+        ?.scrollIntoView({behavior:'smooth',block:'start'});
+    });
+  }
   return <main className="app-shell">
-    <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Creador guiado · D&D 2024</span></div></div><div className="status"><span className="status-dot"/> Motor conectado · Guardado local</div></header>
+    <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Hoja digital · D&D 2024</span></div></div><div className="status"><span className="status-dot"/> Edición local · Guardado manual</div></header>
     <div className="content">
-      <div className="intro"><div><span className="eyebrow">ACTUALIZACIÓN 35 / GUERRERO NIVEL 20</span><h1>Da forma a <em>tu aventurero.</em></h1><p>Guerrero de niveles 1–20. Tus decisiones de origen se validan y se reflejan en la hoja calculada.</p></div><span className="edition">PHB 2024 + SRD</span></div>
+      <p className="sheet-release-note">ACTUALIZACIÓN 36 · REDISEÑO POR PESTAÑAS</p>
+      <CharacterHeader
+        name={name}
+        level={level}
+        background={bg.name}
+        species={species==='human'?'Humano':species==='dwarf'?'Enano':'Elfo'}
+        valid={Boolean(output.result&&!sessionCheck.outOfSync)}
+        onEdit={()=>openEditorAt(0)}
+        onLevelUp={()=>openEditorAt(0,true)}
+      />
       <SaveLoadPanel input={input} adventure={sessionCheck.outOfSync?null:sessionCheck.state} valid={Boolean(output.result&&!sessionCheck.outOfSync)} onLoad={loadSavedSnapshot}/>
+      <CharacterTabs activeTab={activeTab} onChange={setActiveTab}/>
+      <section id="sheet-panel-principal" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-principal" hidden={activeTab!=='principal'}>
+        <div className="sheet-section-heading"><div><span className="eyebrow">PÁGINA PRINCIPAL</span><h2>Tu hoja, en vivo</h2><p>Conservamos el editor y la hoja calculada mientras trasladamos cada módulo a su pestaña definitiva.</p></div></div>
+      <details className="legacy-tools panel">
+        <summary>Herramientas existentes de partida y combate <span>8 módulos conservados</span></summary>
+        <p className="muted-note">Estos sistemas siguen disponibles mientras rediseñamos la hoja. La pestaña Combate completa se desarrollará más adelante.</p>
+        <div className="legacy-tools-content">
       <PlayPanel sheet={sheet??null} state={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
       <SurvivalPanel sheet={sheet??null} state={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
       <MagicWardsPanel inventory={output.result?.inventory??null} outOfSync={sessionCheck.outOfSync} onInventoryAction={transact}/>
@@ -347,15 +377,17 @@ export default function Home(){
       <TurnPanel fighterLevel={sheet?.level??level} heroicWarrior={sheet?.features.includes('champion_heroic_warrior')??false} epicSpeed={sheet?.features.includes('epic_boon_speed')??false} combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} outOfSync={sessionCheck.outOfSync} onChange={handleCombatChange} baseSpeedFeet={output.result?.origin.speedFeet??30} hitPoints={sessionCheck.state?.fighter.hitPoints.current??0}/>
       <AttacksPanel combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} sheet={sheet??null} inventory={output.result?.inventory??null} martial={input.martial??null} onRecord={confirmWeaponAttack} canRecord={Boolean(sheet&&!sessionCheck.outOfSync&&sessionCheck.state&&sessionCheck.state.fighter.hitPoints.current>0&&conditionCapabilities(sessionCheck.state.combat.conditions??initialConditionLedger()).canTakeAction)}/>
       <CombatPanel combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} outOfSync={sessionCheck.outOfSync} onChange={handleCombatChange}/>
+        </div>
+      </details>
       <nav className="wizard-tabs" aria-label="Pasos de creación">{STEPS.map((s,i)=><button type="button" key={s} className={step===i?'active':''} aria-current={step===i?'step':undefined} onClick={()=>setStep(i)}><span>{String(i+1).padStart(2,'0')}</span>{s}</button>)}</nav>
       <div className="workspace">
-        <aside className="editor panel">
+        <aside id="character-editor" className="editor panel">
           <div className="panel-heading"><div><span className="eyebrow">PASO {step+1} DE {STEPS.length}</span><h2>{STEPS[step]}</h2></div><span className="step-marker">MVP</span></div>
           {step===0&&<>
             <label className="field"><span>Nombre del personaje</span><input value={name} maxLength={120} onChange={e=>setName(e.target.value)}/></label>
             <div className="field"><span className="field-label">Clase</span><div className="info-line">Guerrero (única clase disponible en esta versión)</div></div>
             <div className="field"><span className="field-label">Nivel del personaje</span>
-              <div className="level-stepper" role="group" aria-label="Cambiar nivel del Guerrero">
+              <div id="fighter-level-stepper" className="level-stepper" role="group" aria-label="Cambiar nivel del Guerrero">
                 <button type="button" className="level-stepper-arrow" aria-label="Bajar un nivel" title="Bajar un nivel" disabled={adjacentFighterLevel(level,-1)===null}
                   onClick={()=>{const next=adjacentFighterLevel(level,-1);if(next!==null)selectFighterLevel(next);}}><span aria-hidden="true">←</span></button>
                 <div className="level-stepper-display" role="status" aria-live="polite" aria-atomic="true">
@@ -537,7 +569,7 @@ export default function Home(){
             <div className="stat-cards"><div className="stat-card"><span>PG MÁXIMOS</span><strong>{sheet.maximumHitPoints}</strong><small>Actuales: {!sessionCheck.outOfSync&&sessionCheck.state?sessionCheck.state.fighter.hitPoints.current:'pendiente'} · {sheet.hitDice.total}d{sheet.hitDice.die}</small></div><div className="stat-card"><span>CLASE DE ARMADURA</span><strong>{sheet.armorClass}</strong><small>{sheet.armorClassDetails.formula}</small></div><div className="stat-card"><span>INICIATIVA</span><strong>{signed(sheet.initiative)}</strong><small>{sheet.initiativeRollMode==='advantage'?'Ventaja':sheet.initiativeRollMode==='disadvantage'?'Desventaja':'Normal'}</small></div></div>
             <div className="preview-section"><div className="section-label"><h3>Características finales</h3><span>Competencia {signed(sheet.proficiencyBonus)}</span></div><div className="ability-grid">{ABILITIES.map(a=><div className="ability-stat" key={a}><span>{NAMES[a].slice(0,3).toUpperCase()}</span><strong>{sheet.abilityScores[a]}</strong><small>{signed(sheet.abilityModifiers[a])}</small></div>)}</div></div>
             <div className="two-col"><div className="preview-section"><div className="section-label"><h3>Habilidades</h3><span>Competencias elegidas</span></div><div className="data-list">{SKILLS.map(k=><div className="data-row" key={k}><span>{SKILL_NAMES[k]} {taken.includes(k)||((species==='human'&&humanSkill===k)||(species==='elf'&&elfSkill===k))?'•':''}</span><span><strong>{signed(sheet.skillBonuses[k])}</strong>{sheet.skillRollModes[k]!=='normal'&&<b className="mode-chip">{sheet.skillRollModes[k]==='advantage'?'Ventaja':'Desventaja'}</b>}</span></div>)}</div></div><div className="preview-section"><div className="section-label"><h3>Origen y rasgos</h3><span>PHB 2024</span></div><div className="resource-grid">{Object.entries(sheet.resources).map(([id,r])=>r&&<div className="resource-card" key={id}><span>{id==='second_wind'?'Segundo aliento':id==='action_surge'?'Acción súbita':'Indomable'}</span><strong>{!sessionCheck.outOfSync&&sessionCheck.state?sessionCheck.state.fighter.resources[id as 'second_wind'|'action_surge']?.current??r.current:r.current}/{r.maximum}</strong></div>)}</div><p className="muted-note">Tamaño: {output.result.origin.size==='medium'?'Mediano':'Pequeño'} · Velocidad: {output.result.origin.speedFeet} pies</p><p className="muted-note">Dote del trasfondo: {originFeatName(bg.feat)}{output.result.origin.additionalFeat?` · Dote humana: ${FEATS[output.result.origin.additionalFeat]}`:''}</p><p className="muted-note">Herramientas: {output.result.origin.tools.join(', ')}</p>{output.result.origin.luckPointsMaximum!==undefined&&<p className="muted-note">Puntos de suerte máximos: {output.result.origin.luckPointsMaximum} (sin gestión de gasto)</p>}{output.result.martial&&<><p className="muted-note">Estilo: {FIGHTING_STYLES[output.result.martial.choices.fightingStyle]} · Dinero de clase: {output.result.martial.gold} po</p><p className="muted-note">Maestrías: {output.result.martial.masteries.map(m=>`${m.weapon} (${m.property})`).join(', ')}</p></>}
-            <ul className="feature-list">{sheet.features.map(f=><li key={f}>{FEATURES[f]??f}</li>)}</ul></div></div>
+            <ul className="feature-list">{sheet.features.map((f,i)=><li key={`${f}-${i}`}>{FEATURES[f]??f}</li>)}</ul></div></div>
             {output.result.inventory&&<div className="preview-section inventory-section">
               <div className="section-label"><h3>Inventario actual</h3><span>{output.result.inventory.items.length} tipos comunes · {output.result.inventory.magicItems.length} mágicos</span></div>
               <div className="money-summary"><strong>{formatCopper(output.result.inventory.coinsCopper)}</strong><span>Saldo inicial: {output.result.startingInventory?.totalGold??0} po · {activeActions.length} operaciones</span></div>
@@ -553,7 +585,53 @@ export default function Home(){
             {sheet.warnings.length>0&&<div className="warning" role="status">{sheet.warnings.includes('heavy_armor_strength_requirement_unmet')&&<p>La armadura pesada no cumple el requisito de Fuerza.</p>}{sheet.warnings.includes('armor_stealth_disadvantage')&&<p>La armadura impone desventaja en Sigilo.</p>}</div>}
           </>}
         </section>
-      </div><footer className="footer">Guardado manual disponible en desarrollo local. Compras y hallazgos sujetos al director de juego. No equivale a una hoja completa y validada de D&D 2024.</footer>
+      </div>
+      </section>
+      <section id="sheet-panel-rasgos" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-rasgos" hidden={activeTab!=='rasgos'}>
+        <SheetPlaceholder eyebrow="RASGOS · FASE 40" title="Rasgos de tu personaje"
+          description="Esta sección reunirá los rasgos de clase, especie y dotes, con sus descripciones y efectos. Por ahora puedes consultar los rasgos calculados del Guerrero."
+          actionLabel="Abrir hoja principal" onAction={()=>setActiveTab('principal')}>
+          <div className="sheet-quick-list" aria-label="Rasgos actuales">
+            {sheet ? sheet.features.map((feature,index)=><span key={`${feature}-${index}`}>{FEATURES[feature]??feature}</span>) : <p className="muted-note">Corrige las elecciones del personaje para consultar sus rasgos.</p>}
+          </div>
+        </SheetPlaceholder>
+      </section>
+      <section id="sheet-panel-equipo" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-equipo" hidden={activeTab!=='equipo'}>
+        <SheetPlaceholder eyebrow="EQUIPO · FASE 41" title="Inventario y equipamiento"
+          description="La gestión completa de objetos, armas, armaduras, sintonización y monedas se trasladará aquí. El inventario actual sigue disponible en el editor existente."
+          actionLabel="Editar equipo actual" onAction={()=>openEditorAt(4)}>
+          {output.result?.inventory&&<div className="sheet-preview-metrics">
+            <div><span>Objetos comunes</span><strong>{output.result.inventory.items.length}</strong></div>
+            <div><span>Objetos mágicos</span><strong>{output.result.inventory.magicItems.length}</strong></div>
+            <div><span>Monedas disponibles</span><strong>{formatCopper(output.result.inventory.coinsCopper)}</strong></div>
+          </div>}
+        </SheetPlaceholder>
+      </section>
+      <section id="sheet-panel-hechizos" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-hechizos" hidden={activeTab!=='hechizos'}>
+        <SheetPlaceholder eyebrow="HECHIZOS · FASE 43" title="Hechizos"
+          description="La hoja de conjuros completa se implementará al incorporar una clase lanzadora. Los conjuros concedidos por el origen ya se registran, pero sus usos y tiradas todavía no están automatizados.">
+          <div className="sheet-quick-list" aria-label="Conjuros de origen registrados">
+            {output.result?.spells.length ? output.result.spells.map((spell,index)=><span key={`${spell.source}-${spell.id}-${index}`}>{spell.name} · {spell.level===0?'Truco':'Nivel 1'}</span>) : <p className="muted-note">Este personaje no tiene conjuros de origen registrados, o la hoja no es válida.</p>}
+          </div>
+        </SheetPlaceholder>
+      </section>
+      <section id="sheet-panel-personaje" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-personaje" hidden={activeTab!=='personaje'}>
+        <SheetPlaceholder eyebrow="PERSONAJE · FASE 42" title="Historia y apariencia"
+          description="Aquí se incorporarán el trasfondo narrativo, la personalidad, las notas y el retrato del personaje. Estos campos aún no están disponibles ni se guardan."
+          actionLabel="Editar identidad y origen" onAction={()=>openEditorAt(1)}>
+          <div className="sheet-preview-metrics">
+            <div><span>Nombre</span><strong>{name.trim()||'Sin nombre'}</strong></div>
+            <div><span>Trasfondo</span><strong>{bg.name}</strong></div>
+            <div><span>Especie</span><strong>{species==='human'?'Humano':species==='dwarf'?'Enano':'Elfo'}</strong></div>
+          </div>
+        </SheetPlaceholder>
+      </section>
+      <section id="sheet-panel-combate" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-combate" hidden={activeTab!=='combate'}>
+        <SheetPlaceholder eyebrow="COMBATE · DESARROLLO FUTURO" title="Coming Soon"
+          description="La nueva interfaz de combate todavía no está diseñada. Los módulos de combate ya existentes se conservan en Principal, bajo «Herramientas existentes de partida y combate»."
+          actionLabel="Volver a Principal" onAction={()=>setActiveTab('principal')} />
+      </section>
+      <footer className="footer">Guardado manual disponible en desarrollo local. Compras y hallazgos sujetos al director de juego. No equivale a una hoja completa y validada de D&D 2024.</footer>
     </div>
   </main>;
 }
