@@ -18,8 +18,8 @@ export function prepareFighterLevelUp(
   nextInput:GuidedFighterInput,
   allowSynchronization=false
 ):FighterLevelUpResult{
-  if(nextInput.level!==currentInput.level+1||nextInput.level>13)
-    throw new RangeError('La progresión solo permite subir un nivel, hasta el nivel 13');
+  if(nextInput.level!==currentInput.level+1||nextInput.level>15)
+    throw new RangeError('La progresión solo permite subir un nivel, hasta el nivel 15');
   if(nextInput.name!==currentInput.name||nextInput.species!==currentInput.species||nextInput.background!==currentInput.background)
     throw new RangeError('La subida de nivel no puede modificar la identidad o el origen del personaje');
   const currentSheet=calculateGuidedFighter(currentInput).sheet;
@@ -49,8 +49,8 @@ export function prepareFighterLevelUpWithFreshSession(
   currentInput:GuidedFighterInput,
   nextInput:GuidedFighterInput
 ):FighterLevelUpResult{
-  if(nextInput.level!==currentInput.level+1||nextInput.level>13)
-    throw new RangeError('Solo se permite avanzar un nivel de Guerrero, hasta 13');
+  if(nextInput.level!==currentInput.level+1||nextInput.level>15)
+    throw new RangeError('Solo se permite avanzar un nivel de Guerrero, hasta 15');
   if(nextInput.name!==currentInput.name||nextInput.species!==currentInput.species||nextInput.background!==currentInput.background)
     throw new RangeError('La recuperación no puede alterar la identidad del personaje');
   calculateGuidedFighter(currentInput);

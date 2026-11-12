@@ -292,8 +292,8 @@ export function resourceDisplay(state:AdventureState,sheet:CalculatedFighterShee
  */
 export function advanceAdventureLevel(source:AdventureState,oldSheet:CalculatedFighterSheet,newSheet:CalculatedFighterSheet):AdventureState{
   const before=validateAdventureState(source,oldSheet);
-  if(oldSheet.classId!=='fighter'||newSheet.classId!=='fighter'||newSheet.level!==oldSheet.level+1||newSheet.level>13)
-    throw new RangeError('Solo se permite subir un nivel del Guerrero hasta 13');
+  if(oldSheet.classId!=='fighter'||newSheet.classId!=='fighter'||newSheet.level!==oldSheet.level+1||newSheet.level>15)
+    throw new RangeError('Solo se permite subir un nivel del Guerrero hasta 15');
   if(oldSheet.id!==newSheet.id||oldSheet.name!==newSheet.name)throw new RangeError('La progresión debe mantener la identidad del personaje');
   const fighter=advanceFighterLevel(before.fighter,newSheet.level,newSheet.maximumHitPoints);
   return validateAdventureState({...before,fighter},newSheet);

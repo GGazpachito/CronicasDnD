@@ -40,7 +40,7 @@ describe('Actualización 31 · Guerrero 12 y 13',()=>{
  it('el selector avanza de 11 a 13 sin saltos',()=>{
    expect(adjacentFighterLevel(11,1)).toBe(12);
    expect(adjacentFighterLevel(12,1)).toBe(13);
-   expect(adjacentFighterLevel(13,1)).toBeNull();
+   expect(adjacentFighterLevel(13,1)).toBe(14);
    expect(adjacentFighterLevel(13,-1)).toBe(12);
  });
  it('nivel 12 exige una nueva mejora independiente y no permite adelantarla',()=>{

@@ -1,4 +1,4 @@
-/** Paso 05. Recursos persistentes del Guerrero (niveles 1-13), D&D 2024.
+/** Paso 05. Recursos persistentes del Guerrero (niveles 1-15), D&D 2024.
  * Funciones puras. Ninguna operación restaura recursos salvo descansos explícitos.
  */
 export type FighterResourceId = 'second_wind' | 'action_surge' | 'indomitable';
@@ -17,7 +17,7 @@ function integer(value: unknown, name: string, minimum: number, maximum: number)
   }
   return value;
 }
-function fighterLevel(value: number): number { return integer(value, 'fighterLevel', 1, 13); }
+function fighterLevel(value: number): number { return integer(value, 'fighterLevel', 1, 15); }
 
 /** Los máximos se derivan del nivel, jamás del estado persistido. */
 export function fighterResourceMaximum(level: number, id: FighterResourceId): number {

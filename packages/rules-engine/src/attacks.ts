@@ -1,4 +1,4 @@
-/** Fase 4.3 · Ataques con armas D&D 2024, niveles 1–13 del Guerrero.
+/** Fase 4.3 · Ataques con armas D&D 2024, niveles 1–15 del Guerrero.
  * Datos mecánicos normalizados del PHB 2024, pp. 12, 25-28, 96, 209-210, 213-215.
  * Calculador puro: no modifica criaturas, inventarios ni estados de partida.
  */
@@ -94,7 +94,7 @@ export type WeaponAttackProfile = Readonly<{
   magicWeaponInstanceId?:string; magicEnhancement?:EnhancementBonus;
   attackBonus:number; damageModifier:number; damageDice:DamageDice|null; fixedDamage:number;
   damageType:DamageType; mode:'normal'|'advantage'|'disadvantage';
-  criticalMinimum:19|20; mastery:MasteryId|null; masterySaveDC:number|null;
+  criticalMinimum:18|19|20; mastery:MasteryId|null; masterySaveDC:number|null;
   grazeOnMiss:number|null;
   thrown:boolean; twoHanded:boolean; lightExtraAttack:boolean;
   range:readonly [number,number]|null;
@@ -114,7 +114,7 @@ export function calculateWeaponAttack(
   sheet:CalculatedFighterSheet, weaponId:WeaponId, style:FightingStyleId|readonly FightingStyleId[],
   masteries:readonly WeaponId[], options:WeaponAttackOptions={}
 ):WeaponAttackProfile {
-  if(!sheet||sheet.classId!=='fighter'||sheet.ruleset!=='dnd-2024'||sheet.level<1||sheet.level>13)throw new RangeError('Hoja de Guerrero 2024 nivel 1–13 requerida');
+  if(!sheet||sheet.classId!=='fighter'||sheet.ruleset!=='dnd-2024'||sheet.level<1||sheet.level>15)throw new RangeError('Hoja de Guerrero 2024 nivel 1–15 requerida');
   if(!isWeapon(weaponId))throw new RangeError('Arma desconocida');
   const styles:readonly FightingStyleId[]=typeof style==='string'?[style]:style;
   if(!Array.isArray(styles)||styles.length<1||styles.length>(sheet.level>=7?2:1)||new Set(styles).size!==styles.length||styles.some(s=>!['archery','blind_fighting','defense','dueling','great_weapon_fighting','interception','protection','thrown_weapon_fighting','two_weapon_fighting','unarmed_fighting'].includes(s)))throw new RangeError('Estilos de combate desconocidos, duplicados o no desbloqueados');
@@ -191,7 +191,7 @@ export function calculateWeaponAttack(
   const greatWeaponFighting=styles.includes('great_weapon_fighting')&&w.kind==='melee'&&twoHanded&&Boolean(w.twoHanded||w.versatileSides);
   const fixedDamage=w.fixedDamage??0;
   return {weaponId,weaponName:WEAPONS[weaponId].name,ability,abilityModifier:modifier,attackBonus,damageModifier,
-    damageDice:baseDice??null,fixedDamage,damageType:w.damageType,mode,criticalMinimum:sheet.subclass==='champion'?19:20,
+    damageDice:baseDice??null,fixedDamage,damageType:w.damageType,mode,criticalMinimum:sheet.subclass==='champion'?(sheet.level>=15?18:19):20,
     mastery,masterySaveDC,grazeOnMiss,thrown,twoHanded,lightExtraAttack:Boolean(options.lightExtraAttack),range,
     ammunition:w.ammunition,greatWeaponFighting,notes};
 }
