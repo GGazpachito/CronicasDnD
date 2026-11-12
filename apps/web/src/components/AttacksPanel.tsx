@@ -3,7 +3,7 @@
 import {useRef,useState} from 'react';
 import type {CalculatedFighterSheet} from '../../../../packages/rules-engine/src/sheet';
 import {hasEquippedShield,type InventoryState} from '../../../../packages/rules-engine/src/inventory';
-import type {CombatState} from '../../../../packages/rules-engine/src/combat';
+import {hasStudiedAdvantage,type CombatState} from '../../../../packages/rules-engine/src/combat';
 import {suggestAttackTurnUsage,type AttackTurnUsage} from '../../../../packages/rules-engine/src/turns';
 import {conditionKinds,evaluateConditionRoll,initialConditionLedger} from '../../../../packages/rules-engine/src/conditions';
 import {WEAPONS,type MartialChoices} from '../../../../packages/rules-engine/src/martial';
@@ -64,6 +64,7 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
   const extraAttackReady=tracked&&sheet!==null&&sheet.level>=5&&turn?.active===true&&
     turn.attackActionUsed&&(turn.attackActionAttacksUsed??0)<(sheet.level>=11?3:2);
   const vexActive=hasVexAdvantage(combat?.masteryEffects,targetName);
+  const studiedActive=Boolean(sheet&&sheet.level>=13&&hasStudiedAdvantage(combat?.studiedAttacks,targetName));
   let profile:WeaponAttackProfile|null=null;
   let profileError='';
   if(sheet&&martial&&choice&&inventory){
@@ -71,7 +72,7 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
       ...(w?.finesse?{ability:useDex?'dexterity':'strength'}:{}),
       thrown:thrown&&Boolean(w?.thrownRange),twoHanded:twoHands&&Boolean(w?.versatileSides),
       lightExtraAttack:lightExtra&&Boolean(w?.light),otherWeaponHeld:otherWeapon,adjacentEnemy:adjacent,advantage,
-      conditionAdvantage:conditionRoll.advantages.length>0||(vexActive&&targetIsCreature),
+      conditionAdvantage:conditionRoll.advantages.length>0||((vexActive||studiedActive)&&targetIsCreature),
       conditionDisadvantage:conditionRoll.disadvantages.length>0,
       conditionD20Penalty:conditionRoll.d20Penalty,
       ...(masteryAvailable&&tacticalMastery?{tacticalMastery}:{}),
@@ -120,19 +121,19 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
         <label className="field"><span>Distancia objetivo (pies, opcional)</span><input type="number" min="0" step="1" value={distance} placeholder="Sin distancia" onChange={e=>{setDistance(e.target.value);setResolved(null);}}/></label>
       </div>
       <div className="attack-form-grid">
-        <label className="field"><span>Nombre del objetivo (para seguir maestrías)</span><input maxLength={60} value={targetName} placeholder="Ej.: Goblin 1" onChange={e=>{setTargetName(e.target.value);setResolved(null);}}/></label>
+        <label className="field"><span>Nombre del objetivo (maestrías y Ataques estudiados)</span><input maxLength={60} value={targetName} placeholder="Ej.: Goblin 1" onChange={e=>{setTargetName(e.target.value);setResolved(null);}}/></label>
         <label className="field"><span>Tamaño del objetivo (para Empujar)</span><select value={targetSize} onChange={e=>{setTargetSize(e.target.value as CreatureSize);setResolved(null);}}>
           <option value="unknown">Desconocido</option><option value="tiny">Diminuto</option><option value="small">Pequeño</option><option value="medium">Mediano</option><option value="large">Grande</option><option value="huge">Enorme</option><option value="gargantuan">Gargantuesco</option>
         </select></label>
       </div>
       {tracked&&sheet.level>=5&&turn?.active&&<p className={extraAttackReady?'info-line':'muted-note'} role="status">
         Acción Atacar: {turn.attackActionAttacksUsed??(turn.attackActionUsed?1:0)} de {sheet.level>=11?3:sheet.level>=5?2:1} ataques registrados en la última acción Atacar.
-        {extraAttackReady?' Te queda el segundo ataque de esta misma acción. Se seleccionará automáticamente aunque ya tengas 0 acciones disponibles.':' El primer golpe gasta una acción; el segundo no consume otra.'}
+        {extraAttackReady?' Puedes usar el siguiente ataque de la misma acción sin gastar otra; se seleccionará automáticamente.':' El primer golpe gasta una acción; el segundo no consume otra.'}
       </p>}
       {tracked&&<div className="attack-form-grid">
         <label className="field"><span>Gasto de acción al confirmar este ataque</span><select value={effectiveUsage} onChange={e=>{setAttackUsage({stepKey,value:e.target.value as AttackTurnUsage});setResolved(null);}}>
           <option value="attack_action">Acción Atacar (gasta 1 acción)</option>
-          {sheet.level>=5&&<option value="extra_attack">Ataque adicional de nivel 5 (sin gastar otra acción)</option>}
+          {sheet.level>=5&&<option value="extra_attack">Ataque adicional (sin gastar otra acción)</option>}
           <option value="light_bonus">Ataque extra Ligera (gasta acción adicional)</option>
           <option value="light_nick">Ataque extra Ligera con Mella (sin acción adicional)</option>
           <option value="cleave_extra">Ataque extra Tajo (sin acción)</option>
@@ -148,6 +149,8 @@ export default function AttacksPanel({sheet,inventory,martial,combat,onRecord,ca
         <span className="muted-note">Sustituye la propiedad únicamente para este ataque; no cambia tus armas dominadas. Si no dominas esta arma, Dominio táctico no está disponible.</span>
       </label>}
       <div className="attack-options"><label><input type="checkbox" checked={targetIsCreature} onChange={e=>{setTargetIsCreature(e.target.checked);setResolved(null);}}/> El objetivo es una criatura (no un objeto)</label></div>
+      {studiedActive&&targetIsCreature&&<p className="info-line">Ataques estudiados (Guerrero 13): el último ataque falló contra «{targetName}». Este ataque obtiene ventaja (puede cancelarse con desventaja). El efecto se consume al atacar de nuevo a ese objetivo; si fallas, vuelve a generarse.</p>}
+      {sheet.level>=13&&<p className="muted-note">Ataques estudiados: tras fallar una tirada de ataque contra una criatura identificada, obtienes ventaja en el siguiente ataque contra ella antes del final de tu próximo turno. Es necesario indicar CA para confirmar el fallo.</p>}
       {vexActive&&targetIsCreature&&<p className="info-line">Hostigar vigente contra «{targetName}»: aporta ventaja a este ataque (puede quedar cancelada por desventaja). El gestor lo retira al final de tu siguiente turno, salvo efectos antiguos sin fecha.</p>}
       <div className="attack-options">
         {w?.finesse&&<label><input type="checkbox" checked={useDex} onChange={e=>{setUseDex(e.target.checked);setResolved(null)}}/> Usar Destreza (Sutileza)</label>}

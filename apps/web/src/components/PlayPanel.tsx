@@ -54,8 +54,8 @@ export default function PlayPanel({sheet,state,outOfSync,onChange}:Props){
         <div><span>PG temporales</span><strong>{state.temporaryHitPoints}</strong></div>
         <div><span>Dados de golpe disponibles</span><strong>{available} / {sheet.hitDice.total} d10</strong></div>
         <div><span>Segundo aliento</span><strong>{resources?.second_wind?.current ?? 0} / {resources?.second_wind?.maximum ?? 0}</strong></div>
-        {sheet.level>=2&&<div><span>Acción súbita</span><strong>{resources?.action_surge?.current ?? 0} / 1</strong></div>}
-        {sheet.level>=9&&<div><span>Indomable</span><strong>{resources?.indomitable?.current??0} / 1</strong></div>}
+        {sheet.level>=2&&<div><span>Acción súbita</span><strong>{resources?.action_surge?.current ?? 0} / {resources?.indomitable?.maximum??1}</strong></div>}
+        {sheet.level>=9&&<div><span>Indomable</span><strong>{resources?.indomitable?.current??0} / {resources?.indomitable?.maximum??1}</strong></div>}
       </div>
       {state.fighter.hitPoints.current===0&&<p className="play-warning" role="alert">El personaje está a 0 PG. Gestiona sus salvaciones contra muerte y estabilización en el panel siguiente. No puede descansar ni utilizar acciones de clase.</p>}
       <div className="play-actions-grid">
@@ -74,7 +74,7 @@ export default function PlayPanel({sheet,state,outOfSync,onChange}:Props){
             <button type="button" disabled={!ready||state.fighter.hitPoints.current===0||(resources?.second_wind?.current??0)===0} onClick={()=>act({type:'tactical_mind',originalTotal:check,difficultyClass:dc,d10})}>Aplicar Mente táctica</button></div>}
         </div>
         {sheet.level>=9&&<div className="play-action-group"><h3>Indomable · nivel 9</h3>
-          <p className="muted-note">Tras fallar una salvación ordinaria, repítela y suma tu nivel de Guerrero (+{sheet.level}). Es obligatorio usar el nuevo resultado. Un uso por descanso largo. Para las salvaciones de muerte utiliza su panel específico.</p>
+          <p className="muted-note">Tras fallar una salvación ordinaria, repítela y suma tu nivel de Guerrero (+{sheet.level}). Es obligatorio usar el nuevo resultado. Desde nivel 13, dos usos por descanso largo. Para las salvaciones de muerte utiliza su panel específico.</p>
           <label className="field"><span>Característica de la salvación</span><select value={indomitableAbility} onChange={e=>setIndomitableAbility(e.target.value as Ability)}>{ABILITIES.map(a=><option key={a} value={a}>{({strength:'Fuerza',dexterity:'Destreza',constitution:'Constitución',intelligence:'Inteligencia',wisdom:'Sabiduría',charisma:'Carisma'} as Record<Ability,string>)[a]} (bono {sheet.savingThrowBonuses[a]>=0?'+':''}{sheet.savingThrowBonuses[a]})</option>)}</select></label>
           <div className="play-check-row"><label className="field"><span>Resultado total de la salvación fallida</span><input type="number" value={indomitableOriginal} onChange={e=>setIndomitableOriginal(Number(e.target.value))}/></label><label className="field"><span>CD</span><input type="number" min="1" value={indomitableDc} onChange={e=>setIndomitableDc(Number(e.target.value))}/></label></div>
           <div className="play-check-row"><label className="field"><span>Nuevo d20</span><input type="number" min="1" max="20" value={indomitableD20} onChange={e=>setIndomitableD20(Number(e.target.value))}/></label><label className="field"><span>Modificador situacional adicional (si procede)</span><input type="number" value={indomitableExtra} onChange={e=>setIndomitableExtra(Number(e.target.value))}/></label></div>

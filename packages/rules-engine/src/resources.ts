@@ -1,4 +1,4 @@
-/** Paso 05. Recursos persistentes del Guerrero (niveles 1-11), D&D 2024.
+/** Paso 05. Recursos persistentes del Guerrero (niveles 1-13), D&D 2024.
  * Funciones puras. Ninguna operación restaura recursos salvo descansos explícitos.
  */
 export type FighterResourceId = 'second_wind' | 'action_surge' | 'indomitable';
@@ -17,7 +17,7 @@ function integer(value: unknown, name: string, minimum: number, maximum: number)
   }
   return value;
 }
-function fighterLevel(value: number): number { return integer(value, 'fighterLevel', 1, 11); }
+function fighterLevel(value: number): number { return integer(value, 'fighterLevel', 1, 13); }
 
 /** Los máximos se derivan del nivel, jamás del estado persistido. */
 export function fighterResourceMaximum(level: number, id: FighterResourceId): number {
@@ -25,7 +25,7 @@ export function fighterResourceMaximum(level: number, id: FighterResourceId): nu
   switch (id) {
     case 'second_wind': return n >= 10 ? 4 : n >= 4 ? 3 : 2;
     case 'action_surge': return n >= 2 ? 1 : 0;
-    case 'indomitable': return n >= 9 ? 1 : 0;
+    case 'indomitable': return n >= 13 ? 2 : n >= 9 ? 1 : 0;
     default: throw new TypeError('Recurso no reconocido');
   }
 }
@@ -40,7 +40,7 @@ export function initialFighterState(level: number, maximumHitPoints: number): Fi
     resources: {
       second_wind: { current: fighterResourceMaximum(n,'second_wind') },
       ...(n >= 2 ? { action_surge: { current: 1 } } : {}),
-      ...(n >= 9 ? { indomitable: { current: 1 } } : {}),
+      ...(n >= 9 ? { indomitable: { current: fighterResourceMaximum(n,'indomitable') } } : {}),
     },
   };
 }
@@ -92,7 +92,7 @@ export function finishFighterRest(state: FighterState, rest: RecoveryReason): Fi
   const next = changeResource(state, 'second_wind', secondWind);
   if (state.fighterLevel === 1) return next;
   const surged=changeResource(next, 'action_surge', 1);
-  return rest==='long_rest'&&state.fighterLevel>=9?changeResource(surged,'indomitable',1):surged;
+  return rest==='long_rest'&&state.fighterLevel>=9?changeResource(surged,'indomitable',fighterResourceMaximum(state.fighterLevel,'indomitable')):surged;
 }
 
 /** Segundo aliento: bonificación + nivel de Guerrero, siempre como acción adicional.
@@ -154,6 +154,7 @@ export function advanceFighterLevel(state: FighterState, nextLevel: number, newM
         state.resources.second_wind!.current+fighterResourceMaximum(level,'second_wind')-fighterResourceMaximum(state.fighterLevel,'second_wind'))},
       ...(level === 2 ? { action_surge: { current: 1 } } : {}),
       ...(level === 9 ? { indomitable: { current: 1 } } : {}),
+      ...(level === 13 ? { indomitable: { current: Math.min(2,(state.resources.indomitable?.current??0)+1) } } : {}),
     },
   };
 }

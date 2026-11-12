@@ -26,8 +26,10 @@ describe('Selector de nivel con flechas',()=>{
     expect(adjacentFighterLevel(1,-1)).toBeNull();
     expect(adjacentFighterLevel(1,1)).toBe(2);
   });
-  it('la flecha siguiente está bloqueada en nivel 11',()=>{
-    expect(adjacentFighterLevel(11,1)).toBeNull();
+  it('la flecha siguiente está bloqueada en nivel 13',()=>{
+    expect(adjacentFighterLevel(11,1)).toBe(12);
+    expect(adjacentFighterLevel(12,1)).toBe(13);
+    expect(adjacentFighterLevel(13,1)).toBeNull();
     expect(adjacentFighterLevel(9,1)).toBe(10);
     expect(adjacentFighterLevel(10,1)).toBe(11);
     expect(adjacentFighterLevel(11,-1)).toBe(10);
@@ -42,7 +44,7 @@ describe('Selector de nivel con flechas',()=>{
   });
   it('la navegación rechaza niveles y saltos inválidos',()=>{
     expect(()=>adjacentFighterLevel(0 as SupportedFighterLevel,1)).toThrow();
-    expect(()=>adjacentFighterLevel(12 as SupportedFighterLevel,-1)).toThrow();
+    expect(()=>adjacentFighterLevel(14 as SupportedFighterLevel,-1)).toThrow();
     expect(()=>adjacentFighterLevel(7,2 as 1)).toThrow();
   });
   it('la subida consecutiva 6→7→8→9 mantiene el estado y los PG gastados',()=>{

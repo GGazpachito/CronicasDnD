@@ -79,7 +79,7 @@ export function grantsFromMagicInitiate(value:MagicInitiateSelection,source:'bac
   const grant=(id:string, level:0|1):SpellGrant=>({id,name:spellName(id),level,source,spellcastingAbility:value.spellcastingAbility,freeCastPerLongRest:level===1,allowsSpellSlot:level===1});
   return [...value.cantrips.map(id=>grant(id,0)),grant(value.level1Spell,1)];
 }
-export function elfLineageSpells(lineage:'drow'|'high_elf'|'wood_elf',level:1|2|3|4|5|6|7|8|9|10|11,ability:SpellAbility):readonly SpellGrant[] {
+export function elfLineageSpells(lineage:'drow'|'high_elf'|'wood_elf',level:1|2|3|4|5|6|7|8|9|10|11|12|13,ability:SpellAbility):readonly SpellGrant[] {
   const cantrip=lineage==='drow'?'dancing_lights':lineage==='high_elf'?'prestidigitation':'druidcraft';
   const higher=lineage==='drow'?'faerie_fire':lineage==='high_elf'?'detect_magic':'longstrider';
   const base:SpellGrant={id:cantrip,name:spellName(cantrip),level:0,source:'elf_lineage',spellcastingAbility:ability,freeCastPerLongRest:false,allowsSpellSlot:false};

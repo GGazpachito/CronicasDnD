@@ -28,6 +28,14 @@ export type CombatAttackEntry = Readonly<{
   damageType:DamageType;
   ammunitionSpent:AmmoId|null;
 }>;
+export type StudiedTarget = Readonly<{
+  id:number; sourceAttackId:number; round:number; target:string;sourceTurn?:number;
+}>;
+/** Ataques estudiados solo afectan a la siguiente tirada contra la MISMA criatura. */
+export function hasStudiedAdvantage(effects:readonly StudiedTarget[]|undefined,targetName:string):boolean{
+  const normalized=targetName.trim().toLocaleLowerCase('es');
+  return Boolean(normalized&&effects?.some(e=>e.target.toLocaleLowerCase('es')===normalized));
+}
 export type TrackedEffect = Readonly<{
   id:number;
   name:string;
@@ -54,6 +62,8 @@ export type CombatState = Readonly<{
   masteryEffects?:readonly MasteryPendingEffect[];
   /** Opcional en guardados anteriores: el tracker empieza solo cuando se usa la pantalla. */
   turn?:TurnTracker;
+  /** Guerrero 13: la siguiente tirada contra un objetivo fallado tiene ventaja. */
+  studiedAttacks?:readonly StudiedTarget[];
   /** Campeón 10: recurso de Inspiración heroica, que persiste hasta gastarse. */
   heroicInspiration?:boolean;
 }>;
@@ -105,7 +115,8 @@ export function endCharacterTurn(state:CombatState):CombatState{
   const s=validateCombatState(state);
   const turn=endTurnTracker(s.turn??initialTurnTracker());
   const masteryEffects=s.masteryEffects?.filter(e=>!(e.sourceTurn!==undefined&&e.sourceTurn<turn.number&&e.mastery==='Vex'));
-  return {...s,turn,...(masteryEffects?{masteryEffects}:{})};
+  const studiedAttacks=s.studiedAttacks?.filter(e=>!(e.sourceTurn!==undefined&&e.sourceTurn<turn.number));
+  return {...s,turn,...(masteryEffects?{masteryEffects}:{}),...(studiedAttacks?{studiedAttacks}:{})};
 }
 /** Gasta una Inspiración heroica para volver a tirar un dado; el dado se resuelve en mesa. */
 export function spendHeroicInspiration(state:CombatState):CombatState{
@@ -129,7 +140,7 @@ export function moveCombatCharacter(state:CombatState,feet:number,effectiveSpeed
 /** Valida y clona estados cargados de PostgreSQL (no confia en el JSON recibido). */
 export function validateCombatState(value:unknown):CombatState{
   if(!record(value))fail('Estado de combate inválido');
-  exactKeys(value,['round','nextId','attacks','effects',...(value.conditions===undefined?[]:['conditions']),...(value.receivedAttacks===undefined?[]:['receivedAttacks']),...(value.masteryEffects===undefined?[]:['masteryEffects']),...(value.turn===undefined?[]:['turn']),...(value.heroicInspiration===undefined?[]:['heroicInspiration'])],'Combate');
+  exactKeys(value,['round','nextId','attacks','effects',...(value.conditions===undefined?[]:['conditions']),...(value.receivedAttacks===undefined?[]:['receivedAttacks']),...(value.masteryEffects===undefined?[]:['masteryEffects']),...(value.studiedAttacks===undefined?[]:['studiedAttacks']),...(value.turn===undefined?[]:['turn']),...(value.heroicInspiration===undefined?[]:['heroicInspiration'])],'Combate');
   const round=bounded(value.round,1,MAX_ROUNDS,'Ronda');
   const nextId=bounded(value.nextId,1,MAX_ID,'Siguiente ID');
   if(!Array.isArray(value.attacks)||value.attacks.length>MAX_ATTACKS)fail('Historial de ataques demasiado largo');
@@ -226,10 +237,31 @@ export function validateCombatState(value:unknown):CombatState{
       return e;
     });
   }
+  let studiedAttacks:StudiedTarget[]|undefined;
+  if(value.studiedAttacks!==undefined){
+    if(!Array.isArray(value.studiedAttacks)||value.studiedAttacks.length>30)fail('Demasiados Ataques estudiados pendientes');
+    studiedAttacks=value.studiedAttacks.map((raw:unknown)=>{
+      if(!record(raw))fail('Ataque estudiado inválido');
+      exactKeys(raw,['id','sourceAttackId','round','target',...(raw.sourceTurn===undefined?[]:['sourceTurn'])],'Ataque estudiado');
+      const id=bounded(raw.id,1,nextId-1,'ID estudiado');
+      const sourceAttackId=bounded(raw.sourceAttackId,1,id-1,'ID de origen estudiado');
+      const source=attacks.find(a=>a.id===sourceAttackId);
+      if(source&&(source.hit!==false||source.targetName?.toLocaleLowerCase('es')!==String(raw.target).toLocaleLowerCase('es')))
+        fail('Ataques estudiados: origen inválido o no corresponde a un fallo');
+      if(!source&&attacks.length>0&&sourceAttackId>=attacks[0].id)fail('Falta el ataque que originó el estudio');
+      if(seen.has(id))fail('ID de ataque estudiado duplicado');seen.add(id);
+      const effectRound=bounded(raw.round,1,round,'Ronda estudiada');
+      const target=textValue(raw.target,60,'Objetivo estudiado');
+      const sourceTurn=raw.sourceTurn===undefined?undefined:bounded(raw.sourceTurn,1,MAX_ROUNDS,'Turno estudiado');
+      return {id,sourceAttackId,round:effectRound,target,...(sourceTurn===undefined?{}:{sourceTurn})};
+    });
+    if(new Set(studiedAttacks.map(x=>x.target.toLocaleLowerCase('es'))).size!==studiedAttacks.length)fail('Ataque estudiado duplicado para un objetivo');
+  }
   const turn=value.turn===undefined?undefined:validateTurnTracker(value.turn);
   if(value.heroicInspiration!==undefined&&typeof value.heroicInspiration!=='boolean')fail('Inspiración heroica inválida');
   if(turn&&masteryEffects?.some(e=>e.sourceTurn!==undefined&&e.sourceTurn>turn.number))fail('El origen de la maestría es posterior al turno actual');
-  return {round,nextId,attacks,effects,...(conditions?{conditions}:{}),...(receivedAttacks?{receivedAttacks}:{}),...(masteryEffects?{masteryEffects}:{}),...(turn?{turn}:{}),...(value.heroicInspiration===undefined?{}:{heroicInspiration:value.heroicInspiration as boolean})};
+  if(studiedAttacks?.some(e=>e.sourceTurn!==undefined&&(!turn||e.sourceTurn>turn.number)))fail('Turno de Ataques estudiados incoherente');
+  return {round,nextId,attacks,effects,...(conditions?{conditions}:{}),...(receivedAttacks?{receivedAttacks}:{}),...(masteryEffects?{masteryEffects}:{}),...(studiedAttacks?{studiedAttacks}:{}),...(turn?{turn}:{}),...(value.heroicInspiration===undefined?{}:{heroicInspiration:value.heroicInspiration as boolean})};
 }
 
 /** Registrar un ataque y descontar su municion forman una sola operacion logica.
@@ -287,13 +319,27 @@ export function recordWeaponAttack(
     ?remaining.filter(e=>!(e.mastery===pending.mastery&&e.target.toLocaleLowerCase('es')===pending.target.toLocaleLowerCase('es')))
     :remaining;
   if(pending&&unique.length>=30)fail('Demasiados efectos de maestría pendientes');
-  if(pending&&combat.nextId+1>=MAX_ID)fail('Limite del historial de combate alcanzado');
+  const studiedCandidate=fighterLevel>=13&&validatedContext?.targetIsCreature===true&&Boolean(validatedContext.targetName)&&resolution.hit===false;
+  const studiedRemaining=(combat.studiedAttacks??[]).filter(e=>!(validatedContext?.targetIsCreature&&validatedContext.targetName&&hasStudiedAdvantage([e],validatedContext.targetName)));
+  if(studiedCandidate&&studiedRemaining.length>=30)fail('Demasiados Ataques estudiados pendientes');
+  const extraEvents=(pending?1:0)+(studiedCandidate?1:0);
+  if(combat.nextId+extraEvents>=MAX_ID)fail('Limite del historial de combate alcanzado');
   const newEffects=pending?[...unique,{id:combat.nextId+1,sourceAttackId:combat.nextId,round:combat.round,...pending,
     ...(combat.turn&&combat.turn.number>0?{sourceTurn:combat.turn.number}:{})}]:unique;
-  return {inventoryAction,combat:{...combat,nextId:combat.nextId+(pending?2:1),attacks:[...combat.attacks,entry].slice(-MAX_ATTACKS),
-    ...(validatedContext?{masteryEffects:newEffects}:{}),...(nextTurn?{turn:nextTurn}:{})}};
+  const newStudied=studiedCandidate?[...studiedRemaining,{id:combat.nextId+1+(pending?1:0),sourceAttackId:combat.nextId,round:combat.round,
+    target:validatedContext!.targetName,...(combat.turn&&combat.turn.number>0?{sourceTurn:combat.turn.number}:{})}]:studiedRemaining;
+  return {inventoryAction,combat:{...combat,nextId:combat.nextId+1+extraEvents,attacks:[...combat.attacks,entry].slice(-MAX_ATTACKS),
+    ...(validatedContext?{masteryEffects:newEffects}:{}),
+    ...(validatedContext&&fighterLevel>=13?{studiedAttacks:newStudied}:{}),...(nextTurn?{turn:nextTurn}:{})}};
 }
 
+/** Cancelación manual de Ataques estudiados (p. ej., el DM indica que expiró). */
+export function clearStudiedAttack(state:CombatState,id:number):CombatState{
+  const s=validateCombatState(state);
+  bounded(id,1,MAX_ID,'ID de Ataques estudiados');
+  if(!s.studiedAttacks?.some(x=>x.id===id))fail('Ataque estudiado pendiente desconocido');
+  return {...s,studiedAttacks:s.studiedAttacks.filter(x=>x.id!==id)};
+}
 /** Retirada manual: el contador de rondas no identifica el inicio de cada turno. */
 export function clearMasteryEffect(state:CombatState,id:number):CombatState{
   const s=validateCombatState(state);

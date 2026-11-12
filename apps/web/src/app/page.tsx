@@ -40,7 +40,7 @@ const ARMOR_OPTIONS: ReadonlyArray<{id:ArmorId|null;name:string}> = [
 {id:'half_plate',name:'Media armadura'},{id:'ring_mail',name:'Cota de anillas'},{id:'chain_mail',name:'Cota de malla'},
 {id:'splint',name:'Bandas'},{id:'plate',name:'Placas'}
 ];
-const FEATURES:Record<string,string>={ability_score_improvement:'Mejora de característica (nivel 4)',extra_attack:'Ataque adicional (nivel 5)',tactical_shift:'Desplazamiento táctico (nivel 5)',fighting_style:'Estilo de combate',second_wind:'Segundo aliento',weapon_mastery:'Maestría de armas',action_surge:'Acción súbita',tactical_mind:'Mente táctica',champion_improved_critical:'Crítico mejorado',champion_remarkable_athlete:'Atleta extraordinario',ability_score_improvement_level_6:'Mejora de característica (nivel 6)',champion_additional_fighting_style:'Estilo de combate adicional (Campeón nivel 7)',ability_score_improvement_level_8:'Mejora de característica (nivel 8)',indomitable:'Indomable (nivel 9)',tactical_master:'Dominio táctico (nivel 9)',champion_heroic_warrior:'Guerrero heroico (Campeón nivel 10)',two_extra_attacks:'Dos ataques adicionales (nivel 11)'};
+const FEATURES:Record<string,string>={ability_score_improvement:'Mejora de característica (nivel 4)',extra_attack:'Ataque adicional (nivel 5)',tactical_shift:'Desplazamiento táctico (nivel 5)',fighting_style:'Estilo de combate',second_wind:'Segundo aliento',weapon_mastery:'Maestría de armas',action_surge:'Acción súbita',tactical_mind:'Mente táctica',champion_improved_critical:'Crítico mejorado',champion_remarkable_athlete:'Atleta extraordinario',ability_score_improvement_level_6:'Mejora de característica (nivel 6)',champion_additional_fighting_style:'Estilo de combate adicional (Campeón nivel 7)',ability_score_improvement_level_8:'Mejora de característica (nivel 8)',indomitable:'Indomable (nivel 9)',tactical_master:'Dominio táctico (nivel 9)',champion_heroic_warrior:'Guerrero heroico (Campeón nivel 10)',two_extra_attacks:'Dos ataques adicionales (nivel 11)',ability_score_improvement_level_12:'Mejora de característica (nivel 12)',studied_attacks:'Ataques estudiados (nivel 13)'};
 const FEATS = ORIGIN_FEATS;
 const originFeatName=(x:string)=>({magic_initiate_cleric:'Iniciado en la Magia (Clérigo)',magic_initiate_wizard:'Iniciado en la Magia (Mago)',...ORIGIN_FEATS} as Record<string,string>)[x]??x;
 const signed=(n:number)=>n>=0?`+${n}`:String(n);
@@ -62,6 +62,9 @@ export default function Home(){
   const [asi8Mode,setAsi8Mode]=useState<'plus_two'|'two_ones'>('plus_two');
   const [asi8First,setAsi8First]=useState<Ability>('wisdom');
   const [asi8Second,setAsi8Second]=useState<Ability>('dexterity');
+  const [asi12Mode,setAsi12Mode]=useState<'plus_two'|'two_ones'>('plus_two');
+  const [asi12First,setAsi12First]=useState<Ability>('wisdom');
+  const [asi12Second,setAsi12Second]=useState<Ability>('dexterity');
   const [levelMessage,setLevelMessage]=useState('');
   const [levelRecovery,setLevelRecovery]=useState<SupportedFighterLevel|null>(null);
   const [background,setBackground]=useState<BackgroundId>('soldier');
@@ -133,9 +136,10 @@ export default function Home(){
     ...(level>=4?{level4Improvement:{mode:asiMode,first:asiFirst,...(asiMode==='two_ones'?{second:asiSecond}:{})}}:{}),
     ...(level>=6?{level6Improvement:{mode:asi6Mode,first:asi6First,...(asi6Mode==='two_ones'?{second:asi6Second}:{})}}:{}),
     ...(level>=8?{level8Improvement:{mode:asi8Mode,first:asi8First,...(asi8Mode==='two_ones'?{second:asi8Second}:{})}}:{}),
+    ...(level>=12?{level12Improvement:{mode:asi12Mode,first:asi12First,...(asi12Mode==='two_ones'?{second:asi12Second}:{})}}:{}),
     assignedAbilities:scores,increaseMode:mode,plusTwoAbility:two,plusOneAbility:one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,elfLineage:lineage,elfSenseSkill:elfSkill,elfSpellAbility:elfSpell,armor,shield,inventoryActions:activeActions,martial:{fightingStyle:style,...(level>=7?{additionalFightingStyle:additionalStyle as FightingStyleId}:{}),weaponMasteries:masteries,startingPackage:starter},
     backgroundEquipment:{startingPackage:backgroundPackage,...(background==='soldier'?{gamingSet:soldierGamingSet}:{})}};
-  const output=useMemo(()=>{try{return {result:calculateGuidedFighter(input),error:null};}catch(e){return {result:null,error:e instanceof Error?e.message:'Error al crear el personaje'};}},[name,level,asiMode,asiFirst,asiSecond,asi6Mode,asi6First,asi6Second,asi8Mode,asi8First,asi8Second,additionalStyle,background,species,scores,mode,two,one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,lineage,elfSkill,elfSpell,armor,shield,style,masteries,starter,backgroundPackage,soldierGamingSet,activeActions]);
+  const output=useMemo(()=>{try{return {result:calculateGuidedFighter(input),error:null};}catch(e){return {result:null,error:e instanceof Error?e.message:'Error al crear el personaje'};}},[name,level,asiMode,asiFirst,asiSecond,asi6Mode,asi6First,asi6Second,asi8Mode,asi8First,asi8Second,asi12Mode,asi12First,asi12Second,additionalStyle,background,species,scores,mode,two,one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,lineage,elfSkill,elfSpell,armor,shield,style,masteries,starter,backgroundPackage,soldierGamingSet,activeActions]);
   function loadSavedInput(saved:GuidedFighterInput){
     setName(saved.name);setLevel(saved.level);setLevelMessage('');setLevelRecovery(null);
     setAsiMode(saved.level4Improvement?.mode??'plus_two');setAsiFirst(saved.level4Improvement?.first??'strength');
@@ -143,7 +147,9 @@ export default function Home(){
     setAsi6Mode(saved.level6Improvement?.mode??'plus_two');setAsi6First(saved.level6Improvement?.first??'constitution');
     setAsi6Second(saved.level6Improvement?.second??'dexterity');
     setAsi8Mode(saved.level8Improvement?.mode??'plus_two');setAsi8First(saved.level8Improvement?.first??'wisdom');
-    setAsi8Second(saved.level8Improvement?.second??'dexterity');setBackground(saved.background);setSpecies(saved.species);
+    setAsi8Second(saved.level8Improvement?.second??'dexterity');
+    setAsi12Mode(saved.level12Improvement?.mode??'plus_two');setAsi12First(saved.level12Improvement?.first??'wisdom');
+    setAsi12Second(saved.level12Improvement?.second??'dexterity');setBackground(saved.background);setSpecies(saved.species);
     setScores({...saved.assignedAbilities});setMode(saved.increaseMode);setTwo(saved.plusTwoAbility);setOne(saved.plusOneAbility);
     setFighterSkills([...saved.fighterSkills]);setHumanSkill(saved.humanSkill??'investigation');
     setHumanFeat(saved.humanFeat??'tough');setHumanSize(saved.humanSize??'medium');
@@ -189,6 +195,7 @@ export default function Home(){
       ...(next>=4?{level4Improvement:{mode:asiMode,first:asiFirst,...(asiMode==='two_ones'?{second:asiSecond}:{})}}:{}),
       ...(next>=6?{level6Improvement:{mode:asi6Mode,first:asi6First,...(asi6Mode==='two_ones'?{second:asi6Second}:{})}}:{}),
       ...(next>=8?{level8Improvement:{mode:asi8Mode,first:asi8First,...(asi8Mode==='two_ones'?{second:asi8Second}:{})}}:{}),
+      ...(next>=12?{level12Improvement:{mode:asi12Mode,first:asi12First,...(asi12Mode==='two_ones'?{second:asi12Second}:{})}}:{}),
       martial:{...input.martial!,weaponMasteries:chosenMasteries,
         ...(next>=7?{additionalFightingStyle:additionalStyle as FightingStyleId}:{})}};
     return {value,masteries:chosenMasteries};
@@ -305,7 +312,7 @@ export default function Home(){
   return <main className="app-shell">
     <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Creador guiado · D&D 2024</span></div></div><div className="status"><span className="status-dot"/> Motor conectado · Guardado local</div></header>
     <div className="content">
-      <div className="intro"><div><span className="eyebrow">ACTUALIZACIÓN 30 / PROGRESIÓN DEL GUERRERO</span><h1>Da forma a <em>tu aventurero.</em></h1><p>Guerrero de niveles 1–11. Tus decisiones de origen se validan y se reflejan en la hoja calculada.</p></div><span className="edition">PHB 2024 + SRD</span></div>
+      <div className="intro"><div><span className="eyebrow">ACTUALIZACIÓN 31 / PROGRESIÓN DEL GUERRERO</span><h1>Da forma a <em>tu aventurero.</em></h1><p>Guerrero de niveles 1–13. Tus decisiones de origen se validan y se reflejan en la hoja calculada.</p></div><span className="edition">PHB 2024 + SRD</span></div>
       <SaveLoadPanel input={input} adventure={sessionCheck.outOfSync?null:sessionCheck.state} valid={Boolean(output.result&&!sessionCheck.outOfSync)} onLoad={loadSavedSnapshot}/>
       <PlayPanel sheet={sheet??null} state={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
       <SurvivalPanel sheet={sheet??null} state={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
@@ -329,7 +336,7 @@ export default function Home(){
                 <div className="level-stepper-display" role="status" aria-live="polite" aria-atomic="true">
                   <span className="level-stepper-eyebrow">NIVEL ACTUAL</span>
                   <strong className="level-stepper-number">{level}</strong>
-                  <span className="level-stepper-range">Guerrero · 1 a 11</span>
+                  <span className="level-stepper-range">Guerrero · 1 a 13</span>
                 </div>
                 <button type="button" className="level-stepper-arrow" aria-label="Subir un nivel" title="Subir un nivel" disabled={adjacentFighterLevel(level,1)===null}
                   onClick={()=>{const next=adjacentFighterLevel(level,1);if(next!==null)selectFighterLevel(next);}}><span aria-hidden="true">→</span></button>
@@ -343,7 +350,7 @@ export default function Home(){
                 <small>El estilo debe ser distinto del primero. La elección se consolida al subir a 7.</small>
               </label>}
             </div>
-            {level>=3&&<div className="info-line">Subclase: Campeón. Próximo nivel: {level===11?'pendiente de ampliar':level+1}.</div>}
+            {level>=3&&<div className="info-line">Subclase: Campeón. Próximo nivel: {level===13?'pendiente de ampliar':level+1}.</div>}
             {output.error&&<p className="save-error" role="alert">La hoja actual de nivel {level} tiene un error que impide la progresión o el guardado: {output.error}</p>}
             {sessionCheck.outOfSync&&<p className="save-error" role="alert">Nivel {level} sin sincronizar: han cambiado los PG máximos o el estado de partida. Al intentar subir se solicitará confirmar la sincronización sin borrar la sesión.</p>}
             {levelMessage&&<p className="level-stepper-message" role="alert">{levelMessage}</p>}
@@ -401,6 +408,12 @@ export default function Home(){
               <label className="field"><span>Distribución al alcanzar nivel 8</span><select value={asi8Mode} onChange={e=>setAsi8Mode(e.target.value as typeof asi8Mode)}><option value="plus_two">+2 a una característica</option><option value="two_ones">+1 a dos características</option></select></label>
               <label className="field"><span>Primera característica (nivel 8)</span><select value={asi8First} onChange={e=>setAsi8First(e.target.value as Ability)}>{ABILITIES.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label>
               {asi8Mode==='two_ones'&&<label className="field"><span>Segunda característica (nivel 8)</span><select value={asi8Second} onChange={e=>setAsi8Second(e.target.value as Ability)}>{ABILITIES.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label>}
+            </>}
+            {level>=11&&<><div className="divider"/><div className="section-label"><h3>Cuarta mejora de característica · nivel 12</h3><span>{level>=12?'Aplicada':'Elígela antes de subir'}</span></div>
+              <p className="muted-note">Elección independiente de las mejoras de niveles 4, 6 y 8. Esta fase implementa Mejora de característica; el catálogo de dotes generales está pendiente.</p>
+              <label className="field"><span>Distribución al alcanzar nivel 12</span><select value={asi12Mode} onChange={e=>setAsi12Mode(e.target.value as typeof asi12Mode)}><option value="plus_two">+2 a una característica</option><option value="two_ones">+1 a dos características</option></select></label>
+              <label className="field"><span>Primera característica (nivel 12)</span><select value={asi12First} onChange={e=>setAsi12First(e.target.value as Ability)}>{ABILITIES.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label>
+              {asi12Mode==='two_ones'&&<label className="field"><span>Segunda característica (nivel 12)</span><select value={asi12Second} onChange={e=>setAsi12Second(e.target.value as Ability)}>{ABILITIES.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label>}
             </>}
           </>}
           {step===3&&<>

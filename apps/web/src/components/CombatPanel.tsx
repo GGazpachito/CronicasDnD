@@ -1,7 +1,7 @@
 'use client';
 
 import {useState} from 'react';
-import {addTrackedEffect,advanceCombatRound,removeTrackedEffect,clearMasteryEffect,type CombatState} from '../../../../packages/rules-engine/src/combat';
+import {addTrackedEffect,advanceCombatRound,removeTrackedEffect,clearMasteryEffect,clearStudiedAttack,type CombatState} from '../../../../packages/rules-engine/src/combat';
 import {WEAPONS} from '../../../../packages/rules-engine/src/martial';
 import {INVENTORY_NAMES} from '../../../../packages/rules-engine/src/inventory';
 
@@ -30,6 +30,12 @@ export default function CombatPanel({combat,onChange,outOfSync}:Props){
         <p className="muted-note">Hostigar concede ventaja contra el objetivo anotado y se consume al atacarlo. Si activas el gestor de turnos, Hostigar, Debilitar y Ralentizar nuevos caducan automáticamente cuando corresponde. Los anteriores y los efectos sobre enemigos pueden requerir resolución manual.</p>
         <div className="combat-list">{!combat.masteryEffects?.length&&<p className="muted-note">Sin efectos de maestría pendientes.</p>}
           {(combat.masteryEffects??[]).map(effect=><div className="combat-row" key={effect.id}><div><strong>{effect.mastery} · {effect.target} · R{effect.round}</strong><small>{effect.detail}</small></div><button type="button" onClick={()=>perform(c=>clearMasteryEffect(c,effect.id))}>Resuelto / caducado</button></div>)}
+        </div>
+      </div>
+      <div className="combat-column"><h3>Ataques estudiados ({combat.studiedAttacks?.length??0}) · Guerrero nivel 13</h3>
+        <p className="muted-note">Tras fallar contra una criatura, tienes ventaja en el siguiente ataque contra ese mismo objetivo antes del final de tu siguiente turno. Se consume al usarlo; si vuelves a fallar, se registra otra vez. Los ataques sin seguimiento de turnos deben caducarse manualmente.</p>
+        <div className="combat-list">{!combat.studiedAttacks?.length&&<p className="muted-note">Sin objetivos estudiados pendientes.</p>}
+          {(combat.studiedAttacks??[]).map(effect=><div className="combat-row" key={effect.id}><div><strong>{effect.target} · R{effect.round}</strong><small>Ventaja en el próximo ataque contra esta criatura.</small></div><button type="button" onClick={()=>perform(c=>clearStudiedAttack(c,effect.id))}>Resuelto / caducado</button></div>)}
         </div>
       </div>
       <div className="combat-columns">

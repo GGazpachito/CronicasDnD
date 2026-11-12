@@ -28,10 +28,10 @@ function character(level:9|10|11, fifth='longbow'):GuidedFighterInput{
 const detail={lightExtra:false,nickMastery:false,cleaveMastery:false,hitCreature:true,weaponId:'greatsword',targetName:'Orco'};
 
 describe('Guerrero y Campeón, niveles 10 y 11',()=>{
-  it('flechas llegan hasta 11 y se desactivan ahí',()=>{
+  it('flechas permiten continuar después de 11',()=>{
     expect(adjacentFighterLevel(9,1)).toBe(10);
     expect(adjacentFighterLevel(10,1)).toBe(11);
-    expect(adjacentFighterLevel(11,1)).toBeNull();
+    expect(adjacentFighterLevel(11,1)).toBe(12);
     expect(adjacentFighterLevel(11,-1)).toBe(10);
   });
   it('nivel 10: competencia +4, 4 usos de Segundo aliento y cinco maestrías',()=>{

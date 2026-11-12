@@ -10,7 +10,7 @@ import { validateMagicInitiate, grantsFromMagicInitiate, elfLineageSpells, type 
 import { combineStartingInventory, validateBackgroundEquipment, GAMING_SETS, type BackgroundEquipmentChoice, type StartingInventory } from './background-equipment';
 import { replayInventory, equippedArmor, hasEquippedShield, type InventoryAction, type InventoryState } from './inventory';
 import {collectMagicWardBonuses} from './magic-wards';
-import {applyFighterLevel4Improvement,applyFighterLevel6Improvement,applyFighterLevel8Improvement,type FighterLevel4Improvement,type FighterLevel6Improvement,type FighterLevel8Improvement} from './progression';
+import {applyFighterLevel4Improvement,applyFighterLevel6Improvement,applyFighterLevel8Improvement,applyFighterLevel12Improvement,type FighterLevel4Improvement,type FighterLevel6Improvement,type FighterLevel8Improvement,type FighterLevel12Improvement} from './progression';
 
 export const FIGHTER_SKILL_OPTIONS: readonly Skill[] = [
   'acrobatics', 'animal_handling', 'athletics', 'history', 'insight',
@@ -31,13 +31,15 @@ export const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8] as const;
 
 export type GuidedFighterInput = Readonly<{
   name: string;
-  level: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
+  level: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13;
   /** Solo desde el nivel 4; otras dotes generales quedan fuera de este incremento. */
   level4Improvement?: FighterLevel4Improvement;
   /** Segunda mejora independiente desde nivel 6. */
   level6Improvement?:FighterLevel6Improvement;
   /** Tercera mejora independiente desde nivel 8. */
   level8Improvement?:FighterLevel8Improvement;
+  /** Cuarta mejora independiente, desde nivel 12. */
+  level12Improvement?:FighterLevel12Improvement;
   background: BackgroundId;
   species: SpeciesId;
   /** Puntuaciones antes de los aumentos por trasfondo. */
@@ -88,7 +90,7 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
   const bg = BACKGROUNDS[input.background];
   if (!bg) fail('Trasfondo no disponible');
   if (!['human','dwarf','elf'].includes(input.species)) fail('Especie no disponible');
-  if (![1,2,3,4,5,6,7,8,9,10,11].includes(input.level)) fail('Solo Guerrero nivel 1 a 11');
+  if (![1,2,3,4,5,6,7,8,9,10,11,12,13].includes(input.level)) fail('Solo Guerrero nivel 1 a 13');
   if (!input.name?.trim() || input.name.length > 120) fail('Introduce un nombre válido');
   if (!input.assignedAbilities || typeof input.assignedAbilities !== 'object') fail('Faltan características');
   const assigned = ABILITIES.map(a => input.assignedAbilities[a]);
@@ -107,9 +109,11 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
   if(input.level<4 && input.level4Improvement!==undefined)fail('La mejora de nivel 4 no está disponible antes de nivel 4');
   if(input.level<6&&input.level6Improvement!==undefined)fail('La mejora de nivel 6 no está disponible antes de nivel 6');
   if(input.level<8&&input.level8Improvement!==undefined)fail('La mejora de nivel 8 no está disponible antes de nivel 8');
+  if(input.level<12&&input.level12Improvement!==undefined)fail('La mejora de nivel 12 no está disponible antes de nivel 12');
   const level4Scores=input.level>=4 ? applyFighterLevel4Improvement(finalScores,input.level4Improvement!) : finalScores;
   const level6Scores=input.level>=6 ? applyFighterLevel6Improvement(level4Scores,input.level6Improvement!) : level4Scores;
-  const improvedScores=input.level>=8 ? applyFighterLevel8Improvement(level6Scores,input.level8Improvement!) : level6Scores;
+  const level8Scores=input.level>=8 ? applyFighterLevel8Improvement(level6Scores,input.level8Improvement!) : level6Scores;
+  const improvedScores=input.level>=12 ? applyFighterLevel12Improvement(level8Scores,input.level12Improvement!) : level8Scores;
   if (!Array.isArray(input.fighterSkills) || input.fighterSkills.length!==2 || new Set(input.fighterSkills).size!==2 || input.fighterSkills.some(s=>!isSkill(s)||!FIGHTER_SKILL_OPTIONS.includes(s))) fail('Elige dos habilidades distintas de la lista del Guerrero');
   // Se exige una elección libre diferente si ya concede esa competencia el trasfondo.
   const skills = new Set<Skill>(bg.skills as readonly Skill[]);
@@ -187,7 +191,7 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
   const martial = input.martial===undefined ? undefined : validateMartialChoices(input.martial,input.level>=10?5:input.level>=4?4:3,input.level>=7);
   if (!martial) pending.push('Estilo de combate, tres maestrías y equipo inicial aún no seleccionados');
   if (martial && martial.fightingStyle !== 'defense') pending.push('El estilo de combate se utiliza en el panel de ataques cuando corresponde; las reacciones y sentidos especiales siguen pendientes');
-  if(input.level>=4)pending.push('Dotes generales alternativas a Mejora de característica: catálogo pendiente; en esta fase solo se admite esa dote en niveles 4, 6 y 8');
+  if(input.level>=4)pending.push('Dotes generales alternativas a Mejora de característica: catálogo pendiente; en esta fase solo se admite esa dote en niveles 4, 6, 8 y 12');
   if(input.level>=7&&martial?.additionalFightingStyle)pending.push('Segundo estilo del Campeón: los efectos situacionales y reacciones siguen requiriendo resolución manual');
   if(input.level>=5)pending.push('Desplazamiento táctico: el movimiento sin ataques de oportunidad de Segundo aliento debe resolverse con el DM');
   if (martial) pending.push('Las maestrías se muestran en el panel de ataques; las que requieren control de turnos, posición o estados enemigos se resuelven manualmente');
