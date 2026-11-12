@@ -41,6 +41,7 @@ export type CalculatedFighterSheet = Readonly<{
   proficiencyBonus: number;
   skillBonuses: Readonly<Record<Skill, number>>;
   savingThrowBonuses: Readonly<Record<Ability, number>>;
+  savingThrowRollModes: Readonly<Record<Ability, RollModeResult['mode']>>;
   skillRollModes: Readonly<Record<Skill, RollModeResult['mode']>>;
   initiative: number;
   initiativeRollMode: RollModeResult['mode'];
@@ -148,8 +149,10 @@ export function calculateFighterSheet(input: FighterCharacterInput): CalculatedF
     skillRollModes[skill] = resolveRollMode(`skills.${skill}`, modifiers, context).mode;
   }
   const savingThrowBonuses = {} as Record<Ability, number>;
+  const savingThrowRollModes = {} as Record<Ability, RollModeResult['mode']>;
   for (const ability of ['strength','dexterity','constitution','intelligence','wisdom','charisma'] as const) {
     savingThrowBonuses[ability] = adjust(effectResult.savingThrowBonuses[ability], `saving_throws.${ability}`);
+    savingThrowRollModes[ability] = resolveRollMode(`saving_throws.${ability}`, modifiers, context).mode;
   }
   const initiative = adjust(abilityMods.dexterity, 'initiative');
   const initiativeRollMode = resolveRollMode('initiative', modifiers, context).mode;
@@ -170,7 +173,7 @@ export function calculateFighterSheet(input: FighterCharacterInput): CalculatedF
   return {
     id: input.id, name: input.name, ruleset: 'dnd-2024', classId: 'fighter', level: lvl,
     subclass: input.subclass ?? null, abilityScores: scores, abilityModifiers: abilityMods,
-    proficiencyBonus: proficiencyBonus(lvl), skillBonuses, savingThrowBonuses,
+    proficiencyBonus: proficiencyBonus(lvl), skillBonuses, savingThrowBonuses, savingThrowRollModes,
     skillRollModes, initiative, initiativeRollMode, armorClass: ac.value, armorClassDetails: ac,
     maximumHitPoints: hp.maximum, currentHitPoints: state.hitPoints.current,
     hitDice: { total: hp.hitDice, die: hp.die }, resources, features: fighterFeatures(lvl, input.subclass ?? null),

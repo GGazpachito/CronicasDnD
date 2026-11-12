@@ -248,3 +248,33 @@
 @media(max-width:790px){.overview-columns{grid-template-columns:1fr}.overview-vitals{grid-template-columns:repeat(3,minmax(0,1fr))}.overview-ability-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:610px){.overview-vitals{grid-template-columns:1fr 1fr}.overview-vital-hp{grid-column:span 2}.overview-vital{min-height:122px;padding:16px}.overview-abilities,.overview-panel{padding:17px}.overview-foot-grid{grid-template-columns:1fr 1fr}.overview-panel-heading h3{font-size:17px}.overview-editor-details>summary{flex-wrap:wrap;padding:16px;font-size:12px}.overview-editor-content{padding:7px 12px 14px}}
 @media(max-width:420px){.overview-foot-grid{grid-template-columns:1fr}.overview-record{font-size:12px}.overview-vital>strong{font-size:34px}.overview-ability-grid{gap:6px}.overview-ability{padding:10px 4px}}
+
+/* Actualización 38: lanzador de d20 exclusivamente manual, por sección de la hoja. */
+.overview-dice-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:12px 22px;padding:17px 22px}
+.overview-dice-toolbar>div{flex:1 1 270px;min-width:0}
+.overview-dice-toolbar h3{font:700 19px Georgia,serif;color:#f2eee7;margin:0 0 6px}
+.overview-dice-toolbar>div>p{font-size:12px;color:var(--muted);margin:0;line-height:1.45}
+.overview-dice-toolbar label{display:flex;flex-direction:column;gap:6px;flex:0 1 235px;font-size:11px;font-weight:700;color:#ebd4ac}
+.overview-dice-toolbar select{width:100%;min-height:40px;color:#f4ebda;background:#213042;border:1px solid #7e6c4c;border-radius:9px;padding:8px}
+.overview-dice-help,.overview-dice-error{flex:1 0 100%;margin:0;font-size:11px;color:var(--muted);line-height:1.5}
+.overview-dice-error{color:#ffb3a0}
+.overview-roll-actions{display:inline-flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}
+.overview-roll-button{flex:none;min-width:54px;min-height:34px;padding:6px 9px;border:1px solid #867147;border-radius:8px;background:#28394a;color:#ffe1ac;font-size:11px;font-weight:750;cursor:pointer}
+.overview-roll-button:hover,.overview-roll-button:focus-visible{border-color:#e3bf7f;background:#3c5065;outline-offset:2px}
+.overview-roll-button:active{transform:scale(.97)}
+.overview-vital .overview-roll-init{align-self:flex-start;margin:7px 0 0}
+.overview-roll-result{min-width:0;padding:12px 14px;margin-top:14px;border:1px solid #766645;background:#1c2b3a;border-radius:10px;color:#efe9de}
+.overview-vital .overview-roll-result{width:100%;margin-top:10px}
+.overview-roll-result-heading{display:flex;justify-content:space-between;align-items:baseline;gap:7px;flex-wrap:wrap;font-size:12px}
+.overview-roll-result-heading strong{color:#f4dfa8}
+.overview-roll-result-heading span{font-size:10px;color:#b8ceb9}
+.overview-roll-equation{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:9px 0 4px}
+.overview-roll-dice{display:inline-flex;align-items:center;gap:5px}
+.overview-die{min-width:36px;height:36px;padding:4px;border:1px solid #688196;background:#263344;color:#bac9d7;border-radius:7px;display:inline-grid;place-items:center;font:700 18px Georgia,serif;animation:overview-die-pop .18s ease-out both}
+.overview-die.is-chosen{border-color:#e4b968;background:#6b5132;color:#fff0c7}
+.overview-roll-formula{font-size:12px}
+.overview-roll-formula strong{font:700 22px Georgia,serif;color:#ffe1ac;white-space:nowrap}
+.overview-roll-result>small{display:block;font-size:10px;color:var(--muted)}
+@keyframes overview-die-pop{from{opacity:.3;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+@media(max-width:610px){.overview-dice-toolbar{padding:15px}.overview-dice-toolbar label{flex:1 1 100%}.overview-record{gap:6px}.overview-roll-actions{gap:5px}.overview-roll-button{padding:6px;min-width:47px}}
+@media(prefers-reduced-motion:reduce){.overview-die{animation:none}.overview-roll-button:active{transform:none}}
