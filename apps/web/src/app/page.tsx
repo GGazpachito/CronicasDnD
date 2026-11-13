@@ -8,6 +8,7 @@ import CharacterProfilePanel from "../components/CharacterProfilePanel";
 import PrincipalOverview from "../components/PrincipalOverview";
 import TraitsPanel from "../components/TraitsPanel";
 import SpellsPanel from "../components/SpellsPanel";
+import LevelUpWizard from "../components/LevelUpWizard";
 import CharacterTabs, { type SheetTab } from "../components/CharacterTabs";
 import SheetPlaceholder from "../components/SheetPlaceholder";
 import PlayPanel from "../components/PlayPanel";
@@ -28,7 +29,6 @@ import type { CharacterSnapshot } from "../../../../packages/rules-engine/src/pe
 import { EMPTY_CHARACTER_PROFILE, validateCharacterProfile, type CharacterProfile } from "../../../../packages/rules-engine/src/character-profile";
 import { calculateGuidedFighter, BACKGROUNDS, FIGHTER_SKILL_OPTIONS, HUMAN_FEATS, type BackgroundId, type SpeciesId, type ElfLineage, type GuidedFighterInput, type HumanOriginFeat } from "../../../../packages/rules-engine/src/guided";
 import { adjacentFighterLevel, type SupportedFighterLevel } from "../../../../packages/rules-engine/src/progression";
-import {prepareFighterLevelUp,prepareFighterLevelUpWithFreshSession} from "../../../../packages/rules-engine/src/level-up";
 import { ABILITIES, type Ability, type AbilityScores } from "../../../../packages/rules-engine/src/abilities";
 import { SKILLS, type Skill } from "../../../../packages/rules-engine/src/proficiencies";
 import type { ArmorId } from "../../../../packages/rules-engine/src/defense";
@@ -88,7 +88,7 @@ export default function Home(){
   const [epicBoon,setEpicBoon]=useState<EpicBoonId|''>('');
   const [epicAbility,setEpicAbility]=useState<Ability>('strength');
   const [levelMessage,setLevelMessage]=useState('');
-  const [levelRecovery,setLevelRecovery]=useState<SupportedFighterLevel|null>(null);
+  const [levelWizardOpen,setLevelWizardOpen]=useState(false);
   const [background,setBackground]=useState<BackgroundId>('soldier');
   const [species,setSpecies]=useState<SpeciesId>('human');
   const [scores,setScores]=useState<AbilityScores>({strength:15,dexterity:14,constitution:13,intelligence:10,wisdom:12,charisma:8});
@@ -117,9 +117,6 @@ export default function Home(){
   const [style,setStyle]=useState<FightingStyleId>('defense');
   const [additionalStyle,setAdditionalStyle]=useState<FightingStyleId|''>('');
   const [masteries,setMasteries]=useState<WeaponId[]>(['greatsword','flail','javelin']);
-  const [fourthMastery,setFourthMastery]=useState<WeaponId>('shortsword');
-  const [fifthMastery,setFifthMastery]=useState<WeaponId|''>('');
-  const [sixthMastery,setSixthMastery]=useState<WeaponId|''>('');
   const [starter,setStarter]=useState<StartingPackageId>('a');
   const [backgroundPackage,setBackgroundPackage]=useState<BackgroundPackageId>('a');
   const [soldierGamingSet,setSoldierGamingSet]=useState<GamingSetId>('dice_set');
@@ -172,7 +169,7 @@ export default function Home(){
   function loadSavedInput(saved:GuidedFighterInput){
     setName(saved.name);setProfile(saved.profile?validateCharacterProfile(saved.profile):EMPTY_CHARACTER_PROFILE);
     setProfileLoadRevision(n=>n+1);
-    setLevel(saved.level);setLevelMessage('');setLevelRecovery(null);
+    setLevel(saved.level);setLevelMessage('');
     setAsiMode(saved.level4Improvement?.mode??'plus_two');setAsiFirst(saved.level4Improvement?.first??'strength');
     setAsiSecond(saved.level4Improvement?.second??'constitution');
     setAsi6Mode(saved.level6Improvement?.mode??'plus_two');setAsi6First(saved.level6Improvement?.first??'constitution');
@@ -206,7 +203,7 @@ export default function Home(){
     if(details?.musicianInstruments)setInstruments([...details.musicianInstruments]);
     if(details?.skilledProficiencies)setSkilled([...details.skilledProficiencies]);
     const martial=saved.martial;
-    setStyle(martial?.fightingStyle??'defense');setAdditionalStyle(martial?.additionalFightingStyle??'');setMasteries(martial?[...martial.weaponMasteries]:['greatsword','flail','javelin']);setFourthMastery(martial?.weaponMasteries[3]??'shortsword');setFifthMastery(martial?.weaponMasteries[4]??'');setSixthMastery(martial?.weaponMasteries[5]??'');
+    setStyle(martial?.fightingStyle??'defense');setAdditionalStyle(martial?.additionalFightingStyle??'');setMasteries(martial?[...martial.weaponMasteries]:['greatsword','flail','javelin']);
     const newStarter=martial?.startingPackage??'a';setStarter(newStarter);
     const newBackgroundPack=saved.backgroundEquipment?.startingPackage??'a';setBackgroundPackage(newBackgroundPack);
     const game=saved.backgroundEquipment?.gamingSet??'dice_set';setSoldierGamingSet(game);
@@ -221,92 +218,24 @@ export default function Home(){
     try{return {state:validateAdventureState(adventure,sheet),outOfSync:false};}
     catch{return {state:adventure,outOfSync:true};}
   },[sheet,adventure]);
-  /** Construye la siguiente hoja usando las elecciones actuales, sin alterar el estado de React. */
-  function nextFighterInput(next:SupportedFighterLevel):{
-    value:GuidedFighterInput;masteries:WeaponId[]
-  }{
-    const chosenMasteries=next===4?[...masteries,fourthMastery]:next===10?[...masteries,fifthMastery as WeaponId]:next===16?[...masteries,sixthMastery as WeaponId]:[...masteries];
-    const value:GuidedFighterInput={...input,level:next,
-      ...(next>=4?{level4Improvement:{mode:asiMode,first:asiFirst,...(asiMode==='two_ones'?{second:asiSecond}:{})}}:{}),
-      ...(next>=6?{level6Improvement:{mode:asi6Mode,first:asi6First,...(asi6Mode==='two_ones'?{second:asi6Second}:{})}}:{}),
-      ...(next>=8?{level8Improvement:{mode:asi8Mode,first:asi8First,...(asi8Mode==='two_ones'?{second:asi8Second}:{})}}:{}),
-      ...(next>=12?{level12Improvement:{mode:asi12Mode,first:asi12First,...(asi12Mode==='two_ones'?{second:asi12Second}:{})}}:{}),
-      ...(next>=14?{level14Improvement:{mode:asi14Mode,first:asi14First,...(asi14Mode==='two_ones'?{second:asi14Second}:{})}}:{}),
-      ...(next>=16?{level16Improvement:{mode:asi16Mode,first:asi16First,...(asi16Mode==='two_ones'?{second:asi16Second}:{})}}:{}),
-      ...(next>=19&&epicBoon?{epicBoon:{id:epicBoon,ability:epicAbility}}:{}),
-      martial:{...input.martial!,weaponMasteries:chosenMasteries,
-        ...(next>=7?{additionalFightingStyle:additionalStyle as FightingStyleId}:{})}};
-    return {value,masteries:chosenMasteries};
-  }
-  function acceptLevelTransition(snapshot:CharacterSnapshot,chosenMasteries:WeaponId[],description:string){
-    setAdventure(snapshot.adventure);
-    setMasteries(chosenMasteries);
-    setLevel(snapshot.input.level);
-    setLevelRecovery(null);
-    setLevelMessage(description);
-  }
-  function selectFighterLevel(next:SupportedFighterLevel){
-    setLevelMessage('');setLevelRecovery(null);
-    if(next===level)return;
-    if(next<level){
-      if(adventure!==null&&typeof window!=='undefined'&&!window.confirm(`¿Bajar a nivel ${next}? Se reiniciará la sesión de combate actual (PG, recursos gastados, historial y turnos). Guarda antes una copia del personaje si quieres conservarla.`))return;
-      setLevel(next);setMasteries(prev=>prev.slice(0,next>=16?6:next>=10?5:next>=4?4:3));setAdventure(null);
-      setLevelMessage(`Ahora estás en nivel ${next}. Se ha reiniciado el estado de combate. Guarda una copia si quieres conservar la partida anterior.`);return;
-    }
-    if(next!==level+1){setLevelMessage('Sube exactamente un nivel cada vez.');return;}
-    if(!output.result?.sheet){setLevelMessage(`No se puede subir: ${output.error??'revisa las elecciones del personaje'}`);return;}
-    if(next===19&&!epicBoon){setLevelMessage('Antes de subir al nivel 19, elige un beneficio épico en Características.');return;}
-    if(next===16&&!sixthMastery){
-      setLevelMessage('Para alcanzar el nivel 16, elige una sexta maestría en Equipo.');return;
-    }
-    if(next===10&&!fifthMastery){
-      setLevelMessage('Para alcanzar el nivel 10, elige una quinta maestría en Equipo.');return;
-    }
-    if(next===7&&!additionalStyle){
-      setLevelMessage('Para alcanzar el nivel 7 debes elegir un segundo estilo de combate en este mismo apartado. Después vuelve a pulsar la flecha derecha.');
-      return;
-    }
-    const candidate=nextFighterInput(next);
-    // Validar la nueva hoja ANTES de comprobar el estado de combate. Así no se
-    // confunde una elección inválida con un error de persistencia.
-    try{calculateGuidedFighter(candidate.value);}catch(e){
-      setLevelMessage(`No se puede subir al nivel ${next}: ${e instanceof Error?e.message:'revisa las elecciones'} (comprueba Características y Equipo).`);
-      return;
-    }
-    const needsSync=sessionCheck.outOfSync;
-    if(needsSync&&adventure&&typeof window!=='undefined'&&!window.confirm(
-      `Los PG máximos o el estado de partida del nivel ${level} no coinciden con la hoja. ¿Intentar sincronizar la sesión actual antes de subir a ${next}, conservando el daño y el historial?`
-    )){
-      setLevelMessage('Se ha cancelado la sincronización. No se ha modificado el nivel.');return;
-    }
-    try{
-      const source=needsSync?adventure:sessionCheck.state;
-      if(!source)throw new RangeError('Falta el estado de partida para avanzar');
-      const transition=prepareFighterLevelUp(input,source,candidate.value,needsSync);
-      acceptLevelTransition(transition.snapshot,candidate.masteries,
-        `Nivel ${next} alcanzado. ${transition.synchronizedBeforeAdvance?'La sesión se sincronizó previamente. ':''}Pulsa «Actualizar guardado» en Mis personajes para conservarlo.`);
-    }catch(e){
-      const message=e instanceof Error?e.message:'Error desconocido';
-      setLevelMessage(`La hoja de nivel ${next} es válida, pero la sesión de combate impide subir: ${message}. Puedes conservar la partida y revisar el error o utilizar la recuperación de sesión disponible aquí.`);
-      setLevelRecovery(next);
-    }
-  }
-  /** Recuperación voluntaria: solo en caso de estado de combate incompatible.
-   * Nunca cambia el guardado de PostgreSQL hasta que el usuario lo actualiza.
+  /** La subida se decide en LevelUpWizard y llega como instantánea ya validada.
+   * Un único evento de React confirma a la vez nivel, elecciones y estado de partida.
    */
-  function retryLevelWithFreshSession(){
-    if(levelRecovery===null)return;
-    const next=levelRecovery;
-    if(next!==level+1){setLevelRecovery(null);return;}
-    if(!window.confirm(
-      `¿Subir a nivel ${next} iniciando una sesión de combate nueva? Se reiniciarán PG actuales, recursos gastados, condiciones, turnos e historial de la SESIÓN EN PANTALLA. El personaje guardado en PostgreSQL permanecerá intacto hasta que pulses «Actualizar guardado». Cancela si necesitas conservar la sesión actual.`
-    ))return;
-    try{
-      const candidate=nextFighterInput(next);
-      const transition=prepareFighterLevelUpWithFreshSession(input,candidate.value);
-      acceptLevelTransition(transition.snapshot,candidate.masteries,
-        `Nivel ${next} alcanzado. Se ha creado una sesión de combate nueva. Antes de guardar, verifica los PG y recursos actuales.`);
-    }catch(e){setLevelMessage(`La recuperación no ha podido subir de nivel: ${e instanceof Error?e.message:'error desconocido'}`);}
+  function confirmWizardLevelUp(snapshot:CharacterSnapshot,synchronized:boolean,freshSession:boolean){
+    loadSavedInput(snapshot.input);
+    setAdventure(snapshot.adventure);
+    setLevelWizardOpen(false);
+    setLevelMessage(`Nivel ${snapshot.input.level} alcanzado. ${freshSession?'Se inició una sesión de partida nueva. ':synchronized?'La sesión actual se sincronizó previamente. ':''}Pulsa «Actualizar guardado» para conservar los cambios en PostgreSQL.`);
+  }
+  /** Bajar de nivel conserva el comportamiento anterior: solo con confirmación y reinicio de sesión. */
+  function lowerFighterLevel(){
+    const next=adjacentFighterLevel(level,-1);
+    if(next===null)return;
+    if(adventure!==null&&typeof window!=='undefined'&&!window.confirm(`¿Bajar a nivel ${next}? Se reiniciará la sesión de combate actual (PG, recursos gastados, historial y turnos). Guarda antes una copia del personaje si quieres conservarla.`))return;
+    setLevel(next);
+    setMasteries(prev=>prev.slice(0,next>=16?6:next>=10?5:next>=4?4:3));
+    setAdventure(null);
+    setLevelMessage(`Ahora estás en nivel ${next}. Se ha reiniciado el estado de combate. Guarda una copia si quieres conservar la partida anterior.`);
   }
   function confirmWeaponAttack(profile:WeaponAttackProfile,resolution:AttackResolution,context:MasteryContext,usage:AttackTurnUsage,usePeerlessAim=false){
     if(!sheet||!sessionCheck.state||sessionCheck.outOfSync||!output.result?.inventory)throw new RangeError('Primero valida y sincroniza el personaje');
@@ -353,12 +282,12 @@ export default function Home(){
   function changePackage(id:StartingPackageId){setStarter(id);setInventoryError(null);}
   function changeMastery(index:number,value:WeaponId){setMasteries(prev=>prev.map((old,i)=>i===index?value:old));}
   // Un acceso desde otra pestaña debe abrir el editor Y llevar al control elegido.
-  function openEditorAt(targetStep:number, levelControl=false){
+  function openEditorAt(targetStep:number){
     editorDetailsRef.current?.setAttribute("open", "");
     setStep(targetStep);
     setActiveTab('principal');
     window.requestAnimationFrame(()=>{
-      document.getElementById(levelControl?'fighter-level-stepper':'character-editor')
+      document.getElementById('character-editor')
         ?.scrollIntoView({behavior:'smooth',block:'start'});
     });
   }
@@ -369,7 +298,7 @@ export default function Home(){
   return <main className="app-shell">
     <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Hoja digital · D&D 2024</span></div></div><div className="status"><span className="status-dot"/> Edición local · Guardado manual</div></header>
     <div className="content">
-      <p className="sheet-release-note">ACTUALIZACIÓN 43 · HOJA DE HECHIZOS DE ORIGEN</p>
+      <p className="sheet-release-note">ACTUALIZACIÓN 44 · ASISTENTE DE SUBIDA DE NIVEL</p>
       <CharacterHeader
         name={name}
         portraitDataUrl={profile.portraitDataUrl}
@@ -378,8 +307,11 @@ export default function Home(){
         species={species==='human'?'Humano':species==='dwarf'?'Enano':'Elfo'}
         valid={Boolean(output.result&&!sessionCheck.outOfSync)}
         onEdit={()=>openEditorAt(0)}
-        onLevelUp={()=>openEditorAt(0,true)}
+        onLevelUp={()=>level<20?setLevelWizardOpen(true):openEditorAt(0)}
       />
+      {levelWizardOpen&&level<20&&<LevelUpWizard
+        input={input} adventure={adventure} outOfSync={sessionCheck.outOfSync}
+        onClose={()=>setLevelWizardOpen(false)} onConfirmed={confirmWizardLevelUp}/>}
       <SaveLoadPanel input={input} adventure={sessionCheck.outOfSync?null:sessionCheck.state} valid={Boolean(output.result&&!sessionCheck.outOfSync)} onLoad={loadSavedSnapshot}/>
       <CharacterTabs activeTab={activeTab} onChange={setActiveTab}/>
       <section id="sheet-panel-principal" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-principal" hidden={activeTab!=='principal'}>
@@ -413,33 +345,21 @@ export default function Home(){
             <div className="field"><span className="field-label">Nivel del personaje</span>
               <div id="fighter-level-stepper" className="level-stepper" role="group" aria-label="Cambiar nivel del Guerrero">
                 <button type="button" className="level-stepper-arrow" aria-label="Bajar un nivel" title="Bajar un nivel" disabled={adjacentFighterLevel(level,-1)===null}
-                  onClick={()=>{const next=adjacentFighterLevel(level,-1);if(next!==null)selectFighterLevel(next);}}><span aria-hidden="true">←</span></button>
+                  onClick={lowerFighterLevel}><span aria-hidden="true">←</span></button>
                 <div className="level-stepper-display" role="status" aria-live="polite" aria-atomic="true">
                   <span className="level-stepper-eyebrow">NIVEL ACTUAL</span>
                   <strong className="level-stepper-number">{level}</strong>
                   <span className="level-stepper-range">Guerrero · 1 a 20</span>
                 </div>
                 <button type="button" className="level-stepper-arrow" aria-label="Subir un nivel" title="Subir un nivel" disabled={adjacentFighterLevel(level,1)===null}
-                  onClick={()=>{const next=adjacentFighterLevel(level,1);if(next!==null)selectFighterLevel(next);}}><span aria-hidden="true">→</span></button>
+                  onClick={()=>setLevelWizardOpen(true)}><span aria-hidden="true">→</span></button>
               </div>
-              <p className="muted-note">La flecha derecha sube un nivel y conserva la partida. La izquierda baja un nivel y, previa confirmación, reinicia la sesión de combate.</p>
-              {level===6&&<label className="field"><span>Elección obligatoria para subir a nivel 7: segundo estilo del Campeón</span>
-                <select value={additionalStyle} onChange={e=>{setAdditionalStyle(e.target.value as FightingStyleId|'');setLevelMessage('');setLevelRecovery(null);}}>
-                  <option value="">Elige un segundo estilo</option>
-                  {Object.entries(FIGHTING_STYLES).filter(([id])=>id!==style).map(([id,label])=><option key={id} value={id}>{label}</option>)}
-                </select>
-                <small>El estilo debe ser distinto del primero. La elección se consolida al subir a 7.</small>
-              </label>}
+              <p className="muted-note">La flecha derecha abre el asistente de subida: revisa y confirma todas las elecciones antes de aplicar el nivel. La izquierda baja de nivel y, previa confirmación, reinicia la sesión.</p>
             </div>
             {level>=3&&<div className="info-line">Subclase: Campeón. Próximo nivel: {level===20?'nivel máximo':level+1}.</div>}
             {output.error&&<p className="save-error" role="alert">La hoja actual de nivel {level} tiene un error que impide la progresión o el guardado: {output.error}</p>}
             {sessionCheck.outOfSync&&<p className="save-error" role="alert">Nivel {level} sin sincronizar: han cambiado los PG máximos o el estado de partida. Al intentar subir se solicitará confirmar la sincronización sin borrar la sesión.</p>}
             {levelMessage&&<p className="level-stepper-message" role="alert">{levelMessage}</p>}
-            {levelRecovery!==null&&<div className="play-warning" role="group" aria-label="Recuperar subida de nivel">
-              <p>La hoja es válida, pero la partida no ha superado la transición de nivel. El guardado actual no se ha modificado.</p>
-              <button type="button" onClick={retryLevelWithFreshSession}>Subir a nivel {levelRecovery} con una sesión de combate nueva</button>
-              <p className="muted-note">Solo como último recurso, con confirmación. Se perderá la sesión de combate en pantalla, no el personaje de PostgreSQL.</p>
-            </div>}
           </>}
           {step===1&&<>
             <label className="field"><span>Trasfondo</span><select value={background} onChange={e=>onBackground(e.target.value as BackgroundId)}>{Object.entries(BACKGROUNDS).map(([id,b])=><option key={id} value={id}>{b.name}</option>)}</select></label>
@@ -470,46 +390,46 @@ export default function Home(){
             <label className="field"><span>Distribución</span><select value={mode} onChange={e=>setMode(e.target.value as typeof mode)}><option value="two_plus_one">+2 y +1 a características distintas</option><option value="three_ones">+1 a las tres características</option></select></label>
             {mode==='two_plus_one'&&<><label className="field"><span>Característica que recibe +2</span><select value={two} onChange={e=>setTwo(e.target.value as Ability)}>{allowed.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label><label className="field"><span>Característica que recibe +1</span><select value={one} onChange={e=>setOne(e.target.value as Ability)}>{allowed.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label></>}
             <p className="muted-note">Opciones del trasfondo: {allowed.map(a=>NAMES[a]).join(', ')}.</p>
-            {level>=3&&<><div className="divider"/><div className="section-label"><h3>Dote Mejora de característica, nivel 4</h3><span>{level>=4?'Aplicada':'Elígela antes de subir'}</span></div>
+            {level>=4&&<><div className="divider"/><div className="section-label"><h3>Dote Mejora de característica, nivel 4</h3><span>Aplicada</span></div>
               <p className="muted-note">En esta fase puedes elegir la dote Mejora de característica (+2 o +1/+1, máximo 20). Las demás dotes generales se añadirán más adelante.</p>
               <label className="field"><span>Distribución al alcanzar nivel 4</span><select value={asiMode} onChange={e=>setAsiMode(e.target.value as typeof asiMode)}><option value="plus_two">+2 a una característica</option><option value="two_ones">+1 a dos características</option></select></label>
               <label className="field"><span>Primera característica</span><select value={asiFirst} onChange={e=>setAsiFirst(e.target.value as Ability)}>{ABILITIES.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label>
               {asiMode==='two_ones'&&<label className="field"><span>Segunda característica</span><select value={asiSecond} onChange={e=>setAsiSecond(e.target.value as Ability)}>{ABILITIES.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label>}
-              <p className="muted-note">Elige antes de subir a nivel 4. Cambiar la mejora después puede requerir sincronizar el estado de combate.</p>
+              <p className="muted-note">Esta mejora se eligió en el asistente de nivel. Modificarla posteriormente puede requerir sincronizar el estado de combate.</p>
             </>}
-            {level>=5&&<><div className="divider"/><div className="section-label"><h3>Segunda mejora de característica · nivel 6</h3><span>{level>=6?'Aplicada':'Elígela antes de subir'}</span></div>
+            {level>=6&&<><div className="divider"/><div className="section-label"><h3>Segunda mejora de característica · nivel 6</h3><span>Aplicada</span></div>
               <p className="muted-note">Esta mejora es independiente de la de nivel 4. Se acumula con ella, hasta un máximo de 20 por característica.</p>
               <label className="field"><span>Distribución al alcanzar nivel 6</span><select value={asi6Mode} onChange={e=>setAsi6Mode(e.target.value as typeof asi6Mode)}><option value="plus_two">+2 a una característica</option><option value="two_ones">+1 a dos características</option></select></label>
               <label className="field"><span>Primera característica (nivel 6)</span><select value={asi6First} onChange={e=>setAsi6First(e.target.value as Ability)}>{ABILITIES.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label>
               {asi6Mode==='two_ones'&&<label className="field"><span>Segunda característica (nivel 6)</span><select value={asi6Second} onChange={e=>setAsi6Second(e.target.value as Ability)}>{ABILITIES.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label>}
               <p className="muted-note">En nivel 6 el Guerrero también puede elegir otra dote que cumpla requisitos; ese catálogo sigue pendiente. Aquí se implementa Mejora de característica.</p>
             </>}
-            {level>=7&&<><div className="divider"/><div className="section-label"><h3>Tercera mejora de característica · nivel 8</h3><span>{level>=8?'Aplicada':'Elígela antes de subir'}</span></div>
+            {level>=8&&<><div className="divider"/><div className="section-label"><h3>Tercera mejora de característica · nivel 8</h3><span>Aplicada</span></div>
               <p className="muted-note">Esta mejora es independiente de las de niveles 4 y 6. Máximo 20 por característica; otras dotes generales siguen pendientes.</p>
               <label className="field"><span>Distribución al alcanzar nivel 8</span><select value={asi8Mode} onChange={e=>setAsi8Mode(e.target.value as typeof asi8Mode)}><option value="plus_two">+2 a una característica</option><option value="two_ones">+1 a dos características</option></select></label>
               <label className="field"><span>Primera característica (nivel 8)</span><select value={asi8First} onChange={e=>setAsi8First(e.target.value as Ability)}>{ABILITIES.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label>
               {asi8Mode==='two_ones'&&<label className="field"><span>Segunda característica (nivel 8)</span><select value={asi8Second} onChange={e=>setAsi8Second(e.target.value as Ability)}>{ABILITIES.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label>}
             </>}
-            {level>=11&&<><div className="divider"/><div className="section-label"><h3>Cuarta mejora de característica · nivel 12</h3><span>{level>=12?'Aplicada':'Elígela antes de subir'}</span></div>
+            {level>=12&&<><div className="divider"/><div className="section-label"><h3>Cuarta mejora de característica · nivel 12</h3><span>Aplicada</span></div>
               <p className="muted-note">Elección independiente de las mejoras de niveles 4, 6 y 8. Esta fase implementa Mejora de característica; el catálogo de dotes generales está pendiente.</p>
               <label className="field"><span>Distribución al alcanzar nivel 12</span><select value={asi12Mode} onChange={e=>setAsi12Mode(e.target.value as typeof asi12Mode)}><option value="plus_two">+2 a una característica</option><option value="two_ones">+1 a dos características</option></select></label>
               <label className="field"><span>Primera característica (nivel 12)</span><select value={asi12First} onChange={e=>setAsi12First(e.target.value as Ability)}>{ABILITIES.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label>
               {asi12Mode==='two_ones'&&<label className="field"><span>Segunda característica (nivel 12)</span><select value={asi12Second} onChange={e=>setAsi12Second(e.target.value as Ability)}>{ABILITIES.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label>}
             </>}
-            {level>=13&&<><div className="divider"/><div className="section-label"><h3>Quinta mejora de característica · nivel 14</h3><span>{level>=14?'Aplicada':'Elígela antes de subir'}</span></div>
-              <p className="muted-note">Elige la mejora del nivel 14 antes de avanzar. Se acumula con las mejoras anteriores, sin superar 20 en ninguna característica. Otras dotes generales siguen pendientes.</p>
+            {level>=14&&<><div className="divider"/><div className="section-label"><h3>Quinta mejora de característica · nivel 14</h3><span>Aplicada</span></div>
+              <p className="muted-note">La mejora del nivel 14 se elige durante la subida. Se acumula con las mejoras anteriores, sin superar 20 en ninguna característica. Otras dotes generales siguen pendientes.</p>
               <label className="field"><span>Distribución al alcanzar nivel 14</span><select value={asi14Mode} onChange={e=>{setAsi14Mode(e.target.value as typeof asi14Mode);setLevelMessage('');}}><option value="plus_two">+2 a una característica</option><option value="two_ones">+1 a dos características</option></select></label>
               <label className="field"><span>Primera característica (nivel 14)</span><select value={asi14First} onChange={e=>{setAsi14First(e.target.value as Ability);setLevelMessage('');}}>{ABILITIES.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label>
               {asi14Mode==='two_ones'&&<label className="field"><span>Segunda característica (nivel 14)</span><select value={asi14Second} onChange={e=>{setAsi14Second(e.target.value as Ability);setLevelMessage('');}}>{ABILITIES.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label>}
             </>}
-            {level>=15&&<><div className="divider"/><div className="section-label"><h3>Sexta mejora de característica · nivel 16</h3><span>{level>=16?'Aplicada':'Elígela antes de subir'}</span></div>
+            {level>=16&&<><div className="divider"/><div className="section-label"><h3>Sexta mejora de característica · nivel 16</h3><span>Aplicada</span></div>
               <p className="muted-note">Elige cómo mejorar las características en nivel 16. Esta mejora se suma a las anteriores y no puede elevar una puntuación por encima de 20.</p>
               <label className="field"><span>Distribución al alcanzar nivel 16</span><select value={asi16Mode} onChange={e=>{setAsi16Mode(e.target.value as typeof asi16Mode);setLevelMessage('');}}><option value="plus_two">+2 a una característica</option><option value="two_ones">+1 a dos características</option></select></label>
               <label className="field"><span>Primera característica (nivel 16)</span><select value={asi16First} onChange={e=>{setAsi16First(e.target.value as Ability);setLevelMessage('');}}>{ABILITIES.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label>
               {asi16Mode==='two_ones'&&<label className="field"><span>Segunda característica (nivel 16)</span><select value={asi16Second} onChange={e=>{setAsi16Second(e.target.value as Ability);setLevelMessage('');}}>{ABILITIES.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label>}
             </>}
           </>}
-            {step===2&&level>=18&&<><div className="divider"/><div className="section-label"><h3>Beneficio épico · nivel 19</h3><span>{level>=19?'Aplicado':'Elección para subir'}</span></div>
+            {step===2&&level>=19&&<><div className="divider"/><div className="section-label"><h3>Beneficio épico · nivel 19</h3><span>Aplicado</span></div>
               <p className="muted-note">Elige una dote épica disponible y la característica que aumenta en +1 (hasta 30). Hemos automatizado inicialmente tres opciones. No se asigna ninguna por defecto.</p>
               <label className="field"><span>Dote de beneficio épico</span><select value={epicBoon} onChange={e=>{setEpicBoon(e.target.value as EpicBoonId|'');setLevelMessage('');}}>
                 <option value="">Selecciona tu beneficio épico</option>{Object.entries(EPIC_BOONS).map(([id,name])=><option key={id} value={id}>{name}</option>)}
@@ -528,24 +448,13 @@ export default function Home(){
           </>}
           {step===4&&<>
             <label className="field"><span>Estilo de combate del Guerrero</span><select value={style} onChange={e=>{const chosen=e.target.value as FightingStyleId;setStyle(chosen);if(chosen===additionalStyle)setAdditionalStyle('');}}>{Object.entries(FIGHTING_STYLES).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label>
-            {level>=6&&<label className="field"><span>Segundo estilo de combate del Campeón (nivel 7)</span><select value={additionalStyle} onChange={e=>{setAdditionalStyle(e.target.value as FightingStyleId|'');setLevelRecovery(null);setLevelMessage('');}}><option value="">Selecciona el segundo estilo</option>{Object.entries(FIGHTING_STYLES).filter(([id])=>id!==style).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label>}
-            {level>=6&&<p className="muted-note">El segundo estilo se activa al subir a nivel 7. Debe ser distinto del primero y sus bonificadores se aplicarán automáticamente cuando corresponda.</p>}
+            {level>=7&&<label className="field"><span>Segundo estilo de combate del Campeón (nivel 7)</span><select value={additionalStyle} onChange={e=>{setAdditionalStyle(e.target.value as FightingStyleId|'');setLevelMessage('');}}><option value="">Selecciona el segundo estilo</option>{Object.entries(FIGHTING_STYLES).filter(([id])=>id!==style).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label>}
+            {level>=7&&<p className="muted-note">El segundo estilo se activa al subir a nivel 7. Debe ser distinto del primero y sus bonificadores se aplicarán automáticamente cuando corresponda.</p>}
             <div className="info-line">{(style==='defense'||level>=7&&additionalStyle==='defense')?'Defensa: +1 a CA mientras llevas armadura. Aplicado automáticamente.':'Los estilos de ataque se calculan en el nuevo panel de combate. Las reacciones y sentidos siguen pendientes.'}</div>
             <div className="section-label"><h3>Maestría de armas</h3><span>{level>=16?6:level>=10?5:level>=4?4:3} tipos distintos</span></div>
             {Array.from({length:level>=16?6:level>=10?5:level>=4?4:3},(_,i)=>i).map(i=><label key={i} className="field"><span>Arma dominada {i+1}</span><select value={masteries[i]} onChange={e=>changeMastery(i,e.target.value as WeaponId)}>{Object.entries(WEAPONS).map(([id,data])=><option key={id} value={id}>{data.name} · {data.mastery}</option>)}</select></label>)}
-            {level===3&&<label className="field"><span>Cuarta maestría al subir a nivel 4</span><select value={fourthMastery} onChange={e=>setFourthMastery(e.target.value as WeaponId)}>{Object.entries(WEAPONS).map(([id,data])=><option key={id} value={id}>{data.name} · {data.mastery}</option>)}</select></label>}
-            {level===9&&<label className="field"><span>Quinta maestría al subir a nivel 10</span>
-              <select value={fifthMastery} onChange={e=>{setFifthMastery(e.target.value as WeaponId|'');setLevelMessage('');}}>
-                <option value="">Elige tu quinta arma dominada</option>
-                {Object.entries(WEAPONS).filter(([id])=>!masteries.includes(id as WeaponId)).map(([id,data])=><option key={id} value={id}>{data.name} · {data.mastery}</option>)}
-              </select></label>}
-            {level===15&&<label className="field"><span>Sexta maestría al subir a nivel 16</span>
-              <select value={sixthMastery} onChange={e=>{setSixthMastery(e.target.value as WeaponId|'');setLevelMessage('');}}>
-                <option value="">Elige tu sexta arma dominada</option>
-                {Object.entries(WEAPONS).filter(([id])=>!masteries.includes(id as WeaponId)).map(([id,data])=><option key={id} value={id}>{data.name} · {data.mastery}</option>)}
-              </select></label>}
             {level>=9&&<p className="info-line">Dominio táctico: al atacar con un arma que dominas, podrás elegir Empujar, Debilitar o Ralentizar en lugar de su maestría habitual, solo para ese ataque. Se elige en «Ataques con armas».</p>}
-            <p className="muted-note">Las maestrías deben ser distintas. Selecciona la cuarta antes de subir a nivel 4. Puedes elegir armas aunque aún no las poseas. Sus propiedades se muestran en el panel de combate; la mayoría de efectos situacionales se resuelven con el director.</p>
+            <p className="muted-note">Las maestrías deben ser distintas. Las nuevas elecciones se realizan desde el asistente de subida de nivel. Puedes elegir armas aunque aún no las poseas. Sus propiedades se muestran en el panel de combate; la mayoría de efectos situacionales se resuelven con el director.</p>
             <div className="divider"/>
             <label className="field"><span>Equipo inicial de clase</span><select value={starter} onChange={e=>changePackage(e.target.value as StartingPackageId)}>{Object.entries(FIGHTER_PACKAGES).map(([id,pack])=><option key={id} value={id}>{pack.label}</option>)}</select></label>
             <div className="origin-detail"><strong>{FIGHTER_PACKAGES[starter].gold} po · Equipo de clase</strong>{FIGHTER_PACKAGES[starter].items.map((it,i)=><small key={i}>{it.quantity} × {it.name}</small>)}{starter==='c'&&<small>Sin objetos. La compra de equipo se añadirá después.</small>}</div>
