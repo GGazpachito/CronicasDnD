@@ -8,6 +8,7 @@ import { FIGHTING_STYLES, WEAPONS } from './martial';
 import { ORIGIN_FEATS, TOOL_NAMES, type ToolId } from './origin-feats';
 import { EPIC_BOONS } from './epic-boons';
 import type { Ability } from './abilities';
+import {explainFighterFeature,FIGHTING_STYLE_EXPLANATIONS,MASTERY_EXPLANATIONS,EPIC_BOON_EXPLANATIONS,ORIGIN_FEAT_EXPLANATIONS,SPECIES_TRAIT_EXPLANATIONS} from './rules-explanations';
 
 export type TraitGroup = 'class' | 'subclass' | 'species' | 'feats';
 export type TraitAutomation = 'calculated' | 'partial' | 'manual';
@@ -18,6 +19,8 @@ export type CharacterTrait = Readonly<{
   source: string;
   level?: number;
   summary: string;
+  /** Explicación funcional para la vista y para el asistente; nunca aplica reglas. */
+  explanation?: string;
   automation: TraitAutomation;
   details: readonly string[];
 }>;
@@ -97,11 +100,11 @@ function featureDetails(id:string,input:GuidedFighterInput,result:GuidedFighterR
   const sheet=result.sheet;
   const martial=result.martial;
   switch(id){
-    case 'fighting_style':return martial ? [`Estilo elegido: ${FIGHTING_STYLES[martial.choices.fightingStyle]}.`, 'El efecto se incorpora a los módulos correspondientes cuando están implementados; el resto se resuelve en la mesa.'] : ['Todavía no hay un estilo validado.'];
-    case 'champion_additional_fighting_style':return martial?.choices.additionalFightingStyle ? [`Segundo estilo: ${FIGHTING_STYLES[martial.choices.additionalFightingStyle]}.`] : ['Todavía no hay segundo estilo registrado.'];
+    case 'fighting_style':return martial ? [`Estilo elegido: ${FIGHTING_STYLES[martial.choices.fightingStyle]}.`, FIGHTING_STYLE_EXPLANATIONS[martial.choices.fightingStyle], 'El efecto se incorpora a los módulos correspondientes cuando están implementados; el resto se resuelve en la mesa.'] : ['Todavía no hay un estilo validado.'];
+    case 'champion_additional_fighting_style':return martial?.choices.additionalFightingStyle ? [`Segundo estilo: ${FIGHTING_STYLES[martial.choices.additionalFightingStyle]}.`, FIGHTING_STYLE_EXPLANATIONS[martial.choices.additionalFightingStyle]] : ['Todavía no hay segundo estilo registrado.'];
     case 'weapon_mastery':
     case 'weapon_mastery_sixth':return martial?.choices.weaponMasteries?.length
-      ? martial.choices.weaponMasteries.map(weapon=>`${WEAPONS[weapon].name}: ${WEAPONS[weapon].mastery}.`)
+      ? martial.choices.weaponMasteries.map(weapon=>`${WEAPONS[weapon].name} (${WEAPONS[weapon].mastery}): ${MASTERY_EXPLANATIONS[WEAPONS[weapon].mastery]}`)
       : ['No hay armas con maestría seleccionadas.'];
     case 'second_wind':
     case 'action_surge':
@@ -135,6 +138,7 @@ function classTraits(input:GuidedFighterInput,result:GuidedFighterResult):Charac
       source:group==='subclass'?'Campeón':'Guerrero',
       ...(known?{level:known.level}:{}),
       summary:known?.summary ?? 'Rasgo registrado en la hoja; su descripción todavía no está catalogada.',
+      explanation:explainFighterFeature(id),
       automation:known?.automation ?? 'manual',
       details:featureDetails(id,input,result),
     } satisfies CharacterTrait];
@@ -145,7 +149,7 @@ function speciesTraits(input:GuidedFighterInput,result:GuidedFighterResult):Char
   const traits:CharacterTrait[]=[];
   const add=(id:string,title:string,summary:string,automation:TraitAutomation,details:string[]=[])=>traits.push({
     id:`species:${id}`,title,group:'species',source:input.species==='human'?'Humano':input.species==='dwarf'?'Enano':'Elfo',
-    summary,automation,details,
+    summary,explanation:SPECIES_TRAIT_EXPLANATIONS[id],automation,details,
   });
   if(input.species==='human'){
     add('resourceful','Ingenioso','Puedes obtener Inspiración heroica al completar un descanso largo.','manual',['Esta concesión automática por descanso aún no está integrada.']);
@@ -215,7 +219,7 @@ function featTrait(id:string,source:string,origin:'background'|'human_feat',resu
     summary='Opciones especiales para combate sin armas e improvisación.';
     details.push('Los efectos específicos todavía no se automatizan.');
   }
-  return {id:`feat:${origin}:${id}`,title,group:'feats',source,summary,automation,details};
+  return {id:`feat:${origin}:${id}`,title,group:'feats',source,summary,explanation:ORIGIN_FEAT_EXPLANATIONS[id],automation,details};
 }
 
 function featTraits(input:GuidedFighterInput,result:GuidedFighterResult):CharacterTrait[]{
@@ -231,7 +235,7 @@ function featTraits(input:GuidedFighterInput,result:GuidedFighterResult):Charact
     };
     const spec=specs[boon.id];
     feats.push({id:`feat:epic:${boon.id}`,title:EPIC_BOONS[boon.id],group:'feats',source:'Guerrero · nivel 19',level:19,
-      summary:spec.summary,automation:spec.automation,
+      summary:spec.summary,explanation:EPIC_BOON_EXPLANATIONS[boon.id],automation:spec.automation,
       details:[`Mejora de ${ABILITY_NAMES[boon.ability]} +1 incluida en la puntuación final.`,...spec.details]});
   }
   return feats;

@@ -7,7 +7,30 @@ import {collectCharacterTraits,type CharacterTrait} from './traits';
 import {type FighterAbilityImprovement} from './progression';
 import {type FightingStyleId,type WeaponId} from './martial';
 import {type EpicBoonChoice} from './epic-boons';
+import {explainFighterFeature} from './rules-explanations';
 
+/** Las novedades y los desplegables comparten el mismo catálogo de explicaciones de Rasgos. */
+const MILESTONE_FEATURE_IDS:Readonly<Record<string,string>>={
+  'Acción súbita (un uso)':'action_surge','Mente táctica':'tactical_mind',
+  'Crítico mejorado':'champion_improved_critical','Atleta extraordinario':'champion_remarkable_athlete',
+  'Mejora de característica':'ability_score_improvement',
+  'Cuarta maestría de armas':'weapon_mastery','Quinta maestría de armas':'weapon_mastery','Sexta maestría de armas':'weapon_mastery_sixth',
+  'Ataque adicional':'extra_attack','Desplazamiento táctico':'tactical_shift',
+  'Campeón: segundo estilo de combate':'champion_additional_fighting_style',
+  'Indomable (un uso)':'indomitable','Indomable (dos usos)':'indomitable','Indomable (tres usos)':'indomitable_three_uses',
+  'Dominio táctico':'tactical_master','Campeón: Guerrero heroico':'champion_heroic_warrior',
+  'Dos ataques adicionales':'two_extra_attacks','Ataques estudiados':'studied_attacks',
+  'Campeón: Crítico superior':'champion_superior_critical','Acción súbita (dos usos)':'action_surge_two_uses',
+  'Campeón: Superviviente':'champion_survivor','Beneficio épico':'epic_boon',
+  'Tres ataques adicionales: cuatro ataques por acción Atacar':'three_extra_attacks',
+};
+const SUBCLASS_INFO='En este proyecto se implementa Campeón: mejora tu intervalo de crítico, destaca en Atletismo e iniciativa y obtiene más capacidades de resistencia y combate al subir de nivel.';
+export function explainFighterMilestone(title:string):string|undefined{
+  if(title==='Subclase Campeón')return SUBCLASS_INFO;
+  const id=MILESTONE_FEATURE_IDS[title];
+  // La mejora numérica se explica directamente mediante sus dos opciones de reparto.
+  return id&&id!=='ability_score_improvement'?explainFighterFeature(id):undefined;
+}
 export const FIGHTER_IMPROVEMENT_LEVELS=[4,6,8,12,14,16] as const;
 export type FighterImprovementLevel=typeof FIGHTER_IMPROVEMENT_LEVELS[number];
 

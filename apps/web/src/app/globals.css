@@ -767,3 +767,19 @@
 .level-wizard-actions button:disabled{opacity:.42;cursor:not-allowed}
 .level-wizard-actions .level-wizard-cancel,.level-wizard-actions .level-wizard-back{background:transparent;border:1px solid rgba(200,195,175,.32);color:inherit}
 @media(max-width:590px){.level-wizard-backdrop{padding:7px;align-items:end}.level-wizard{max-height:95dvh;border-radius:16px 16px 6px 6px}.level-wizard-top,.level-wizard-body{padding:18px}.level-wizard-steps{padding:12px}.level-wizard-steps span{font-size:.73rem;gap:4px;flex-direction:column}.level-wizard-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.level-wizard-actions{padding:13px;align-items:stretch}.level-wizard-actions button{padding:8px 11px}}
+
+/* Actualización 44.1: textos explicativos compartidos entre Rasgos y subida de nivel. */
+.traits-card-body .traits-rule-explanation{margin:0 0 10px;line-height:1.55;font-size:.94rem;color:var(--text,#f4ead3);font-weight:500}
+.traits-card-body .traits-automation-explanation{margin:0 0 10px;font-size:.83rem;line-height:1.5;color:var(--text-muted,#a7ada9)}
+.level-wizard-milestones li::before{display:none}
+.level-wizard-milestones li>strong{display:block;font-size:.94rem}
+.level-wizard-explanation,.level-wizard-detail{margin:6px 0 0;line-height:1.5;font-size:.87rem;color:var(--text-muted,#a7ada9);font-weight:400}
+.level-wizard-choice-info{margin:0;padding:11px 13px;border-left:3px solid #b49a60;border-radius:7px;background:rgba(169,145,89,.10);line-height:1.55;font-size:.9rem}
+.level-wizard-choice-info>strong{display:block;margin-bottom:3px}
+.level-wizard-choice-info .level-wizard-explanation{margin:0}
+.level-wizard-reference{border:1px solid rgba(171,155,122,.26);border-radius:9px;padding:9px 12px}
+.level-wizard-reference summary{cursor:pointer;font-size:.86rem;font-weight:600}
+.level-wizard-reference ul{margin:10px 0 0;padding-left:18px;display:grid;gap:10px;max-height:210px;overflow:auto}
+.level-wizard-reference li{font-size:.83rem;line-height:1.45}
+.level-wizard-small-list .level-wizard-explanation{margin:6px 0}
+.level-wizard-small-list .level-wizard-detail{margin:3px 0}

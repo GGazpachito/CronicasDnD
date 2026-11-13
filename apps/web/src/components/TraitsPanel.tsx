@@ -27,7 +27,8 @@ function TraitCard({ trait }: {trait:CharacterTrait}) {
       <span className={`traits-status is-${trait.automation}`} title={AUTOMATION[trait.automation].description}>{AUTOMATION[trait.automation].label}</span>
     </summary>
     <div className="traits-card-body">
-      <p>{AUTOMATION[trait.automation].description}</p>
+      {trait.explanation && <p className="traits-rule-explanation">{trait.explanation}</p>}
+      <p className="traits-automation-explanation">{AUTOMATION[trait.automation].description}</p>
       {trait.details.length > 0 && <ul>{trait.details.map((text,index)=><li key={`${trait.id}:${index}`}>{text}</li>)}</ul>}
     </div>
   </details>;
@@ -53,7 +54,7 @@ export default function TraitsPanel({input,result,error,onEdit}:TraitsPanelProps
   const collection=collectCharacterTraits(input,result);
   const term=query.trim().toLocaleLowerCase("es");
   const visible=collection.traits.filter(trait=>(groupFilter==="all" || trait.group===groupFilter) &&
-    (!term || [trait.title,trait.source,trait.summary,...trait.details].join(" ").toLocaleLowerCase("es").includes(term)));
+    (!term || [trait.title,trait.source,trait.summary,trait.explanation??"",...trait.details].join(" ").toLocaleLowerCase("es").includes(term)));
   const counts=collection.traits.reduce((acc,trait)=>{
     acc[trait.automation]++;
     return acc;
@@ -62,7 +63,7 @@ export default function TraitsPanel({input,result,error,onEdit}:TraitsPanelProps
   return <div className="traits-page" aria-label="Catálogo de rasgos del personaje">
     <header className="traits-hero panel">
       <div className="traits-hero-top">
-        <div><span className="eyebrow">RASGOS · ACTUALIZACIÓN 40</span><h2>Las capacidades de tu personaje</h2>
+        <div><span className="eyebrow">RASGOS · GUÍA DEL PERSONAJE</span><h2>Las capacidades de tu personaje</h2>
           <p>Rasgos disponibles según tu nivel, especie, subclase y dotes. Las descripciones son resúmenes de consulta; los valores y efectos aplicados proceden del motor.</p>
         </div>
         <button type="button" className="traits-edit" onClick={()=>onEdit(1)}>Editar origen y elecciones</button>
