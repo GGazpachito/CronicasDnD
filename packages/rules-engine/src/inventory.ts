@@ -19,7 +19,7 @@ export type InventoryLine = Readonly<{
 export type InventoryState = Readonly<{
   coinsCopper: number;
   items: readonly InventoryLine[];
-  equipped: Readonly<{armor: ArmorId | null; shield: boolean}>;
+  equipped: Readonly<{armor: ArmorId | null; shield: boolean; weapons: readonly WeaponId[]}>;
   /** Objetos mágicos y su vinculación, dentro del mismo inventario persistente. */
   magicItems: readonly MagicWardEntry[];
 }>;
@@ -57,6 +57,7 @@ export type InventoryAction =
   | Readonly<{type:'remove';itemId:InventoryItemId;quantity:number}>
   | Readonly<{type:'equip_armor';armor:ArmorId|null}>
   | Readonly<{type:'equip_shield';equipped:boolean}>
+  | Readonly<{type:'equip_weapon';weaponId:WeaponId;equipped:boolean}>
   | Readonly<{type:'magic_grant';itemId:MagicWardItemId;damageType?:RingResistanceType;armorId?:ArmorId;weaponId?:WeaponId;enhancement?:EnhancementBonus;instanceId?:string}>
   | Readonly<{type:'magic_wear';instanceId:string;worn:boolean}>
   | Readonly<{type:'magic_attune';instanceId:string;attuned:boolean}>
@@ -78,8 +79,8 @@ function price(id:InventoryItemId):number {
   return p;
 }
 function itemCount(state:InventoryState,id:InventoryItemId):number {return state.items.find(x=>x.id===id)?.quantity??0;}
-function clone(state:InventoryState): {coinsCopper:number;items:{id:InventoryItemId;name:string;quantity:number;sources:{from:InventorySource;quantity:number}[]}[];equipped:{armor:ArmorId|null;shield:boolean};magicItems:MagicWardEntry[]} {
-  return {coinsCopper:state.coinsCopper,items:state.items.map(x=>({id:x.id,name:x.name,quantity:x.quantity,sources:x.sources.map(s=>({...s}))})),equipped:{...state.equipped},magicItems:validateMagicWards(state.magicItems??[]).map(x=>({...x}))};
+function clone(state:InventoryState): {coinsCopper:number;items:{id:InventoryItemId;name:string;quantity:number;sources:{from:InventorySource;quantity:number}[]}[];equipped:{armor:ArmorId|null;shield:boolean;weapons:WeaponId[]};magicItems:MagicWardEntry[]} {
+  return {coinsCopper:state.coinsCopper,items:state.items.map(x=>({id:x.id,name:x.name,quantity:x.quantity,sources:x.sources.map(s=>({...s}))})),equipped:{...state.equipped,weapons:[...(state.equipped.weapons??[])]},magicItems:validateMagicWards(state.magicItems??[]).map(x=>({...x}))};
 }
 function addLine(state:ReturnType<typeof clone>,id:InventoryItemId,quantity:number,from:InventorySource):void{
   const existing=state.items.find(x=>x.id===id);
@@ -102,6 +103,7 @@ function removeLine(state:ReturnType<typeof clone>,id:InventoryItemId,quantity:n
   if(line.quantity===0) state.items=state.items.filter(x=>x.id!==id);
   if(state.equipped.armor===id && itemCount(state,id)===0) state.equipped.armor=null;
   if(id==='shield' && itemCount(state,id)===0) state.equipped.shield=false;
+  if(Object.hasOwn(WEAPONS,id) && itemCount(state,id)===0) state.equipped.weapons=state.equipped.weapons.filter(w=>w!==id);
 }
 function money(value:number):number {
   if(!Number.isSafeInteger(value)||value<0||value>MAX_COINS)error('Saldo de monedas fuera de rango');
@@ -111,7 +113,7 @@ function money(value:number):number {
 export function initialInventoryState(starting:StartingInventory, initialArmor:ArmorId|null):InventoryState {
   if(!starting||!Array.isArray(starting.items))error('Inventario inicial inválido');
   if(initialArmor!==null&&!armorValid(initialArmor))error('Armadura inicial inválida');
-  const state:ReturnType<typeof clone>={coinsCopper:money(starting.totalGold*100),items:[],equipped:{armor:initialArmor,shield:false},magicItems:[]};
+  const state:ReturnType<typeof clone>={coinsCopper:money(starting.totalGold*100),items:[],equipped:{armor:initialArmor,shield:false,weapons:[]},magicItems:[]};
   for(const line of starting.items){
     if(!idValid(line.id)||!Number.isInteger(line.quantity)||line.quantity<1||line.quantity>MAX_UNITS)error('Objeto inicial inválido');
     if(!Array.isArray(line.sources)||line.sources.reduce((n:number,s:{quantity:number})=>n+s.quantity,0)!==line.quantity)error('Procedencia del objeto inicial inválida');
@@ -154,6 +156,15 @@ export function applyInventoryAction(state:InventoryState, action:InventoryActio
       if(action.equipped&&itemCount(state,'shield')<1)error('Necesitas poseer un escudo en el inventario');
       next.equipped.shield=action.equipped;
       if(action.equipped)next.magicItems=next.magicItems.map(m=>m.itemId==='shield_enhancement'?{...m,worn:false}:m);
+      break;
+    }
+    case 'equip_weapon':{
+      if(typeof action.weaponId!=='string'||!Object.hasOwn(WEAPONS,action.weaponId))error('Arma no reconocida');
+      if(typeof action.equipped!=='boolean')error('Estado del arma inválido');
+      if(action.equipped&&itemCount(state,action.weaponId)<1)error('Necesitas poseer el arma para equiparla');
+      next.equipped.weapons=action.equipped
+        ? [...new Set([...next.equipped.weapons,action.weaponId])]
+        : next.equipped.weapons.filter(w=>w!==action.weaponId);
       break;
     }
     case 'magic_grant':{

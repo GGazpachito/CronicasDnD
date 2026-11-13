@@ -49,7 +49,8 @@ export function inventoryOverview(state:InventoryState):InventoryOverview {
     categories[category]+=item.quantity;
     return {
       id:item.id,name:item.name,quantity:item.quantity,category,
-      equipped: category==='armor' && (state.equipped.armor===item.id || (item.id==='shield'&&state.equipped.shield)),
+      equipped: category==='weapons' ? (state.equipped.weapons??[]).includes(item.id as keyof typeof WEAPONS) :
+        category==='armor' && (state.equipped.armor===item.id || (item.id==='shield'&&state.equipped.shield)),
       sourceText:item.sources.map(src=>`${INVENTORY_SOURCE_LABELS[src.from]} ×${src.quantity}`).join(' · '),
       unitPriceCopper:INVENTORY_PRICES_CP[item.id]??null,
     };
@@ -60,4 +61,29 @@ export function inventoryOverview(state:InventoryState):InventoryOverview {
     entries,categories,totalUnits:entries.reduce((total,item)=>total+item.quantity,0),
     magicOwned:state.magicItems.length,magicActive,magicAttuned,attunementCapacity:3,
   };
+}
+
+/** Vista derivada del equipamiento actual. No se persiste un segundo listado. */
+export type EquippedInventoryEntry = Readonly<{
+  key:string;
+  name:string;
+  category:'weapon'|'armor'|'shield';
+  magical:boolean;
+}>;
+export function equippedInventory(state:InventoryState):readonly EquippedInventoryEntry[]{
+  const worn=inventoryOverview(state).entries.filter(item=>item.equipped);
+  const ordinary:EquippedInventoryEntry[]=worn.map(item=>({
+    key:`normal:${item.id}`,name:item.name,
+    category:item.category==='weapons'?'weapon':item.id==='shield'?'shield':'armor',magical:false,
+  }));
+  const magical:EquippedInventoryEntry[]=state.magicItems.filter(item=>item.worn &&
+    (item.itemId==='weapon_enhancement'||item.itemId==='armor_enhancement'||item.itemId==='shield_enhancement'))
+    .map(item=>({
+      key:`magic:${item.instanceId}`,
+      name:`${MAGIC_WARD_CATALOG[item.itemId].label}${item.armorId?` (${state.items.find(x=>x.id===item.armorId)?.name??item.armorId})`:''}${item.weaponId?` (${WEAPONS[item.weaponId].name})`:''}${item.enhancement?` +${item.enhancement}`:''}`,
+      category:item.itemId==='weapon_enhancement'?'weapon':item.itemId==='armor_enhancement'?'armor':'shield',
+      magical:true,
+    }));
+  const position={weapon:0,armor:1,shield:2};
+  return [...ordinary,...magical].sort((a,b)=>position[a.category]-position[b.category]);
 }

@@ -3,12 +3,13 @@
 import {useState} from "react";
 import {ARMORS, type ArmorId} from "../../../../packages/rules-engine/src/defense";
 import {
-  equippedArmor, formatCopper, hasEquippedShield, INVENTORY_NAMES, INVENTORY_PRICES_CP,
+  formatCopper, INVENTORY_NAMES, INVENTORY_PRICES_CP,
   type InventoryAction, type InventoryItemId, type InventoryState,
 } from "../../../../packages/rules-engine/src/inventory";
 import {
-  INVENTORY_CATEGORY_LABELS, inventoryOverview, type InventoryCategory,
+  INVENTORY_CATEGORY_LABELS, equippedInventory, inventoryOverview, type InventoryCategory,
 } from "../../../../packages/rules-engine/src/inventory-view";
+import {WEAPONS, type WeaponId} from "../../../../packages/rules-engine/src/martial";
 import MagicWardsPanel from "./MagicWardsPanel";
 
 type CategoryFilter = "all" | InventoryCategory;
@@ -62,10 +63,10 @@ export default function EquipmentPanel({
   const term=query.trim().toLocaleLowerCase("es");
   const shown=overview.entries.filter(item=>(category==="all"||item.category===category)&&
     (!term||`${item.name} ${item.sourceText}`.toLocaleLowerCase("es").includes(term)));
-  const actualArmor=equippedArmor(inventory);
-  const actualShield=hasEquippedShield(inventory);
-  const magicArmor=inventory.magicItems.some(item=>item.itemId==="armor_enhancement"&&item.worn);
-  const magicShield=inventory.magicItems.some(item=>item.itemId==="shield_enhancement"&&item.worn);
+  const equipped=equippedInventory(inventory);
+  const gold=Math.floor(inventory.coinsCopper/100);
+  const silver=Math.floor(inventory.coinsCopper%100/10);
+  const copper=inventory.coinsCopper%10;
 
   function perform(action:InventoryAction){
     if(!enabled)return;
@@ -80,26 +81,16 @@ export default function EquipmentPanel({
   }
 
   return <div className="equipment-page" aria-label="Inventario y equipamiento del personaje">
-    <header className="panel equipment-hero">
-      <div className="equipment-hero-title">
-        <div><span className="eyebrow">EQUIPO · ACTUALIZACIÓN 41</span><h2>Tu equipo de aventura</h2>
-          <p>Objetos, monedas y equipamiento. Los efectos de armaduras, escudos y objetos mágicos se calculan desde el inventario real.</p></div>
-        <button type="button" className="equipment-secondary-button" onClick={onEdit}>Editar equipo inicial</button>
-      </div>
-      <div className="equipment-overview" aria-label="Resumen del inventario">
-        <div><span>Saldo disponible</span><strong>{formatCopper(inventory.coinsCopper)}</strong></div>
-        <div><span>Objetos comunes</span><strong>{overview.totalUnits}</strong></div>
-        <div><span>Objetos mágicos</span><strong>{overview.magicOwned}</strong><small>{overview.magicActive} activos</small></div>
-        <div><span>Vinculaciones</span><strong>{overview.magicAttuned}/{overview.attunementCapacity}</strong></div>
-      </div>
-      <div className="equipment-equipped-line"><span>Armadura: <strong>{actualArmor?INVENTORY_NAMES[actualArmor]:"Ninguna"}</strong></span>
-        <span>Escudo: <strong>{actualShield?"Equipado":"No equipado"}</strong></span></div>
-      <p className="equipment-save-hint">Los cambios afectan a la hoja inmediatamente, pero se guardan en PostgreSQL únicamente cuando pulsas «Actualizar guardado».</p>
-      {outOfSync&&<p className="play-warning" role="alert">La sesión de partida no coincide con los datos actuales del personaje. Revisa la sincronización antes de modificar el inventario.</p>}
+    <header className="equipment-page-title">
+      <div><span className="eyebrow">HOJA DE PERSONAJE · EQUIPO</span><h2>Equipo</h2>
+        <p>Marca las casillas del inventario para equipar armas, armaduras y escudos. Los cambios se reflejan en la hoja.</p></div>
+      <button type="button" className="equipment-secondary-button" onClick={onEdit}>Editar equipo inicial</button>
     </header>
-
+    {outOfSync&&<p className="play-warning" role="alert">La sesión no coincide con los datos del personaje. Sincronízala antes de modificar el equipo.</p>}
+    <div className="equipment-layout">
+      <div className="equipment-inventory-column">
     <section className="panel equipment-section" aria-labelledby="equipment-list-title">
-      <div className="equipment-section-header"><div><span className="eyebrow">CONTENIDO</span><h3 id="equipment-list-title">Inventario actual</h3></div>
+      <div className="equipment-section-header"><div><span className="eyebrow">OBJETOS EN TU MOCHILA</span><h3 id="equipment-list-title">Inventario</h3></div>
         <button type="button" className="equipment-secondary-button" onClick={onOpenAttacks}>Abrir ataques</button></div>
       <div className="equipment-toolbar">
         <label><span>Buscar objetos</span><input type="search" placeholder="Nombre o procedencia" value={query} onChange={event=>setQuery(event.target.value)}/></label>
@@ -113,6 +104,7 @@ export default function EquipmentPanel({
           {shown.map(item=>{
             const canEquipArmor=Object.hasOwn(ARMORS,item.id);
             const canEquipShield=item.id==="shield";
+            const canEquipWeapon=Object.hasOwn(WEAPONS,item.id);
             return <article className="equipment-item" key={item.id}>
               <div className="equipment-item-main">
                 <span className="equipment-item-category">{INVENTORY_CATEGORY_LABELS[item.category]} {item.equipped?"· EQUIPADO":""}</span>
@@ -121,17 +113,24 @@ export default function EquipmentPanel({
                 <small>{item.unitPriceCopper===null?"Precio no normalizado":`Precio de catálogo: ${formatCopper(item.unitPriceCopper)} / unidad`}</small>
               </div>
               <div className="equipment-item-side"><span className="equipment-quantity" aria-label={`${item.quantity} unidades`}>×{item.quantity}</span>
-                {canEquipArmor&&<button type="button" disabled={!enabled} onClick={()=>perform({type:"equip_armor",armor:item.equipped?null:item.id as ArmorId})}>{item.equipped?"Quitar":"Equipar"}</button>}
-                {canEquipShield&&<button type="button" disabled={!enabled} onClick={()=>perform({type:"equip_shield",equipped:!item.equipped})}>{item.equipped?"Quitar":"Equipar"}</button>}
+                {(canEquipArmor||canEquipShield||canEquipWeapon)&&<label className="equipment-equip-check">
+                  <input type="checkbox" aria-label={`Equipar ${item.name}`} checked={item.equipped} disabled={!enabled}
+                    onChange={event=>{
+                      const checked=event.target.checked;
+                      if(canEquipWeapon)perform({type:"equip_weapon",weaponId:item.id as WeaponId,equipped:checked});
+                      else if(canEquipShield)perform({type:"equip_shield",equipped:checked});
+                      else perform({type:"equip_armor",armor:checked?item.id as ArmorId:null});
+                    }}/>
+                  <span>{item.equipped?"Equipado":"Equipar"}</span>
+                </label>}
               </div>
             </article>;
           })}
         </div>}
-      {(magicArmor||magicShield)&&<p className="equipment-context-note">Las piezas mágicas equipadas sustituyen a las normales. Para cambiarlas, usa los controles de objetos mágicos que aparecen más abajo.</p>}
-      <p className="equipment-context-note">Las armas comunes se seleccionan al realizar ataques; no existe una casilla de «arma equipada» en el motor actual. Los paquetes de aventurero se mantienen como un objeto único.</p>
-    </section>
-
-    <section className="panel equipment-section" aria-labelledby="equipment-trade-title">
+      <p className="equipment-context-note">Puedes marcar varias armas como preparadas. Esa selección se guarda, pero no impone restricciones de manos ni limita las tiradas de ataque. Al vender o descartar la última unidad de un arma equipada, se desmarca automáticamente.</p>
+      {feedback&&<p className={feedback.error?"equipment-feedback is-error":"equipment-feedback"} role={feedback.error?"alert":"status"}>{feedback.message}</p>}
+      <details className="equipment-trade-fold"><summary>Comprar, vender y gestionar botín</summary>
+    <div className="equipment-trade-content" aria-labelledby="equipment-trade-title">
       <div className="equipment-section-header"><div><span className="eyebrow">MOVIMIENTOS</span><h3 id="equipment-trade-title">Comprar, vender y registrar botín</h3></div>
         <span className="equipment-history-count">{actionCount} operaciones</span></div>
       <div className="equipment-trade-fields">
@@ -154,11 +153,33 @@ export default function EquipmentPanel({
         <button type="button" disabled={!enabled||actionCount===0} onClick={()=>{onUndo();setFeedback({message:"Se ha deshecho la última operación del inventario.",error:false});}}>Deshacer última operación</button>
         <button type="button" disabled={!enabled||actionCount===0} onClick={confirmReset}>Reiniciar inventario</button>
       </div>
-      {feedback&&<p className={feedback.error?"equipment-feedback is-error":"equipment-feedback"} role={feedback.error?"alert":"status"}>{feedback.message}</p>}
+    </div></details>
     </section>
-
-    <div className="equipment-magic">
-      <MagicWardsPanel inventory={inventory} outOfSync={outOfSync} onInventoryAction={onInventoryAction}/>
+      </div>
+      <div className="equipment-side-column">
+        <section className="panel equipment-section equipment-equipped-card" aria-labelledby="equipment-equipped-title">
+          <div className="equipment-section-header"><div><span className="eyebrow">LISTO PARA USAR</span><h3 id="equipment-equipped-title">Objetos equipados</h3></div>
+            <span className="equipment-history-count">{equipped.length}</span></div>
+          {equipped.length===0?<p className="equipment-empty">No hay objetos equipados. Marca las casillas del inventario.</p>:<div className="equipment-equipped-list">
+            {equipped.map(item=><div className="equipment-equipped-item" key={item.key}>
+              <span className="equipment-equipped-symbol" aria-hidden="true">{item.category==="weapon"?"⚔":item.category==="armor"?"◈":"⬡"}</span>
+              <div><strong>{item.name}</strong><small>{item.category==="weapon"?"Arma":item.category==="armor"?"Armadura":"Escudo"}{item.magical?" · Mágico":""}</small></div>
+            </div>)}
+          </div>}
+          <p className="equipment-context-note">La lista se obtiene directamente de las casillas y de los objetos mágicos que lleves equipados. Para retirar un objeto, desmarca su casilla en Inventario u Objetos mágicos.</p>
+        </section>
+        <div className="equipment-magic"><MagicWardsPanel inventory={inventory} outOfSync={outOfSync} onInventoryAction={onInventoryAction}/></div>
+      </div>
     </div>
+    <section className="panel equipment-wallet" aria-label="Contador de monedas">
+      <div className="equipment-wallet-heading"><span className="eyebrow">MONEDERO</span><h3>Oro / Plata / Cobre</h3></div>
+      <div className="equipment-coin-values">
+        <div><strong>{gold}</strong><span>Oro (po)</span></div>
+        <div><strong>{silver}</strong><span>Plata (pp)</span></div>
+        <div><strong>{copper}</strong><span>Cobre (pc)</span></div>
+      </div>
+      <p>Saldo: {formatCopper(inventory.coinsCopper)}. Las compras y ventas actualizan las monedas automáticamente.</p>
+    </section>
+    <p className="equipment-save-hint">Pulsa «Actualizar guardado» en Mis personajes para conservar estos cambios en PostgreSQL.</p>
   </div>;
 }

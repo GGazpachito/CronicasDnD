@@ -440,3 +440,42 @@
 .equipment-magic .save-panel-head .eyebrow{font-size:10px}
 @media(max-width:920px){.equipment-overview{grid-template-columns:repeat(2,minmax(0,1fr))}.equipment-items{grid-template-columns:1fr}}
 @media(max-width:650px){.equipment-hero,.equipment-section{padding:17px}.equipment-hero-title,.equipment-section-header{align-items:flex-start;flex-direction:column}.equipment-overview{gap:7px}.equipment-overview>div{padding:12px}.equipment-overview strong{font-size:19px}.equipment-trade-fields{grid-template-columns:1fr}.equipment-trade-buttons{grid-template-columns:repeat(2,minmax(0,1fr))}.equipment-quote{grid-template-columns:1fr 1fr}.equipment-magic>.play-panel{padding:16px}.equipment-filters{flex-basis:100%}}
+
+/* Ajuste 41.1: distribución de Equipo según el boceto: inventario izquierda,
+   equipados y objetos mágicos derecha, monedas a lo ancho al pie. */
+.equipment-page-title{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:0 0 4px;padding:4px 2px 11px}
+.equipment-page-title h2{font:700 clamp(27px,3vw,38px) Georgia,serif;color:#f1ddbb;margin:3px 0 6px}
+.equipment-page-title p{margin:0;color:#b8c9d5;font-size:12px;line-height:1.6;max-width:740px}
+.equipment-layout{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);gap:17px;align-items:start}
+.equipment-inventory-column,.equipment-side-column{display:flex;flex-direction:column;gap:17px;min-width:0}
+.equipment-inventory-column>.equipment-section{min-height:620px}
+.equipment-inventory-column .equipment-items{grid-template-columns:1fr;max-height:660px;overflow-y:auto;padding:2px 4px 2px 0}
+.equipment-inventory-column .equipment-item{padding:13px 15px}
+.equipment-equip-check{display:flex;align-items:center;gap:8px;border:1px solid #8b7754;border-radius:8px;background:#2a3944;padding:8px 10px;cursor:pointer;white-space:nowrap;font-size:11px;color:#f2dbae;font-weight:750}
+.equipment-equip-check input{width:19px;height:19px;accent-color:#d7b879;cursor:pointer;margin:0}
+.equipment-equip-check:has(input:disabled){opacity:.5;cursor:not-allowed}
+.equipment-equip-check:focus-within{outline:2px solid #f1cd8e;outline-offset:3px}
+.equipment-equipped-list{display:flex;flex-direction:column;gap:8px}
+.equipment-equipped-item{display:flex;gap:12px;align-items:center;background:#172837;border:1px solid #3f5366;border-radius:10px;padding:12px 14px}
+.equipment-equipped-symbol{width:33px;min-width:33px;height:33px;display:grid;place-items:center;border:1px solid #967e55;color:#eed4a8;border-radius:10px;font-size:18px}
+.equipment-equipped-item div{min-width:0;display:flex;flex-direction:column;gap:3px}
+.equipment-equipped-item strong{color:#f6e5cb;font-size:13px;overflow-wrap:anywhere}
+.equipment-equipped-item small{color:#b3c1ca;font-size:11px}
+.equipment-trade-fold{margin-top:18px;border-top:1px solid #465667;padding-top:13px}
+.equipment-trade-fold>summary{list-style:revert;cursor:pointer;color:#f2d7a5;font-size:12px;font-weight:750;padding:8px 6px}
+.equipment-trade-fold>summary:focus-visible{outline:2px solid #e9bb77;outline-offset:2px}
+.equipment-trade-content{padding:18px 0 4px}
+.equipment-trade-content .equipment-section-header h3{font-size:19px}
+.equipment-trade-buttons{grid-template-columns:repeat(2,minmax(0,1fr))}
+.equipment-quote{grid-template-columns:repeat(3,minmax(0,1fr))}
+.equipment-magic>.play-panel{height:auto;max-width:100%}
+.equipment-magic .play-actions-grid{grid-template-columns:1fr}
+.equipment-wallet{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;padding:21px 25px}
+.equipment-wallet-heading h3{font:700 22px Georgia,serif;color:#f2dfbd;margin:3px 0 0}
+.equipment-coin-values{display:flex;align-items:center;justify-content:center;gap:10px;flex:1 1 280px}
+.equipment-coin-values>div{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-width:95px;border:1px solid #67583f;border-radius:11px;background:#1d2b36;padding:11px 13px}
+.equipment-coin-values strong{font:700 27px Georgia,serif;color:#f1d9a5}
+.equipment-coin-values span{font-size:11px;color:#bfc9d3}
+.equipment-wallet>p{flex:1 1 180px;max-width:260px;margin:0;color:#b8c5cf;font-size:11px;line-height:1.6}
+@media(max-width:970px){.equipment-layout{grid-template-columns:1fr}.equipment-inventory-column>.equipment-section{min-height:0}.equipment-inventory-column .equipment-items{max-height:none}.equipment-magic .play-actions-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.equipment-page-title{flex-direction:column;align-items:stretch}.equipment-magic .play-actions-grid{grid-template-columns:1fr}.equipment-equipped-card{padding:17px}.equipment-wallet{padding:17px;gap:12px}.equipment-wallet-heading h3{font-size:19px}.equipment-coin-values{gap:6px}.equipment-coin-values>div{min-width:0;flex:1 1 0;padding:10px 4px}.equipment-coin-values strong{font-size:23px}.equipment-item{flex-wrap:wrap}.equipment-item-side{flex-direction:row;align-items:center;width:100%;justify-content:space-between}.equipment-trade-buttons{grid-template-columns:repeat(2,minmax(0,1fr))}}
