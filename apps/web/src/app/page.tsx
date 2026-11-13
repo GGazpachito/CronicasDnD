@@ -11,7 +11,7 @@ import SheetPlaceholder from "../components/SheetPlaceholder";
 import PlayPanel from "../components/PlayPanel";
 import SurvivalPanel from "../components/SurvivalPanel";
 import IncomingAttacksPanel from "../components/IncomingAttacksPanel";
-import MagicWardsPanel from "../components/MagicWardsPanel";
+import EquipmentPanel from "../components/EquipmentPanel";
 import AttacksPanel from "../components/AttacksPanel";
 import CombatPanel from "../components/CombatPanel";
 import TurnPanel from "../components/TurnPanel";
@@ -360,7 +360,7 @@ export default function Home(){
   return <main className="app-shell">
     <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Hoja digital · D&D 2024</span></div></div><div className="status"><span className="status-dot"/> Edición local · Guardado manual</div></header>
     <div className="content">
-      <p className="sheet-release-note">ACTUALIZACIÓN 40 · RASGOS DEL PERSONAJE</p>
+      <p className="sheet-release-note">ACTUALIZACIÓN 41 · EQUIPO E INVENTARIO</p>
       <CharacterHeader
         name={name}
         level={level}
@@ -376,12 +376,11 @@ export default function Home(){
         <div className="sheet-section-heading"><div><span className="eyebrow">PÁGINA PRINCIPAL</span><h2>Tu hoja de personaje</h2><p>Valores calculados por el motor, tiradas manuales y gestión directa del estado de partida.</p></div></div>
       <PrincipalOverview result={output.result} error={output.error} input={input} adventure={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onAdventureChange={setAdventure} onEdit={openEditorAt} onOpenTools={openExistingTools}/>
       <details id="existing-play-tools" ref={toolsDetailsRef} className="legacy-tools panel">
-        <summary>Herramientas existentes de partida y combate <span>8 módulos conservados</span></summary>
+        <summary>Herramientas existentes de partida y combate <span>7 módulos conservados</span></summary>
         <p className="muted-note">Estos sistemas siguen disponibles mientras rediseñamos la hoja. La pestaña Combate completa se desarrollará más adelante.</p>
         <div className="legacy-tools-content">
       <PlayPanel sheet={sheet??null} state={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
       <SurvivalPanel sheet={sheet??null} state={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
-      <MagicWardsPanel inventory={output.result?.inventory??null} outOfSync={sessionCheck.outOfSync} onInventoryAction={transact}/>
       <IncomingAttacksPanel sheet={sheet??null} state={sessionCheck.state} species={output.result?.origin.species??null} inventory={output.result?.inventory??null} outOfSync={sessionCheck.outOfSync} onChange={setAdventure}/>
       <ConditionsPanel combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} outOfSync={sessionCheck.outOfSync} onChange={handleCombatChange} baseSpeed={output.result?.origin.speedFeet??30}/>
       <TurnPanel fighterLevel={sheet?.level??level} heroicWarrior={sheet?.features.includes('champion_heroic_warrior')??false} epicSpeed={sheet?.features.includes('epic_boon_speed')??false} combat={sessionCheck.outOfSync?null:sessionCheck.state?.combat??null} outOfSync={sessionCheck.outOfSync} onChange={handleCombatChange} baseSpeedFeet={output.result?.origin.speedFeet??30} hitPoints={sessionCheck.state?.fighter.hitPoints.current??0}/>
@@ -608,15 +607,17 @@ export default function Home(){
         <TraitsPanel input={input} result={output.result} error={output.error} onEdit={openEditorAt}/>
       </section>
       <section id="sheet-panel-equipo" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-equipo" hidden={activeTab!=='equipo'}>
-        <SheetPlaceholder eyebrow="EQUIPO · FASE 41" title="Inventario y equipamiento"
-          description="La gestión completa de objetos, armas, armaduras, sintonización y monedas se trasladará aquí. El inventario actual sigue disponible en el editor existente."
-          actionLabel="Editar equipo actual" onAction={()=>openEditorAt(4)}>
-          {output.result?.inventory&&<div className="sheet-preview-metrics">
-            <div><span>Objetos comunes</span><strong>{output.result.inventory.items.length}</strong></div>
-            <div><span>Objetos mágicos</span><strong>{output.result.inventory.magicItems.length}</strong></div>
-            <div><span>Monedas disponibles</span><strong>{formatCopper(output.result.inventory.coinsCopper)}</strong></div>
-          </div>}
-        </SheetPlaceholder>
+        <EquipmentPanel
+          inventory={output.result?.inventory??null}
+          error={output.error}
+          outOfSync={sessionCheck.outOfSync}
+          actionCount={activeActions.length}
+          onInventoryAction={transact}
+          onUndo={undoTransaction}
+          onReset={resetTransactions}
+          onEdit={()=>openEditorAt(4)}
+          onOpenAttacks={()=>{setActiveTab('principal');openExistingTools('attacks');}}
+        />
       </section>
       <section id="sheet-panel-hechizos" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-hechizos" hidden={activeTab!=='hechizos'}>
         <SheetPlaceholder eyebrow="HECHIZOS · FASE 43" title="Hechizos"
