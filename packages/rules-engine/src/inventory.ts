@@ -58,6 +58,7 @@ export type InventoryAction =
   | Readonly<{type:'equip_armor';armor:ArmorId|null}>
   | Readonly<{type:'equip_shield';equipped:boolean}>
   | Readonly<{type:'equip_weapon';weaponId:WeaponId;equipped:boolean}>
+  | Readonly<{type:'adjust_coins';deltaCopper:number}>
   | Readonly<{type:'magic_grant';itemId:MagicWardItemId;damageType?:RingResistanceType;armorId?:ArmorId;weaponId?:WeaponId;enhancement?:EnhancementBonus;instanceId?:string}>
   | Readonly<{type:'magic_wear';instanceId:string;worn:boolean}>
   | Readonly<{type:'magic_attune';instanceId:string;attuned:boolean}>
@@ -128,6 +129,11 @@ export function applyInventoryAction(state:InventoryState, action:InventoryActio
   if(!action||typeof action!=='object'||Array.isArray(action))error('Acción de inventario inválida');
   const next=clone(state);
   switch(action.type){
+    case 'adjust_coins':{
+      if(!Number.isSafeInteger(action.deltaCopper)||action.deltaCopper===0)error('El ajuste de monedas debe ser un entero distinto de cero');
+      next.coinsCopper=money(next.coinsCopper+action.deltaCopper);
+      break;
+    }
     case 'buy':case 'sell':case 'add':case 'remove':{
       if(!idValid(action.itemId))error('Objeto no reconocido');
       const qty=units(action.quantity);
@@ -235,6 +241,31 @@ export function replayInventory(starting:StartingInventory,initialArmor:ArmorId|
   if(!Array.isArray(actions)||actions.length>MAX_ACTIONS)error('Historial de inventario inválido o demasiado largo');
   return actions.reduce<InventoryState>((s,a)=>applyInventoryAction(s,a),initialInventoryState(starting,initialArmor));
 }
+/** Saldo expresado en denominaciones equivalentes, no cuatro monederos independientes.
+ * 1 ppt = 10 po = 100 pp = 1000 pc. El diario sigue guardando solo cobre.
+ */
+export const COIN_VALUES_CP = {platinum:1000,gold:100,silver:10,copper:1} as const;
+export type CoinDenomination = keyof typeof COIN_VALUES_CP;
+export function coinBreakdown(coinsCopper:number):Readonly<Record<CoinDenomination,number>>{
+  money(coinsCopper);
+  return {
+    platinum:Math.floor(coinsCopper/1000),
+    gold:Math.floor(coinsCopper%1000/100),
+    silver:Math.floor(coinsCopper%100/10),
+    copper:coinsCopper%10,
+  };
+}
+/** Convierte una variación de monedas a la unidad única del historial.
+ * Los números enormes, fraccionarios o fuera del rango seguro se rechazan antes de grabarse.
+ */
+export function coinAdjustment(denomination:CoinDenomination,change:number):InventoryAction{
+  if(!Object.hasOwn(COIN_VALUES_CP,denomination))error('Denominación de moneda desconocida');
+  if(!Number.isSafeInteger(change)||change===0||Math.abs(change)>1_000_000)error('El cambio debe ser un entero no nulo de hasta un millón de monedas');
+  const deltaCopper=change*COIN_VALUES_CP[denomination];
+  if(!Number.isSafeInteger(deltaCopper))error('Cambio de monedas fuera de rango');
+  return {type:'adjust_coins',deltaCopper};
+}
+
 export function formatCopper(value:number):string {
   money(value);
   if(value===0)return '0 po';

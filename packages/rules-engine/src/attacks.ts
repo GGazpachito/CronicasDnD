@@ -195,6 +195,23 @@ export function calculateWeaponAttack(
     mastery,masterySaveDC,grazeOnMiss,thrown,twoHanded,lightExtraAttack:Boolean(options.lightExtraAttack),range,
     ammunition:w.ammunition,greatWeaponFighting,notes};
 }
+/** Resultado puro y reutilizable de una tirada de daño, sin decidir impacto ni alterar criaturas.
+ * El modificador y las mejoras mágicas ya vienen calculados en el perfil.
+ */
+export type WeaponDamageResult=Readonly<{
+  dice:readonly number[];effectiveDice:readonly number[];critical:boolean;
+  fixedDamage:number;modifier:number;total:number;
+}>;
+export function resolveWeaponDamage(profile:WeaponAttackProfile,rolls:readonly number[],critical=false):WeaponDamageResult{
+  if(!profile||!Array.isArray(rolls)||typeof critical!=="boolean")throw new RangeError('Tirada de daño inválida');
+  const needed=(profile.damageDice?.count??0)*(critical?2:1);
+  if(rolls.length!==needed)throw new RangeError(`Se necesitan ${needed} resultados de dados de daño`);
+  for(const roll of rolls)integerBetween(roll,1,profile.damageDice?.sides??1,'Dado de daño');
+  const effectiveDice=rolls.map(roll=>profile.greatWeaponFighting?Math.max(3,roll):roll);
+  return {dice:[...rolls],effectiveDice,critical,fixedDamage:profile.fixedDamage,modifier:profile.damageModifier,
+    total:Math.max(0,effectiveDice.reduce((sum,roll)=>sum+roll,profile.fixedDamage+profile.damageModifier))};
+}
+
 export type AttackResolution = Readonly<{
   naturalRoll:number;selectedRoll:number;attackTotal:number;critical:boolean;hit:boolean|null;
   damageDiceNeeded:number;damageTotal:number|null;grazeDamage:number|null;notes:readonly string[];
@@ -216,11 +233,9 @@ export function resolveWeaponAttack(profile:WeaponAttackProfile,params:Readonly<
   let damageTotal:number|null=null;
   if(needed===0)damageTotal=hit===false?0:Math.max(0,profile.fixedDamage+profile.damageModifier);
   if(params.damageRolls!==undefined){
-    if(!Array.isArray(params.damageRolls)||params.damageRolls.length!==needed)throw new RangeError(`Se necesitan ${needed} resultados de dados de daño`);
-    for(const value of params.damageRolls)integerBetween(value,1,profile.damageDice?.sides??1,'Dado de daño');
+    const damage=resolveWeaponDamage(profile,params.damageRolls,critical);
     // Al fallar, los dados no causan daño. Solo se ofrece Rozar si la maestría aplica.
-    if(hit===false)damageTotal=0;
-    else damageTotal=Math.max(0,params.damageRolls.reduce((sum,value)=>sum+(profile.greatWeaponFighting?Math.max(3,value):value),profile.fixedDamage+profile.damageModifier));
+    damageTotal=hit===false?0:damage.total;
   }
   const grazeDamage=hit===false?profile.grazeOnMiss:null;
   const notes=[...profile.notes];
@@ -254,6 +269,16 @@ export function ownedWeaponChoices(inventory:InventoryState):OwnedWeaponChoice[]
   }));
   return [...mundane,...magical];
 }
+/** Proyección de armas que el usuario ha marcado en Equipo.
+ * Las instancias mágicas se muestran solo si se llevan equipadas ('worn').
+ * No altera el catálogo general del panel avanzado ni el inventario persistido.
+ */
+export function equippedWeaponChoices(inventory:InventoryState):OwnedWeaponChoice[]{
+  const prepared=new Set(inventory.equipped?.weapons??[]);
+  return ownedWeaponChoices(inventory).filter(choice=>
+    choice.magicWeaponInstanceId!==undefined||prepared.has(choice.weaponId));
+}
+
 /** Calcula el bonificador mágico UNA sola vez, para la instancia seleccionada.
  * No modifica maestrías, cantidad de dados del crítico, ni daño de Rozar en un fallo.
  */

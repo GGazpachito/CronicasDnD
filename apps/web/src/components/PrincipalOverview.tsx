@@ -7,8 +7,7 @@ import { SKILLS, SKILL_ABILITIES, type Skill } from "../../../../packages/rules-
 import { BACKGROUNDS, type GuidedFighterInput, type GuidedFighterResult } from "../../../../packages/rules-engine/src/guided";
 import { applyAdventureAction, type AdventureAction, type AdventureState } from "../../../../packages/rules-engine/src/adventure";
 import { PrincipalHealthControls, PrincipalResourceControls, PrincipalInspirationControls } from "./PrincipalSessionControls";
-import { WEAPONS } from "../../../../packages/rules-engine/src/martial";
-import type { WeaponId } from "../../../../packages/rules-engine/src/martial";
+import PrincipalEquippedAttacks from "./PrincipalEquippedAttacks";
 
 const ABILITY_NAMES: Record<Ability, string> = {
   strength: "Fuerza", dexterity: "Destreza", constitution: "Constitución",
@@ -86,8 +85,6 @@ export default function PrincipalOverview({ result, error, input, adventure, out
     ...(input.species === "elf" && input.elfSenseSkill ? [input.elfSenseSkill] : []),
     ...(input.species === "human" && input.humanFeat === "skilled" ? input.humanFeatDetails?.skilledProficiencies?.filter((s): s is Skill => SKILLS.includes(s as Skill)) ?? [] : []),
   ]);
-  const weapons = inventory?.items.filter(item => Object.hasOwn(WEAPONS, item.id)) ?? [];
-  const magicalWeapons = inventory?.magicItems.filter(item => item.itemId === "weapon_enhancement" && item.worn) ?? [];
   const death = current?.survival?.death;
   const perceptionMode = sheet.skillRollModes.perception;
   // Invalidar visualmente tiradas anteriores al cambiar la proyección del personaje.
@@ -189,15 +186,8 @@ export default function PrincipalOverview({ result, error, input, adventure, out
           </div>)}</div>
           <RollSummary record={rolls.saves} sheetKey={sheetKey}/>
         </section>
-        <section className="overview-panel panel" aria-label="Armas disponibles">
-          <div className="overview-panel-heading"><h3>Ataques y armas</h3><span>Inventario</span></div>
-          {weapons.length === 0 && magicalWeapons.length === 0 ? <p className="overview-panel-note">No hay armas registradas en el inventario.</p> : <div className="overview-records">
-            {weapons.map(item => <div className="overview-record" key={item.id}><span>{item.name}</span><strong>×{item.quantity}</strong></div>)}
-            {magicalWeapons.map(item => <div className="overview-record" key={item.instanceId}><span>{item.weaponId ? WEAPONS[item.weaponId as WeaponId]?.name ?? "Arma mágica" : "Arma mágica"}</span><strong>+{item.enhancement ?? 0}</strong></div>)}
-          </div>}
-          <p className="overview-panel-note">El inventario aún no distingue armas empuñadas. Ataques y daño siguen disponibles en las herramientas existentes.</p>
-          <button className="overview-link" type="button" onClick={() => onOpenTools("attacks")}>Abrir panel de ataques</button>
-        </section>
+        <PrincipalEquippedAttacks sheet={sheet} inventory={inventory??null} martial={input.martial} combat={current?.combat ?? null}
+          onOpenAdvanced={() => onOpenTools("attacks")}/>
         <PrincipalResourceControls state={current} sheet={sheet} onAction={runAdventureAction} onOpenTools={() => onOpenTools("resources")} onError={setActionError}/>
       </div>
     </div>

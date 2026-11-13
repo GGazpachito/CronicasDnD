@@ -479,3 +479,51 @@
 .equipment-wallet>p{flex:1 1 180px;max-width:260px;margin:0;color:#b8c5cf;font-size:11px;line-height:1.6}
 @media(max-width:970px){.equipment-layout{grid-template-columns:1fr}.equipment-inventory-column>.equipment-section{min-height:0}.equipment-inventory-column .equipment-items{max-height:none}.equipment-magic .play-actions-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.equipment-page-title{flex-direction:column;align-items:stretch}.equipment-magic .play-actions-grid{grid-template-columns:1fr}.equipment-equipped-card{padding:17px}.equipment-wallet{padding:17px;gap:12px}.equipment-wallet-heading h3{font-size:19px}.equipment-coin-values{gap:6px}.equipment-coin-values>div{min-width:0;flex:1 1 0;padding:10px 4px}.equipment-coin-values strong{font-size:23px}.equipment-item{flex-wrap:wrap}.equipment-item-side{flex-direction:row;align-items:center;width:100%;justify-content:space-between}.equipment-trade-buttons{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Actualización 41.2: monedero editable y tiradas rápidas de armas equipadas. */
+.equipment-wallet{align-items:stretch}
+.equipment-wallet-heading{flex:0 1 215px;align-self:center}
+.equipment-coin-values{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;flex:1 1 560px}
+.equipment-coin-values>.equipment-coin-stat{min-width:0;display:flex;flex-direction:column;gap:7px;align-items:stretch;padding:12px 10px}
+.equipment-coin-stat>strong{text-align:center;font-size:26px;font-variant-numeric:tabular-nums}
+.equipment-coin-stat>label{text-align:center;font-size:11px;color:#d9c8af;font-weight:700}
+.equipment-coin-input{display:flex;min-width:0;border:1px solid #667689;border-radius:8px;background:#122230;overflow:hidden}
+.equipment-coin-input:focus-within{outline:2px solid #e1bc82;outline-offset:2px}
+.equipment-coin-input input{min-width:0;width:100%;border:0;background:transparent;padding:7px 5px;color:#fff0d4;font-size:12px;text-align:center;outline:none}
+.equipment-coin-input input::placeholder{color:#adbbc7}
+.equipment-coin-stepper{display:flex;flex-direction:column;flex:0 0 28px;border-left:1px solid #566c7b}
+.equipment-coin-stepper button{padding:0;min-height:20px;background:#324557;border:0;color:#f7deb5;cursor:pointer;font-size:11px;line-height:18px}
+.equipment-coin-stepper button+button{border-top:1px solid #526778}
+.equipment-coin-stepper button:hover:not(:disabled){background:#4c6072}
+.equipment-coin-stepper button:disabled{cursor:not-allowed;opacity:.4}
+.equipment-wallet>p{max-width:290px;flex:1 1 230px;align-self:center}
+.overview-weapon-list{display:flex;flex-direction:column;gap:12px;margin:10px 0}
+.overview-equipped-weapon{border:1px solid #536476;border-radius:11px;background:#172836;padding:13px;display:flex;flex-direction:column;gap:11px;min-width:0}
+.overview-equipped-weapon-head{display:flex;align-items:start;justify-content:space-between;gap:7px}
+.overview-equipped-weapon-head>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.overview-equipped-weapon-head strong{color:#ffe3ad;font-size:15px;overflow-wrap:anywhere}
+.overview-equipped-weapon-head small{font-size:10px;color:#bac8d0}
+.overview-weapon-magic{font-size:10px;padding:5px 7px;color:#f3d5a0;background:#36402f;border-radius:20px;white-space:nowrap}
+.overview-weapon-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.overview-weapon-stats>div{display:flex;flex-direction:column;gap:4px;border:1px solid #41566a;border-radius:8px;padding:10px;background:#203342;min-width:0}
+.overview-weapon-stats span{font-size:10px;color:#c9d2d9;text-transform:uppercase;letter-spacing:.04em}
+.overview-weapon-stats strong{color:#ffe2a6;font-size:19px;font-variant-numeric:tabular-nums}
+.overview-weapon-stats small{color:#bbcbd6;font-size:10px;line-height:1.45}
+.overview-weapon-actions{display:flex;align-items:end;flex-wrap:wrap;gap:7px}
+.overview-weapon-actions>label{display:flex;flex-direction:column;gap:3px;color:#cdd4dc;font-size:10px;flex:1 1 100px}
+.overview-weapon-actions select,.overview-weapon-options select{width:100%;min-width:0;border:1px solid #697684;color:#f5e0c5;background:#1b303e;border-radius:7px;min-height:33px;padding:5px}
+.overview-weapon-actions button{flex:1 1 95px;min-height:34px}
+.overview-weapon-actions button:disabled{opacity:.5;cursor:not-allowed}
+.overview-weapon-options{border-top:1px solid #4c5e6a;padding-top:7px}
+.overview-weapon-options>summary{cursor:pointer;font-size:11px;color:#efcea3}
+.overview-weapon-options>div{display:flex;flex-direction:column;gap:9px;margin-top:9px}
+.overview-weapon-options label:not(.overview-weapon-check){display:flex;flex-direction:column;gap:4px;font-size:11px;color:#d8e0e6}
+.overview-weapon-check{display:flex;align-items:center;gap:7px;color:#d4dce5;font-size:11px;line-height:1.4}
+.overview-weapon-check input{accent-color:#d5b274;width:16px;height:16px}
+.overview-weapon-critical{padding:2px 0}
+.overview-weapon-result{border-radius:8px;background:#2a3d49;border:1px solid #687a7b;display:flex;flex-direction:column;gap:5px;padding:10px;color:#e6eef2;font-size:11px;line-height:1.5}
+.overview-weapon-result strong{font-size:13px;color:#f4d6a4}
+.overview-weapon-result small{font-size:10px;color:#c8d4df}
+.overview-weapon-alert{border:1px solid #a46965;color:#f4c0b9;border-radius:7px;padding:8px;font-size:11px}
+@media(max-width:970px){.equipment-coin-values{flex-basis:100%}}
+@media(max-width:600px){.equipment-coin-values{grid-template-columns:repeat(2,minmax(0,1fr))}.equipment-wallet-heading{flex-basis:100%}.overview-weapon-stats{grid-template-columns:1fr}}

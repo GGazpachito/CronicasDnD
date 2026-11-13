@@ -1,10 +1,10 @@
 "use client";
 
-import {useState} from "react";
+import {useId,useState,type ChangeEvent,type KeyboardEvent,type PointerEvent} from "react";
 import {ARMORS, type ArmorId} from "../../../../packages/rules-engine/src/defense";
 import {
-  formatCopper, INVENTORY_NAMES, INVENTORY_PRICES_CP,
-  type InventoryAction, type InventoryItemId, type InventoryState,
+  formatCopper, INVENTORY_NAMES, INVENTORY_PRICES_CP, coinBreakdown, coinAdjustment,
+  type CoinDenomination, type InventoryAction, type InventoryItemId, type InventoryState,
 } from "../../../../packages/rules-engine/src/inventory";
 import {
   INVENTORY_CATEGORY_LABELS, equippedInventory, inventoryOverview, type InventoryCategory,
@@ -64,9 +64,7 @@ export default function EquipmentPanel({
   const shown=overview.entries.filter(item=>(category==="all"||item.category===category)&&
     (!term||`${item.name} ${item.sourceText}`.toLocaleLowerCase("es").includes(term)));
   const equipped=equippedInventory(inventory);
-  const gold=Math.floor(inventory.coinsCopper/100);
-  const silver=Math.floor(inventory.coinsCopper%100/10);
-  const copper=inventory.coinsCopper%10;
+  const coins=coinBreakdown(inventory.coinsCopper);
 
   function perform(action:InventoryAction){
     if(!enabled)return;
@@ -172,14 +170,75 @@ export default function EquipmentPanel({
       </div>
     </div>
     <section className="panel equipment-wallet" aria-label="Contador de monedas">
-      <div className="equipment-wallet-heading"><span className="eyebrow">MONEDERO</span><h3>Oro / Plata / Cobre</h3></div>
+      <div className="equipment-wallet-heading"><span className="eyebrow">MONEDERO</span><h3>Platino / Oro / Plata / Cobre</h3></div>
       <div className="equipment-coin-values">
-        <div><strong>{gold}</strong><span>Oro (po)</span></div>
-        <div><strong>{silver}</strong><span>Plata (pp)</span></div>
-        <div><strong>{copper}</strong><span>Cobre (pc)</span></div>
+        {([['platinum','Platino','ppt'],['gold','Oro','po'],['silver','Plata','pp'],['copper','Cobre','pc']] as const).map(([denomination,name,unit])=><CoinAdjuster
+          key={denomination} denomination={denomination} title={name} abbreviation={unit}
+          amount={coins[denomination]} disabled={!enabled} onAction={onInventoryAction}
+          onFeedback={setFeedback}/>)}
       </div>
-      <p>Saldo: {formatCopper(inventory.coinsCopper)}. Las compras y ventas actualizan las monedas automáticamente.</p>
+      <p>Saldo total: {formatCopper(inventory.coinsCopper)}. 1 platino = 10 oros. Escribe +5 o -5 y pulsa Intro; las flechas cambian una moneda. Se usa el mismo saldo para compras y ventas.</p>
     </section>
     <p className="equipment-save-hint">Pulsa «Actualizar guardado» en Mis personajes para conservar estos cambios en PostgreSQL.</p>
+  </div>;
+}
+
+
+type CoinAdjusterProps={
+  denomination:CoinDenomination; title:string; abbreviation:string; amount:number; disabled:boolean;
+  onAction:(action:InventoryAction)=>string|null;
+  onFeedback:(value:{message:string;error:boolean}|null)=>void;
+};
+/** Edición de una variación, no de un saldo alternativo por denominación. */
+function CoinAdjuster({denomination,title,abbreviation,amount,disabled,onAction,onFeedback}:CoinAdjusterProps){
+  const id=useId();
+  const [draft,setDraft]=useState('');
+  function adjust(change:number){
+    if(disabled||change===0)return;
+    try{
+      const error=onAction(coinAdjustment(denomination,change));
+      if(error){onFeedback({message:error,error:true});return;}
+      setDraft('');
+      onFeedback({message:`Monedero actualizado: ${change>0?'+':''}${change} ${abbreviation}. Pulsa «Actualizar guardado» para conservar los cambios.`,error:false});
+    }catch(reason){onFeedback({message:reason instanceof Error?reason.message:'Variación monetaria inválida',error:true});}
+  }
+  function commit(){
+    const value=draft.trim();
+    if(!value||disabled)return;
+    if(!/^[+-]?\d+$/.test(value)){
+      onFeedback({message:`Introduce un número entero para ${title.toLowerCase()}, por ejemplo +5 o -3.`,error:true});return;
+    }
+    const quantity=Number(value);
+    if(!Number.isSafeInteger(quantity)||Math.abs(quantity)>1_000_000){
+      onFeedback({message:'La variación debe ser un entero de hasta un millón de monedas.',error:true});return;
+    }
+    if(quantity===0){setDraft('');return;}
+    adjust(quantity);
+  }
+  function keyDown(event:KeyboardEvent<HTMLInputElement>){
+    if(event.key==='Enter'){event.preventDefault();commit();}
+    else if(event.key==='Escape'){event.preventDefault();setDraft('');}
+    else if(event.key==='ArrowUp'||event.key==='ArrowDown'){
+      event.preventDefault();adjust(event.key==='ArrowUp'?1:-1);
+    }
+  }
+  return <div className="equipment-coin-stat">
+    <strong aria-live="polite">{amount.toLocaleString('es-ES')}</strong>
+    <label htmlFor={id}>{title} ({abbreviation})</label>
+    <div className="equipment-coin-input">
+      <input id={id} type="text" inputMode="numeric" autoComplete="off" spellCheck={false}
+        aria-label={`Variación de ${title.toLowerCase()}: positivo suma, negativo resta`}
+        placeholder="+5 / -5" value={draft} disabled={disabled}
+        onChange={(event:ChangeEvent<HTMLInputElement>)=>setDraft(event.target.value)}
+        onKeyDown={keyDown} onBlur={commit}/>
+      <div className="equipment-coin-stepper">
+        <button type="button" disabled={disabled} aria-label={`Añadir una moneda de ${title.toLowerCase()}`}
+          onPointerDown={(event:PointerEvent<HTMLButtonElement>)=>event.preventDefault()}
+          onClick={()=>adjust(1)}>▲</button>
+        <button type="button" disabled={disabled} aria-label={`Restar una moneda de ${title.toLowerCase()}`}
+          onPointerDown={(event:PointerEvent<HTMLButtonElement>)=>event.preventDefault()}
+          onClick={()=>adjust(-1)}>▼</button>
+      </div>
+    </div>
   </div>;
 }
