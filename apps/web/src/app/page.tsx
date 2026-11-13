@@ -298,7 +298,7 @@ export default function Home(){
   return <main className="app-shell">
     <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Hoja digital · D&D 2024</span></div></div><div className="status"><span className="status-dot"/> Edición local · Guardado manual</div></header>
     <div className="content">
-      <p className="sheet-release-note">ACTUALIZACIÓN 44 · ASISTENTE DE SUBIDA DE NIVEL</p>
+      <p className="sheet-release-note">HOJA DE PERSONAJE · D&D 2024</p>
       <CharacterHeader
         name={name}
         portraitDataUrl={profile.portraitDataUrl}
