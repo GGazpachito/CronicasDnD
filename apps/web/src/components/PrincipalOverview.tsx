@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ChangeEvent } from "react";
+import { useState } from "react";
 import { rollD20, type D20Mode, type D20Result } from "../../../../packages/rules-engine/src/d20";
 import { ABILITIES, type Ability } from "../../../../packages/rules-engine/src/abilities";
 import { SKILLS, SKILL_ABILITIES, type Skill } from "../../../../packages/rules-engine/src/proficiencies";
@@ -62,6 +62,7 @@ type Props = {
 export default function PrincipalOverview({ result, error, input, adventure, outOfSync, onAdventureChange, onEdit, onOpenTools }: Props) {
   // Solo resultados efímeros de tiradas. Ninguna característica, PG o recurso se duplica aquí.
   const [circumstanceMode, setCircumstanceMode] = useState<D20Mode>("normal");
+  const [criticalDamage, setCriticalDamage] = useState(false);
   const [rolls, setRolls] = useState<Partial<Record<RollArea, RollRecord>>>({});
   const [rollError, setRollError] = useState<string | null>(null);
   const [actionNote, setActionNote] = useState<string | null>(null);
@@ -113,7 +114,6 @@ export default function PrincipalOverview({ result, error, input, adventure, out
       const rolled = rollD20(modifier, sheetMode, circumstanceMode);
       setRolls(previous => ({ ...previous, [area]: { label, sheetKey, result: rolled } }));
       setRollError(null);
-      setCircumstanceMode("normal"); // La circunstancia es para una tirada, no una regla permanente.
     } catch (reason) {
       setRollError(reason instanceof Error ? reason.message : "No se ha podido lanzar el dado");
     }
@@ -123,14 +123,18 @@ export default function PrincipalOverview({ result, error, input, adventure, out
     {outOfSync && <div className="overview-warning" role="status">La partida no está sincronizada con la hoja. Los recursos y PG actuales se ocultan hasta resolverlo desde el editor.</div>}
     <div className="overview-dice-toolbar panel">
       <div><h3>Tiradas de d20</h3><p>Pulsa «Tirar» en iniciativa, una habilidad o una salvación. La hoja aporta su bonificador y sus efectos.</p></div>
-      <label htmlFor="overview-circumstance"><span>Circunstancia de la próxima tirada</span>
-        <select id="overview-circumstance" value={circumstanceMode} onChange={(event: ChangeEvent<HTMLSelectElement>) => setCircumstanceMode(event.target.value as D20Mode)}>
-          <option value="normal">Sin efecto adicional</option>
-          <option value="advantage">Ventaja circunstancial</option>
-          <option value="disadvantage">Desventaja circunstancial</option>
-        </select>
-      </label>
-      <p className="overview-dice-help">Ventaja y desventaja opuestas se anulan. Tras cada tirada, la circunstancia vuelve a «sin efecto». El DM determina si la prueba tiene éxito; la tirada no modifica la partida.</p>
+      <div className="overview-dice-mode" role="group" aria-label="Circunstancia para tiradas de d20">
+        <span>Circunstancia de las tiradas</span>
+        <div className="overview-dice-mode-buttons">
+          <button type="button" className={circumstanceMode === "advantage" ? "is-active" : ""}
+            aria-pressed={circumstanceMode === "advantage"}
+            onClick={() => setCircumstanceMode(current => current === "advantage" ? "normal" : "advantage")}>Ventaja</button>
+          <button type="button" className={circumstanceMode === "disadvantage" ? "is-active" : ""}
+            aria-pressed={circumstanceMode === "disadvantage"}
+            onClick={() => setCircumstanceMode(current => current === "disadvantage" ? "normal" : "disadvantage")}>Desventaja</button>
+        </div>
+      </div>
+      <p className="overview-dice-help">Estos botones afectan a iniciativa, habilidades, salvaciones y ataques con armas. Solo uno puede estar activo; pulsa otra vez el marcado para quitarlo. La selección se mantiene hasta que la cambies. Los efectos contrarios del personaje pueden anularla. El DM determina el éxito; no se modifica la partida.</p>
       {rollError && <p className="overview-dice-error" role="alert">{rollError}</p>}
     </div>
     <div className="overview-vitals" aria-label="Valores principales">
@@ -187,6 +191,7 @@ export default function PrincipalOverview({ result, error, input, adventure, out
           <RollSummary record={rolls.saves} sheetKey={sheetKey}/>
         </section>
         <PrincipalEquippedAttacks sheet={sheet} inventory={inventory??null} martial={input.martial} combat={current?.combat ?? null}
+          circumstanceMode={circumstanceMode} criticalDamage={criticalDamage} onCriticalDamageChange={setCriticalDamage}
           onOpenAdvanced={() => onOpenTools("attacks")}/>
         <PrincipalResourceControls state={current} sheet={sheet} onAction={runAdventureAction} onOpenTools={() => onOpenTools("resources")} onError={setActionError}/>
       </div>

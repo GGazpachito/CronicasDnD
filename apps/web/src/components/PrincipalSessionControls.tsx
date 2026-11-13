@@ -155,13 +155,16 @@ export function PrincipalResourceControls({ state, sheet, onAction, onOpenTools,
 
 export function PrincipalInspirationControls({ state, sheet, onAction }: SessionProps) {
   const inspiration = state?.combat.heroicInspiration === true;
-  return <section className="overview-panel panel" aria-label="Inspiración heroica">
+  return <section className="overview-panel panel overview-inspiration-panel" aria-label="Inspiración heroica">
     <h3>Inspiración heroica</h3>
-    <strong className="overview-inspiration-value">{state ? (inspiration ? "Disponible" : "Sin inspiración") : "—"}</strong>
-    <div className="overview-quick-actions">
-      <button type="button" disabled={!state || inspiration} onClick={() => onAction({ type: "gain_heroic_inspiration" })}>Anotar inspiración</button>
-      <button type="button" disabled={!state || !inspiration} onClick={() => onAction({ type: "spend_heroic_inspiration" })}>Gastar inspiración</button>
-    </div>
+    <label className={`overview-inspiration-toggle${inspiration?" is-active":""}${!state?" is-disabled":""}`}>
+      <input type="checkbox" checked={inspiration} disabled={!state}
+        onChange={event=>onAction({type:event.target.checked?"gain_heroic_inspiration":"spend_heroic_inspiration"})}/>
+      <span className="overview-inspiration-symbol" aria-hidden="true">✦</span>
+      <span className="overview-inspiration-label"><strong>{!state?"Partida no disponible":inspiration?"Inspiración disponible":"Sin inspiración"}</strong>
+        <small>{inspiration?"Marcada · pulsa para gastar":"Márcala cuando la consigas"}</small></span>
+      <span className="overview-inspiration-check" aria-hidden="true">{inspiration?"✓":""}</span>
+    </label>
     <p className="overview-panel-note">El jugador o DM decide cuándo se recibe. Al gastarla, repite el dado y usa el nuevo resultado. No se lanza automáticamente.</p>
     {sheet.features.includes("champion_heroic_warrior") && <p className="overview-panel-note">Guerrero heroico: la inspiración se recupera al iniciar tu turno mediante el panel de turnos existente.</p>}
     <p className="overview-panel-note">Resistencias e inmunidades: resumen pendiente de integración.</p>
