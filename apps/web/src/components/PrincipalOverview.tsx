@@ -5,7 +5,7 @@ import { rollD20, type D20Mode, type D20Result } from "../../../../packages/rule
 import { ABILITIES, type Ability } from "../../../../packages/rules-engine/src/abilities";
 import { SKILLS, SKILL_ABILITIES, type Skill } from "../../../../packages/rules-engine/src/proficiencies";
 import { BACKGROUNDS, type GuidedFighterInput, type GuidedFighterResult } from "../../../../packages/rules-engine/src/guided";
-import { applyAdventureAction, type AdventureAction, type AdventureState } from "../../../../packages/rules-engine/src/adventure";
+import { applyAdventureAction, setManualDeathSaveMark, type AdventureAction, type AdventureState } from "../../../../packages/rules-engine/src/adventure";
 import { PrincipalHealthControls, PrincipalResourceControls, PrincipalInspirationControls } from "./PrincipalSessionControls";
 import PrincipalEquippedAttacks from "./PrincipalEquippedAttacks";
 
@@ -86,7 +86,6 @@ export default function PrincipalOverview({ result, error, input, adventure, out
     ...(input.species === "elf" && input.elfSenseSkill ? [input.elfSenseSkill] : []),
     ...(input.species === "human" && input.humanFeat === "skilled" ? input.humanFeatDetails?.skilledProficiencies?.filter((s): s is Skill => SKILLS.includes(s as Skill)) ?? [] : []),
   ]);
-  const death = current?.survival?.death;
   const perceptionMode = sheet.skillRollModes.perception;
   // Invalidar visualmente tiradas anteriores al cambiar la proyección del personaje.
   const sheetKey = JSON.stringify([
@@ -106,6 +105,19 @@ export default function PrincipalOverview({ result, error, input, adventure, out
       setActionError(reason instanceof Error ? reason.message : "No se ha podido registrar la acción");
       setActionNote(null);
       return false;
+    }
+  }
+
+  function toggleDeathMark(kind: "successes" | "failures", index: number) {
+    if (!current) return;
+    try {
+      const selected = !(current.manualDeathMarks?.[kind][index] ?? false);
+      onAdventureChange(setManualDeathSaveMark(current, sheet, kind, index, selected));
+      setActionError(null);
+      setActionNote("Marcadores de muerte actualizados manualmente.");
+    } catch (reason) {
+      setActionError(reason instanceof Error ? reason.message : "No se pudo cambiar el marcador");
+      setActionNote(null);
     }
   }
 
@@ -200,7 +212,31 @@ export default function PrincipalOverview({ result, error, input, adventure, out
     <div className="overview-foot-grid">
       <section className="overview-panel panel"><h3>Percepción pasiva</h3><strong className="overview-spotlight">{passivePerception(sheet.skillBonuses.perception, perceptionMode)}</strong><p className="overview-panel-note">10 + Percepción {signed(sheet.skillBonuses.perception)}{perceptionMode !== "normal" ? ` · ${modeName(perceptionMode)} ${perceptionMode === "advantage" ? "+5" : "−5"}` : ""}</p></section>
       <section className="overview-panel panel"><h3>Movimiento y origen</h3><strong className="overview-spotlight">{origin.speedFeet} <small>pies</small></strong><p className="overview-panel-note">Tamaño {origin.size === "medium" ? "mediano" : "pequeño"} · Guerrero nivel {sheet.level}</p></section>
-      <section className="overview-panel panel"><h3>Salvaciones de muerte</h3><div className="overview-death-counts"><span>Éxitos: {death?.successes ?? "—"}/3</span><span>Fallos: {death?.failures ?? "—"}/3</span></div><p className="overview-panel-note">{death?.dead ? "Personaje fallecido" : death?.stable ? "Personaje estable" : "Registro disponible en Supervivencia"}</p></section>
+      <section className="overview-panel panel overview-death-panel" aria-label="Marcadores manuales de salvaciones de muerte">
+        <h3>Salvaciones de muerte</h3>
+        <div className="overview-death-markers">
+          {(["successes", "failures"] as const).map(kind => {
+            const count = current?.manualDeathMarks?.[kind].filter(Boolean).length ?? 0;
+            const isSuccess = kind === "successes";
+            return <div className={`overview-death-track ${isSuccess ? "is-success" : "is-failure"}`} key={kind}>
+              <div className="overview-death-track-heading"><span>{isSuccess ? "Éxitos" : "Fallos"}</span><small>{current ? `${count}/3` : "—/3"}</small></div>
+              <div className="overview-death-marks" role="group" aria-label={isSuccess ? "Salvaciones de muerte superadas" : "Salvaciones de muerte fallidas"}>
+                {([0, 1, 2] as const).map(index => {
+                  const checked = current?.manualDeathMarks?.[kind][index] ?? false;
+                  return <button type="button" key={index}
+                    className={`overview-death-mark${checked ? " is-marked" : ""}`}
+                    aria-label={`${isSuccess ? "Éxito" : "Fallo"} ${index + 1} de 3`}
+                    aria-pressed={checked} disabled={!current}
+                    onClick={() => toggleDeathMark(kind, index)}>
+                    <span aria-hidden="true">{checked ? (isSuccess ? "✓" : "×") : ""}</span>
+                  </button>;
+                })}
+              </div>
+            </div>;
+          })}
+        </div>
+        <p className="overview-panel-note">Marca o desmarca cada círculo manualmente. No aplica efectos automáticos ni modifica el sistema de Supervivencia. Usa «Actualizar guardado» para conservarlos.</p>
+      </section>
       <PrincipalInspirationControls state={current} sheet={sheet} onAction={runAdventureAction}/>
     </div>
     {sheet.warnings.length > 0 && <div className="overview-warning" role="status">{sheet.warnings.includes("heavy_armor_strength_requirement_unmet") && <p>No se cumple el requisito de Fuerza de la armadura pesada.</p>}{sheet.warnings.includes("armor_stealth_disadvantage") && <p>La armadura impone desventaja en Sigilo.</p>}</div>}

@@ -13,10 +13,54 @@ import {advanceSurvivalRound,concentrationDC,damageAtZero,deathSavingThrow,initi
 import { advanceFighterLevel, finishFighterRest, initialFighterState, spendFighterResource, useSecondWind, useTacticalMind,
   validateFighterState, type FighterState, type FighterResourceId } from './resources';
 
+/** Marcadores visuales manuales: no alimentan las reglas de Supervivencia. */
+export type ManualDeathSaveMarks = Readonly<{
+  successes: readonly [boolean, boolean, boolean];
+  failures: readonly [boolean, boolean, boolean];
+}>;
+
+const EMPTY_MANUAL_DEATH_MARKS: ManualDeathSaveMarks = {
+  successes: [false, false, false], failures: [false, false, false],
+};
+
+function validateManualDeathMarks(value: unknown): ManualDeathSaveMarks {
+  if (!isRecord(value)) throw new RangeError('Marcadores manuales de muerte inválidos');
+  onlyKeys(value, ['successes', 'failures'], 'Marcadores manuales de muerte');
+  function checkMarks(marks: unknown, label: string): readonly [boolean, boolean, boolean] {
+    if (!Array.isArray(marks) || marks.length !== 3 || marks.some(mark => typeof mark !== 'boolean'))
+      throw new RangeError(`${label}: se requieren exactamente tres valores booleanos`);
+    return [marks[0], marks[1], marks[2]];
+  }
+  return {
+    successes: checkMarks(value.successes, 'Éxitos manuales'),
+    failures: checkMarks(value.failures, 'Fallos manuales'),
+  };
+}
+
+/** Cambia solo una marca visible, sin tirar dados, estabilizar ni provocar muerte. */
+export function setManualDeathSaveMark(
+  source: AdventureState,
+  sheet: CalculatedFighterSheet,
+  kind: 'successes' | 'failures',
+  index: number,
+  selected: boolean,
+): AdventureState {
+  const state = validateAdventureState(source, sheet);
+  if (kind !== 'successes' && kind !== 'failures') throw new RangeError('Tipo de marcador inválido');
+  requireInteger(index, 'Posición del marcador', 0, 2);
+  if (typeof selected !== 'boolean') throw new RangeError('La selección debe ser booleana');
+  const previous = state.manualDeathMarks ?? EMPTY_MANUAL_DEATH_MARKS;
+  const updated = [...previous[kind]] as [boolean, boolean, boolean];
+  updated[index] = selected;
+  return { ...state, manualDeathMarks: { ...previous, [kind]: updated } };
+}
+
 export type AdventureState = Readonly<{
   fighter: FighterState;
   temporaryHitPoints: number;
   spentHitDice: number;
+  /** Marcas visuales opcionales, independientes de survival.death. */
+  manualDeathMarks?: ManualDeathSaveMarks;
   combat: CombatState;
   /** Ausente en guardados v2 anteriores a esta actualización. */
   survival?: SurvivalState;
@@ -69,7 +113,7 @@ export function initialAdventureState(sheet:CalculatedFighterSheet):AdventureSta
 /** Comprueba que el estado pertenece a esta hoja; no se remapea silenciosamente. */
 export function validateAdventureState(value:unknown,sheet:CalculatedFighterSheet):AdventureState{
   if(!isRecord(value))throw new RangeError('Estado de partida inválido');
-  onlyKeys(value,['fighter','temporaryHitPoints','spentHitDice','combat','survival','magicWards'],'Estado de partida');
+  onlyKeys(value,['fighter','temporaryHitPoints','spentHitDice','combat','survival','magicWards','manualDeathMarks'],'Estado de partida');
   if(!isRecord(value.fighter))throw new RangeError('Estado del Guerrero inválido');
   onlyKeys(value.fighter,['fighterLevel','hitPoints','resources'],'Estado del Guerrero');
   if(!isRecord(value.fighter.hitPoints))throw new RangeError('PG inválidos');
@@ -87,6 +131,7 @@ export function validateAdventureState(value:unknown,sheet:CalculatedFighterShee
   const temporaryHitPoints=requireInteger(value.temporaryHitPoints,'PG temporales',0,100_000);
   const spentHitDice=requireInteger(value.spentHitDice,'Dados de golpe gastados',0,sheet.hitDice.total);
   const combat=value.combat===undefined?initialCombatState():validateCombatState(value.combat);
+  const manualDeathMarks = value.manualDeathMarks === undefined ? undefined : validateManualDeathMarks(value.manualDeathMarks);
   // La validación del turno permite el máximo global (4), pero la hoja debe
   // respetar el límite real desbloqueado en este nivel.
   const attacksPerAction=sheet.level>=20?4:sheet.level>=11?3:sheet.level>=5?2:1;
@@ -100,7 +145,8 @@ export function validateAdventureState(value:unknown,sheet:CalculatedFighterShee
     second_wind:{current:fighter.resources.second_wind!.current},
     ...(fighter.fighterLevel>=2?{action_surge:{current:fighter.resources.action_surge!.current}}:{}),
     ...(fighter.fighterLevel>=9?{indomitable:{current:fighter.resources.indomitable!.current}}:{})
-  }},temporaryHitPoints,spentHitDice,combat,survival,magicWards};
+  }},temporaryHitPoints,spentHitDice,combat,survival,magicWards,
+    ...(manualDeathMarks ? { manualDeathMarks } : {})};
 }
 
 function withHp(state:AdventureState,current:number):AdventureState{

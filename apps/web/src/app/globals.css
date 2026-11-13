@@ -230,7 +230,21 @@
 .overview-foot-grid .overview-panel h3{font-size:16px}
 .overview-spotlight{display:block;font:700 34px Georgia,serif;margin-top:10px;color:#f7e0ac}
 .overview-spotlight small{font:400 13px system-ui,sans-serif;color:var(--muted)}
-.overview-death-counts{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:13px;color:#eed2bd;font-size:13px}
+/* Fase 41.4: salvaciones de muerte con seis marcas visuales independientes. */
+.overview-death-markers{display:grid;gap:14px;margin-top:13px}
+.overview-death-track{display:flex;flex-direction:column;gap:8px}
+.overview-death-track-heading{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12px;font-weight:700;color:#e8ebed}
+.overview-death-track-heading small{color:#aebbc6;font-size:11px;font-weight:600}
+.overview-death-marks{display:flex;gap:10px;flex-wrap:wrap}
+.overview-death-mark{display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;border-radius:50%;border:2px solid #637785;background:#182631;color:#f6fafb;font-size:20px;font-weight:850;line-height:1;cursor:pointer;transition:border-color .15s,background .15s,transform .15s;user-select:none}
+.overview-death-track.is-success .overview-death-mark{border-color:#6eae95}
+.overview-death-track.is-failure .overview-death-mark{border-color:#c68481}
+.overview-death-track.is-success .overview-death-mark.is-marked{background:#2c745d;border-color:#9ae0c1;box-shadow:0 0 0 2px #244d4240}
+.overview-death-track.is-failure .overview-death-mark.is-marked{background:#954c4b;border-color:#f0a5a1;box-shadow:0 0 0 2px #592b2b40}
+.overview-death-mark:hover:not(:disabled){transform:translateY(-1px);border-color:#f3d49a}
+.overview-death-mark:focus-visible{outline:3px solid #f1d19b;outline-offset:3px}
+.overview-death-mark:disabled{opacity:.42;cursor:not-allowed}
+@media(prefers-reduced-motion:reduce){.overview-death-mark{transition:none}.overview-death-mark:hover:not(:disabled){transform:none}}
 .overview-warning{padding:14px 18px;border:1px solid #9c8153;background:#382f24;color:#f7deb7;border-radius:12px;font-size:12px}
 .overview-warning p{margin:0 0 4px}
 .overview-unavailable{padding:27px;margin:0 0 24px}
