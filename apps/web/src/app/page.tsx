@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import {EPIC_BOONS,type EpicBoonId} from "../../../../packages/rules-engine/src/epic-boons";
 import SaveLoadPanel from "../components/SaveLoadPanel";
 import CharacterHeader from "../components/CharacterHeader";
+import CharacterProfilePanel from "../components/CharacterProfilePanel";
 import PrincipalOverview from "../components/PrincipalOverview";
 import TraitsPanel from "../components/TraitsPanel";
 import CharacterTabs, { type SheetTab } from "../components/CharacterTabs";
@@ -23,6 +24,7 @@ import type { WeaponAttackProfile,AttackResolution } from "../../../../packages/
 import type {MasteryContext} from "../../../../packages/rules-engine/src/mastery-effects";
 import { initialAdventureState, validateAdventureState, updateAdventureCombat, type AdventureState } from "../../../../packages/rules-engine/src/adventure";
 import type { CharacterSnapshot } from "../../../../packages/rules-engine/src/persistence";
+import { EMPTY_CHARACTER_PROFILE, validateCharacterProfile, type CharacterProfile } from "../../../../packages/rules-engine/src/character-profile";
 import { calculateGuidedFighter, BACKGROUNDS, FIGHTER_SKILL_OPTIONS, HUMAN_FEATS, type BackgroundId, type SpeciesId, type ElfLineage, type GuidedFighterInput, type HumanOriginFeat } from "../../../../packages/rules-engine/src/guided";
 import { adjacentFighterLevel, type SupportedFighterLevel } from "../../../../packages/rules-engine/src/progression";
 import {prepareFighterLevelUp,prepareFighterLevelUpWithFreshSession} from "../../../../packages/rules-engine/src/level-up";
@@ -61,6 +63,8 @@ export default function Home(){
   const toolsDetailsRef=useRef<HTMLDetailsElement>(null);
   const [adventure,setAdventure]=useState<AdventureState|null>(null);
   const [name,setName]=useState('Aldric');
+  const [profile,setProfile]=useState<CharacterProfile>(EMPTY_CHARACTER_PROFILE);
+  const [profileLoadRevision,setProfileLoadRevision]=useState(0);
   const [level,setLevel]=useState<SupportedFighterLevel>(1);
   const [asiMode,setAsiMode]=useState<'plus_two'|'two_ones'>('plus_two');
   const [asiFirst,setAsiFirst]=useState<Ability>('strength');
@@ -151,7 +155,7 @@ export default function Home(){
     : background==='sage'?{list:'wizard',spellcastingAbility:bgMagicAbility,cantrips:bgWizardCantrips,level1Spell:bgWizardSpell}:undefined,
     [background,bgMagicAbility,bgClericCantrips,bgClericSpell,bgWizardCantrips,bgWizardSpell]);
   const humanFeatDetails=useMemo(()=>({magicInitiate:{list:humanMagicList,spellcastingAbility:humanMagicAbility,cantrips:humanCantrips,level1Spell:humanSpell},crafterTools,musicianInstruments:instruments,skilledProficiencies:skilled}),[humanMagicList,humanMagicAbility,humanCantrips,humanSpell,crafterTools,instruments,skilled]);
-  const input=useMemo<GuidedFighterInput>(()=>({name,level,background,species,
+  const rulesInput=useMemo<GuidedFighterInput>(()=>({name,level,background,species,
     ...(level>=4?{level4Improvement:{mode:asiMode,first:asiFirst,...(asiMode==='two_ones'?{second:asiSecond}:{})}}:{}),
     ...(level>=6?{level6Improvement:{mode:asi6Mode,first:asi6First,...(asi6Mode==='two_ones'?{second:asi6Second}:{})}}:{}),
     ...(level>=8?{level8Improvement:{mode:asi8Mode,first:asi8First,...(asi8Mode==='two_ones'?{second:asi8Second}:{})}}:{}),
@@ -161,9 +165,13 @@ export default function Home(){
     ...(level>=19&&epicBoon?{epicBoon:{id:epicBoon,ability:epicAbility}}:{}),
     assignedAbilities:scores,increaseMode:mode,plusTwoAbility:two,plusOneAbility:one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,elfLineage:lineage,elfSenseSkill:elfSkill,elfSpellAbility:elfSpell,armor,shield,inventoryActions:activeActions,martial:{fightingStyle:style,...(level>=7?{additionalFightingStyle:additionalStyle as FightingStyleId}:{}),weaponMasteries:masteries,startingPackage:starter},
     backgroundEquipment:{startingPackage:backgroundPackage,...(background==='soldier'?{gamingSet:soldierGamingSet}:{})}}),[name,level,asiMode,asiFirst,asiSecond,asi6Mode,asi6First,asi6Second,asi8Mode,asi8First,asi8Second,asi12Mode,asi12First,asi12Second,asi14Mode,asi14First,asi14Second,asi16Mode,asi16First,asi16Second,epicBoon,epicAbility,additionalStyle,background,species,scores,mode,two,one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,lineage,elfSkill,elfSpell,armor,shield,style,masteries,starter,backgroundPackage,soldierGamingSet,activeActions]);
-  const output=useMemo(()=>{try{return {result:calculateGuidedFighter(input),error:null};}catch(e){return {result:null,error:e instanceof Error?e.message:'Error al crear el personaje'};}},[input]);
+  // Separar perfil y reglas evita recalcular toda la hoja por cada tecla en las notas.
+  const input=useMemo<GuidedFighterInput>(()=>({...rulesInput,profile}),[rulesInput,profile]);
+  const output=useMemo(()=>{try{return {result:calculateGuidedFighter(rulesInput),error:null};}catch(e){return {result:null,error:e instanceof Error?e.message:'Error al crear el personaje'};}},[rulesInput]);
   function loadSavedInput(saved:GuidedFighterInput){
-    setName(saved.name);setLevel(saved.level);setLevelMessage('');setLevelRecovery(null);
+    setName(saved.name);setProfile(saved.profile?validateCharacterProfile(saved.profile):EMPTY_CHARACTER_PROFILE);
+    setProfileLoadRevision(n=>n+1);
+    setLevel(saved.level);setLevelMessage('');setLevelRecovery(null);
     setAsiMode(saved.level4Improvement?.mode??'plus_two');setAsiFirst(saved.level4Improvement?.first??'strength');
     setAsiSecond(saved.level4Improvement?.second??'constitution');
     setAsi6Mode(saved.level6Improvement?.mode??'plus_two');setAsi6First(saved.level6Improvement?.first??'constitution');
@@ -360,9 +368,10 @@ export default function Home(){
   return <main className="app-shell">
     <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Hoja digital · D&D 2024</span></div></div><div className="status"><span className="status-dot"/> Edición local · Guardado manual</div></header>
     <div className="content">
-      <p className="sheet-release-note">ACTUALIZACIÓN 41 · EQUIPO E INVENTARIO</p>
+      <p className="sheet-release-note">ACTUALIZACIÓN 42 · HISTORIA, APARIENCIA Y RETRATO</p>
       <CharacterHeader
         name={name}
+        portraitDataUrl={profile.portraitDataUrl}
         level={level}
         background={bg.name}
         species={species==='human'?'Humano':species==='dwarf'?'Enano':'Elfo'}
@@ -628,15 +637,9 @@ export default function Home(){
         </SheetPlaceholder>
       </section>
       <section id="sheet-panel-personaje" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-personaje" hidden={activeTab!=='personaje'}>
-        <SheetPlaceholder eyebrow="PERSONAJE · FASE 42" title="Historia y apariencia"
-          description="Aquí se incorporarán el trasfondo narrativo, la personalidad, las notas y el retrato del personaje. Estos campos aún no están disponibles ni se guardan."
-          actionLabel="Editar identidad y origen" onAction={()=>openEditorAt(1)}>
-          <div className="sheet-preview-metrics">
-            <div><span>Nombre</span><strong>{name.trim()||'Sin nombre'}</strong></div>
-            <div><span>Trasfondo</span><strong>{bg.name}</strong></div>
-            <div><span>Especie</span><strong>{species==='human'?'Humano':species==='dwarf'?'Enano':'Elfo'}</strong></div>
-          </div>
-        </SheetPlaceholder>
+        <CharacterProfilePanel key={profileLoadRevision} profile={profile} onChange={setProfile} name={name}
+          species={species==='human'?'Humano':species==='dwarf'?'Enano':'Elfo'}
+          background={bg.name} level={level} onEditIdentity={()=>openEditorAt(0)}/>
       </section>
       <section id="sheet-panel-combate" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-combate" hidden={activeTab!=='combate'}>
         <SheetPlaceholder eyebrow="COMBATE · DESARROLLO FUTURO" title="Coming Soon"

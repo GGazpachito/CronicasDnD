@@ -3,6 +3,7 @@
  */
 import { calculateGuidedFighter, type GuidedFighterInput } from './guided';
 import { initialAdventureState, validateAdventureState, type AdventureState } from './adventure';
+import { validateCharacterProfile } from './character-profile';
 
 export const CHARACTER_SAVE_SCHEMA_VERSION = 2 as const;
 export const CHARACTER_SAVE_RULESET = 'dnd-2024' as const;
@@ -31,6 +32,9 @@ export function validateCharacterSnapshot(value:unknown):CharacterSnapshot{
   if(!serialized||serialized.length>120_000)throw new RangeError('Personaje demasiado grande para guardado local');
   let input:GuidedFighterInput;
   try{input=JSON.parse(serialized) as GuidedFighterInput;}catch{throw new RangeError('Datos de personaje invalidos');}
+  // Los guardados antiguos no tienen perfil. Un perfil presente se valida
+  // antes de aceptar el documento, también al cargar desde PostgreSQL.
+  if ('profile' in input) input={...input,profile:validateCharacterProfile(input.profile)};
   let sheet:ReturnType<typeof calculateGuidedFighter>['sheet'];
   try{sheet=calculateGuidedFighter(input).sheet;}catch(e){
     throw new RangeError(e instanceof Error?`Personaje invalido: ${e.message}`:'Personaje invalido');

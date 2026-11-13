@@ -1,7 +1,10 @@
 "use client";
 
+import Image from "next/image";
+
 type CharacterHeaderProps = {
   name: string;
+  portraitDataUrl?: string;
   level: number;
   background: string;
   species: string;
@@ -10,11 +13,14 @@ type CharacterHeaderProps = {
   onLevelUp: () => void;
 };
 
-export default function CharacterHeader({ name, level, background, species, valid, onEdit, onLevelUp }: CharacterHeaderProps) {
+export default function CharacterHeader({ name, portraitDataUrl, level, background, species, valid, onEdit, onLevelUp }: CharacterHeaderProps) {
   const displayName = name.trim() || "Personaje sin nombre";
   return (
     <section className="character-header panel" aria-label="Identificación del personaje">
-      <div className="character-portrait" aria-hidden="true">{displayName[0]?.toLocaleUpperCase("es") ?? "?"}</div>
+      <div className="character-portrait">
+        {portraitDataUrl ? <Image src={portraitDataUrl} width={78} height={88} unoptimized alt={`Retrato de ${displayName}`} />
+          : <span aria-hidden="true">{displayName[0]?.toLocaleUpperCase("es") ?? "?"}</span>}
+      </div>
       <div className="character-identity">
         <span className="eyebrow">HOJA DE PERSONAJE · D&D 2024</span>
         <h1>{displayName}</h1>

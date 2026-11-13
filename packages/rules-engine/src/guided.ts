@@ -2,6 +2,7 @@
  * El catálogo declara las capacidades que aún no están implementadas, en vez de simularlas.
  */
 import { ABILITIES, type Ability, type AbilityScores, proficiencyBonus } from './abilities';
+import type { CharacterProfile } from './character-profile';
 import { SKILLS, type Skill } from './proficiencies';
 import { calculateFighterSheet, type CalculatedFighterSheet, type FighterCharacterInput } from './sheet';
 import { FIGHTER_PACKAGES, WEAPONS, validateMartialChoices, type MartialChoices } from './martial';
@@ -32,6 +33,8 @@ export const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8] as const;
 
 export type GuidedFighterInput = Readonly<{
   name: string;
+  /** Datos narrativos y retrato; no intervienen en los cálculos de reglas. */
+  profile?: CharacterProfile;
   level: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20;
   /** Solo desde el nivel 4; otras dotes generales quedan fuera de este incremento. */
   level4Improvement?: FighterLevel4Improvement;
