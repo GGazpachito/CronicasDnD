@@ -85,30 +85,102 @@ const PHYSICAL_FIELDS = [
   {key:'skin',label:'Piel',placeholder:'Ej. Bronceada'},
 ] as const;
 
+type EditableSection = 'backstory' | 'personality' | 'notes' | 'portrait' | 'physical';
+
+const SECTION_KEYS: Record<EditableSection, readonly (keyof CharacterProfile)[]> = {
+  backstory: ['backstory'],
+  personality: ['appearance', 'personality', 'ideals', 'bonds', 'flaws'],
+  notes: ['notes'],
+  portrait: ['portraitDataUrl'],
+  physical: ['age', 'height', 'weight', 'eyes', 'hair', 'skin'],
+};
+
+function SectionActions({title,editing,onEdit,onSave,onCancel,savingDisabled=false}: {
+  title:string;
+  editing:boolean;
+  onEdit:()=>void;
+  onSave:()=>void;
+  onCancel:()=>void;
+  savingDisabled?:boolean;
+}) {
+  return <div className="character-profile-actions">
+    {editing ? <>
+      <button type="button" className="character-profile-action is-save" onClick={onSave} disabled={savingDisabled} aria-label={`Guardar ${title}`}>Guardar</button>
+      <button type="button" className="character-profile-action is-cancel" onClick={onCancel} aria-label={`Cancelar edición de ${title}`}>Cancelar</button>
+    </> : <button type="button" className="character-profile-action is-edit" onClick={onEdit} aria-label={`Editar ${title}`}>
+      <span aria-hidden="true">✎</span> Editar
+    </button>}
+  </div>;
+}
+
+function DisplayText({value,empty='Sin completar todavía.'}: {value:string;empty?:string}) {
+  return <p className={`character-profile-readonly${value.trim()?'':' is-empty'}`}>{value.trim()||empty}</p>;
+}
+
 export default function CharacterProfilePanel({profile,name,species,background,level,onChange,onEditIdentity}:Props) {
   const inputId = useId();
   const uploadSequence = useRef(0);
   const [uploading,setUploading] = useState(false);
   const [uploadError,setUploadError] = useState<string | null>(null);
-  // Al cargar otro personaje se desmonta este panel; invalida imágenes pendientes.
+  // Los borradores existen solo mientras se edita cada tarjeta. El perfil real es la fuente única.
+  const [drafts,setDrafts] = useState<Partial<Record<EditableSection,CharacterProfile>>>({});
+
+  // Si la pestaña se desmonta (por ejemplo, al cargar otro personaje), invalida cargas pendientes.
   useEffect(() => {
     const sequenceRef = uploadSequence;
     return () => { sequenceRef.current++; };
   }, []);
 
-  function edit(key: CharacterProfileTextKey, value: string) {
-    onChange({...profile,[key]:value});
+  function startEditing(section:EditableSection) {
+    setDrafts(current => ({...current,[section]:{...profile}}));
+    if (section === 'portrait') setUploadError(null);
+  }
+  function cancelEditing(section:EditableSection) {
+    if (section === 'portrait') {
+      uploadSequence.current++;
+      setUploading(false);
+      setUploadError(null);
+    }
+    setDrafts(current => {
+      const next = {...current};
+      delete next[section];
+      return next;
+    });
+  }
+  function updateDraft(section:EditableSection,key:CharacterProfileTextKey,value:string) {
+    setDrafts(current => {
+      const draft = current[section];
+      return draft ? {...current,[section]:{...draft,[key]:value}} : current;
+    });
+  }
+  function saveEditing(section:EditableSection) {
+    if (section === 'portrait' && uploading) return;
+    const draft = drafts[section];
+    if (!draft) return;
+    // Fusionar SOLO los campos de esta tarjeta. Guardar otra tarjeta no revierte cambios previos.
+    const updatedFields = Object.fromEntries(SECTION_KEYS[section].map(key => [key,draft[key]])) as Partial<CharacterProfile>;
+    onChange({...profile,...updatedFields});
+    setDrafts(current => {
+      const next = {...current};
+      delete next[section];
+      return next;
+    });
+    if (section === 'portrait') setUploadError(null);
   }
   async function handleFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = '';
-    if (!file) return;
+    if (!file || !drafts.portrait) return;
     const sequence = ++uploadSequence.current;
     setUploading(true);
     setUploadError(null);
     try {
       const portraitDataUrl = await optimizePortrait(file);
-      if (sequence === uploadSequence.current) onChange({...profile,portraitDataUrl});
+      if (sequence === uploadSequence.current) {
+        setDrafts(current => current.portrait
+          ? {...current,portrait:{...current.portrait,portraitDataUrl}}
+          : current);
+      }
     } catch (error) {
       if (sequence === uploadSequence.current) setUploadError(error instanceof Error ? error.message : 'No se pudo procesar la imagen.');
     } finally {
@@ -119,60 +191,103 @@ export default function CharacterProfilePanel({profile,name,species,background,l
     uploadSequence.current++;
     setUploading(false);
     setUploadError(null);
-    // Elimina la imagen sin tocar los campos narrativos.
-    onChange({...profile,portraitDataUrl:undefined});
+    setDrafts(current => current.portrait
+      ? {...current,portrait:{...current.portrait,portraitDataUrl:undefined}}
+      : current);
   }
+
+  const backstoryDraft = drafts.backstory;
+  const personalityDraft = drafts.personality;
+  const notesDraft = drafts.notes;
+  const physicalDraft = drafts.physical;
+  const portraitDraft = drafts.portrait;
+  const visiblePortrait = portraitDraft ? portraitDraft.portraitDataUrl : profile.portraitDataUrl;
 
   return <div className="character-profile-page">
     <div className="sheet-section-heading"><div>
-      <span className="eyebrow">PERSONAJE · ACTUALIZACIÓN 42</span>
+      <span className="eyebrow">PERSONAJE · ACTUALIZACIÓN 42.1</span>
       <h2>Identidad e historia</h2>
-      <p>Completa la interpretación de tu personaje. Estos textos no alteran los cálculos de D&D.</p>
+      <p>Consulta los textos como parte de tu ficha. Pulsa «Editar» en cualquier apartado para modificarlos.</p>
     </div></div>
 
     <div className="character-profile-layout">
       <div className="character-profile-main">
         <section className="panel character-profile-card" aria-labelledby="profile-backstory-title">
-          <div className="character-profile-card-heading"><div><span className="eyebrow">BIOGRAFÍA</span><h3 id="profile-backstory-title">Historia del personaje</h3></div><span className="character-profile-count">{profile.backstory.length}/{PROFILE_TEXT_LIMITS.backstory}</span></div>
-          <textarea className="character-profile-textarea is-large" value={profile.backstory} maxLength={PROFILE_TEXT_LIMITS.backstory} rows={9}
-            placeholder="¿De dónde viene? ¿Qué le llevó a convertirse en aventurero? ¿Qué persigue ahora?"
-            aria-label="Historia del personaje" onChange={event=>edit('backstory',event.target.value)}/>
+          <div className="character-profile-card-heading">
+            <div><span className="eyebrow">BIOGRAFÍA</span><h3 id="profile-backstory-title">Historia del personaje</h3></div>
+            <div className="character-profile-heading-actions">
+              {backstoryDraft && <span className="character-profile-count">{backstoryDraft.backstory.length}/{PROFILE_TEXT_LIMITS.backstory}</span>}
+              <SectionActions title="Historia del personaje" editing={!!backstoryDraft}
+                onEdit={()=>startEditing('backstory')} onSave={()=>saveEditing('backstory')} onCancel={()=>cancelEditing('backstory')}/>
+            </div>
+          </div>
+          {backstoryDraft
+            ? <textarea className="character-profile-textarea is-large" value={backstoryDraft.backstory} maxLength={PROFILE_TEXT_LIMITS.backstory} rows={9}
+                placeholder="¿De dónde viene? ¿Qué le llevó a convertirse en aventurero? ¿Qué persigue ahora?"
+                aria-label="Historia del personaje" onChange={event=>updateDraft('backstory','backstory',event.target.value)}/>
+            : <DisplayText value={profile.backstory} empty="Aquí aparecerá la historia de tu personaje."/>}
         </section>
+
         <section className="panel character-profile-card" aria-labelledby="profile-personality-title">
-          <div className="character-profile-card-heading"><div><span className="eyebrow">INTERPRETACIÓN</span><h3 id="profile-personality-title">Personalidad y motivaciones</h3></div></div>
+          <div className="character-profile-card-heading">
+            <div><span className="eyebrow">INTERPRETACIÓN</span><h3 id="profile-personality-title">Personalidad y motivaciones</h3></div>
+            <SectionActions title="Personalidad y motivaciones" editing={!!personalityDraft}
+              onEdit={()=>startEditing('personality')} onSave={()=>saveEditing('personality')} onCancel={()=>cancelEditing('personality')}/>
+          </div>
           <div className="character-profile-fields">
-            {DESCRIPTION_FIELDS.map(field=><label className="character-profile-field" key={field.key}>
-              <span>{field.label} <small>{profile[field.key].length}/{PROFILE_TEXT_LIMITS[field.key]}</small></span>
-              <textarea rows={field.rows} maxLength={PROFILE_TEXT_LIMITS[field.key]} placeholder={field.hint}
-                value={profile[field.key]} onChange={event=>edit(field.key,event.target.value)}/>
-            </label>)}
+            {DESCRIPTION_FIELDS.map(field => personalityDraft
+              ? <label className="character-profile-field" key={field.key}>
+                  <span>{field.label} <small>{personalityDraft[field.key].length}/{PROFILE_TEXT_LIMITS[field.key]}</small></span>
+                  <textarea rows={field.rows} maxLength={PROFILE_TEXT_LIMITS[field.key]} placeholder={field.hint}
+                    value={personalityDraft[field.key]} onChange={event=>updateDraft('personality',field.key,event.target.value)}/>
+                </label>
+              : <div className="character-profile-field character-profile-field-display" key={field.key}>
+                  <span>{field.label}</span><DisplayText value={profile[field.key]}/>
+                </div>)}
           </div>
         </section>
+
         <section className="panel character-profile-card" aria-labelledby="profile-notes-title">
-          <div className="character-profile-card-heading"><div><span className="eyebrow">CUADERNO</span><h3 id="profile-notes-title">Notas de aventura</h3></div><span className="character-profile-count">{profile.notes.length}/{PROFILE_TEXT_LIMITS.notes}</span></div>
-          <textarea className="character-profile-textarea" value={profile.notes} maxLength={PROFILE_TEXT_LIMITS.notes} rows={7}
-            placeholder="Personajes conocidos, pistas, objetivos, lugares, recuerdos de sesión…"
-            aria-label="Notas de aventura" onChange={event=>edit('notes',event.target.value)}/>
+          <div className="character-profile-card-heading">
+            <div><span className="eyebrow">CUADERNO</span><h3 id="profile-notes-title">Notas de aventura</h3></div>
+            <div className="character-profile-heading-actions">
+              {notesDraft && <span className="character-profile-count">{notesDraft.notes.length}/{PROFILE_TEXT_LIMITS.notes}</span>}
+              <SectionActions title="Notas de aventura" editing={!!notesDraft}
+                onEdit={()=>startEditing('notes')} onSave={()=>saveEditing('notes')} onCancel={()=>cancelEditing('notes')}/>
+            </div>
+          </div>
+          {notesDraft
+            ? <textarea className="character-profile-textarea" value={notesDraft.notes} maxLength={PROFILE_TEXT_LIMITS.notes} rows={7}
+                placeholder="Personajes conocidos, pistas, objetivos, lugares, recuerdos de sesión…"
+                aria-label="Notas de aventura" onChange={event=>updateDraft('notes','notes',event.target.value)}/>
+            : <DisplayText value={profile.notes} empty="Todavía no hay notas de aventura."/>}
         </section>
       </div>
 
       <aside className="character-profile-side">
         <section className="panel character-profile-card" aria-labelledby="profile-portrait-title">
-          <div className="character-profile-card-heading"><div><span className="eyebrow">RETRATO</span><h3 id="profile-portrait-title">Imagen del personaje</h3></div></div>
+          <div className="character-profile-card-heading">
+            <div><span className="eyebrow">RETRATO</span><h3 id="profile-portrait-title">Imagen del personaje</h3></div>
+            <SectionActions title="Imagen del personaje" editing={!!portraitDraft}
+              onEdit={()=>startEditing('portrait')} onSave={()=>saveEditing('portrait')} onCancel={()=>cancelEditing('portrait')}
+              savingDisabled={uploading}/>
+          </div>
           <div className="character-profile-portrait">
-            {profile.portraitDataUrl
-              // Se admite exclusivamente una imagen JPEG generada localmente y validada.
-              ? <Image src={profile.portraitDataUrl} width={360} height={360} unoptimized alt={`Retrato de ${name.trim() || 'tu personaje'}`}/>
+            {visiblePortrait
+              ? <Image src={visiblePortrait} width={360} height={360} unoptimized alt={`Retrato de ${name.trim() || 'tu personaje'}`}/>
               : <span aria-hidden="true">{name.trim()[0]?.toLocaleUpperCase('es') ?? '?'}</span>}
           </div>
-          <div className="character-profile-portrait-actions">
-            <input id={inputId} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFile} disabled={uploading} className="character-profile-file-input"/>
-            <label className="character-profile-upload" htmlFor={inputId}>{uploading?'Procesando retrato…':'Elegir imagen'}</label>
-            {profile.portraitDataUrl&&<button type="button" className="character-profile-remove" onClick={removePortrait}>Quitar retrato</button>}
-          </div>
-          {uploadError&&<p className="character-profile-error" role="alert">{uploadError}</p>}
-          <p className="character-profile-hint">JPG, PNG o WebP de hasta 5 MB. La imagen se recorta y reduce antes de guardarla; también se mostrará en la cabecera.</p>
+          {portraitDraft && <>
+            <div className="character-profile-portrait-actions">
+              <input id={inputId} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFile} disabled={uploading} className="character-profile-file-input"/>
+              <label className="character-profile-upload" htmlFor={inputId}>{uploading?'Procesando retrato…':'Elegir imagen'}</label>
+              {visiblePortrait && <button type="button" className="character-profile-remove" onClick={removePortrait}>Quitar retrato</button>}
+            </div>
+            {uploadError && <p className="character-profile-error" role="alert">{uploadError}</p>}
+            <p className="character-profile-hint">JPG, PNG o WebP de hasta 5 MB. La imagen se reduce antes de guardarla. Pulsa «Guardar» para confirmar el nuevo retrato.</p>
+          </>}
         </section>
+
         <section className="panel character-profile-card" aria-labelledby="profile-identity-title">
           <div className="character-profile-card-heading"><div><span className="eyebrow">HOJA</span><h3 id="profile-identity-title">Identidad</h3></div></div>
           <dl className="character-profile-identity">
@@ -182,19 +297,34 @@ export default function CharacterProfilePanel({profile,name,species,background,l
             <div><dt>Trasfondo</dt><dd>{background}</dd></div>
           </dl>
           <button className="character-profile-edit-link" type="button" onClick={onEditIdentity}>Editar identidad y origen</button>
-          <p className="character-profile-hint">Estos valores vienen del creador de personaje. No se duplican aquí.</p>
+          <p className="character-profile-hint">Los datos de identidad se modifican desde el creador original para mantener las reglas sincronizadas.</p>
         </section>
+
         <section className="panel character-profile-card" aria-labelledby="profile-physical-title">
-          <div className="character-profile-card-heading"><div><span className="eyebrow">DESCRIPCIÓN</span><h3 id="profile-physical-title">Detalles físicos</h3></div></div>
-          <div className="character-profile-physical">
-            {PHYSICAL_FIELDS.map(field=><label key={field.key}>
-              <span>{field.label}</span><input type="text" value={profile[field.key]} maxLength={PROFILE_TEXT_LIMITS[field.key]}
-                placeholder={field.placeholder} onChange={event=>edit(field.key,event.target.value)}/>
-            </label>)}
+          <div className="character-profile-card-heading">
+            <div><span className="eyebrow">DESCRIPCIÓN</span><h3 id="profile-physical-title">Detalles físicos</h3></div>
+            <SectionActions title="Detalles físicos" editing={!!physicalDraft}
+              onEdit={()=>startEditing('physical')} onSave={()=>saveEditing('physical')} onCancel={()=>cancelEditing('physical')}/>
           </div>
+          {physicalDraft
+            ? <div className="character-profile-physical">
+                {PHYSICAL_FIELDS.map(field=><label key={field.key}>
+                  <span>{field.label}</span><input type="text" value={physicalDraft[field.key]} maxLength={PROFILE_TEXT_LIMITS[field.key]}
+                    placeholder={field.placeholder} onChange={event=>updateDraft('physical',field.key,event.target.value)}/>
+                </label>)}
+              </div>
+            : <dl className="character-profile-physical-readonly">
+                {PHYSICAL_FIELDS.map(field=><div key={field.key}>
+                  <dt>{field.label}</dt><dd className={profile[field.key].trim()?'':'is-empty'}>{profile[field.key].trim()||'Sin completar'}</dd>
+                </div>)}
+              </dl>}
         </section>
       </aside>
     </div>
-    <div className="character-profile-save-note" role="note">Los cambios se mantienen en pantalla. Para conservarlos en PostgreSQL, pulsa <strong>«Actualizar guardado»</strong> en «Mis personajes», o «Guardar como nuevo» si todavía no has guardado este personaje.</div>
+    <div className="character-profile-save-note" role="note">
+      <strong>«Guardar» en una tarjeta</strong> confirma su contenido en la ficha y la deja en modo lectura.
+      Para conservar esos cambios en PostgreSQL al cerrar o recargar la página, utiliza <strong>«Actualizar guardado»</strong> en «Mis personajes», o «Guardar como nuevo» para personajes nuevos.
+      <strong> «Cancelar»</strong> descarta los cambios no confirmados de esa tarjeta.
+    </div>
   </div>;
 }
