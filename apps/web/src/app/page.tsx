@@ -7,6 +7,7 @@ import CharacterHeader from "../components/CharacterHeader";
 import CharacterProfilePanel from "../components/CharacterProfilePanel";
 import PrincipalOverview from "../components/PrincipalOverview";
 import TraitsPanel from "../components/TraitsPanel";
+import SpellsPanel from "../components/SpellsPanel";
 import CharacterTabs, { type SheetTab } from "../components/CharacterTabs";
 import SheetPlaceholder from "../components/SheetPlaceholder";
 import PlayPanel from "../components/PlayPanel";
@@ -368,7 +369,7 @@ export default function Home(){
   return <main className="app-shell">
     <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Hoja digital · D&D 2024</span></div></div><div className="status"><span className="status-dot"/> Edición local · Guardado manual</div></header>
     <div className="content">
-      <p className="sheet-release-note">ACTUALIZACIÓN 42 · HISTORIA, APARIENCIA Y RETRATO</p>
+      <p className="sheet-release-note">ACTUALIZACIÓN 43 · HOJA DE HECHIZOS DE ORIGEN</p>
       <CharacterHeader
         name={name}
         portraitDataUrl={profile.portraitDataUrl}
@@ -629,12 +630,7 @@ export default function Home(){
         />
       </section>
       <section id="sheet-panel-hechizos" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-hechizos" hidden={activeTab!=='hechizos'}>
-        <SheetPlaceholder eyebrow="HECHIZOS · FASE 43" title="Hechizos"
-          description="La hoja de conjuros completa se implementará al incorporar una clase lanzadora. Los conjuros concedidos por el origen ya se registran, pero sus usos y tiradas todavía no están automatizados.">
-          <div className="sheet-quick-list" aria-label="Conjuros de origen registrados">
-            {output.result?.spells.length ? output.result.spells.map((spell,index)=><span key={`${spell.source}-${spell.id}-${index}`}>{spell.name} · {spell.level===0?'Truco':'Nivel 1'}</span>) : <p className="muted-note">Este personaje no tiene conjuros de origen registrados, o la hoja no es válida.</p>}
-          </div>
-        </SheetPlaceholder>
+        <SpellsPanel result={output.result} error={output.error} onEditOrigin={()=>openEditorAt(1)}/>
       </section>
       <section id="sheet-panel-personaje" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-personaje" hidden={activeTab!=='personaje'}>
         <CharacterProfilePanel key={profileLoadRevision} profile={profile} onChange={setProfile} name={name}

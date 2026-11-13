@@ -664,3 +664,58 @@
 .character-profile-physical-readonly dd.is-empty{font-style:italic;color:#94a5b4}
 @media(max-width:640px){.character-profile-card-heading{align-items:flex-start;flex-wrap:wrap}.character-profile-heading-actions{flex:1;justify-content:flex-start}.character-profile-action{min-height:38px}}
 @media(prefers-reduced-motion:reduce){.character-profile-action{transition:none}}
+
+/* Actualización 43: hoja de magia de origen. Visualización; no ejecuta hechizos. */
+.spells-page{display:flex;flex-direction:column;gap:17px;padding:2px 0 20px;min-width:0}
+.spells-title{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:23px 25px;border:1px solid #495e6c;border-radius:16px;background:linear-gradient(125deg,#223448,#142130 70%)}
+.spells-title h2{margin:5px 0 7px;color:#f6e9d1;font:700 31px/1.1 Georgia,serif}
+.spells-title p{margin:0;max-width:660px;color:#c2ced7;font-size:12px;line-height:1.65}
+.spells-edit-button{flex-shrink:0;background:#2f4051;border:1px solid #ac8953;color:#f9e5bc;border-radius:9px;padding:10px 13px;font-size:12px;font-weight:750;cursor:pointer;min-height:40px}
+.spells-edit-button:hover{background:#425469}.spells-edit-button:focus-visible{outline:2px solid #e7bd74;outline-offset:3px}
+.spells-counters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.spells-counters>div{display:flex;flex-direction:column;gap:8px;padding:14px 17px;background:#1d2b3a;border:1px solid #3e5264;border-radius:12px}
+.spells-counters span{color:#b0bfca;font-size:11px}.spells-counters strong{color:#f1dab0;font:700 28px/1.1 Georgia,serif}
+.spells-abilities,.spells-collection,.spells-limitations{background:#152331;border:1px solid #34495b;border-radius:14px;padding:19px 21px;min-width:0}
+.spells-heading{display:flex;align-items:baseline;justify-content:space-between;gap:13px;margin-bottom:14px}
+.spells-heading h3{font:700 21px/1.2 Georgia,serif;color:#f1e1c1;margin:0}.spells-heading span{font-size:11px;color:#adbac6}
+.spells-ability-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:11px}
+.spells-ability-card{background:#202f3e;border:1px solid #465d70;border-radius:11px;padding:13px 15px;display:flex;flex-direction:column;gap:8px}
+.spells-ability-card>strong{font-size:15px;color:#ebd5ae}
+.spells-ability-values{display:flex;justify-content:space-between;gap:12px}.spells-ability-values>span{display:flex;flex-direction:column;gap:4px;font-size:10px;color:#acbbc8}.spells-ability-values b{font-size:22px;color:#f3e9d6}
+.spells-ability-card>small,.spells-formula-note{font-size:11px;line-height:1.6;color:#aebfcb}
+.spells-formula-note{margin:13px 0 0}
+.spells-toolbar{display:flex;justify-content:space-between;align-items:flex-end;gap:13px;flex-wrap:wrap}
+.spells-toolbar>label{display:flex;flex-direction:column;gap:6px;flex:1;min-width:200px;font-size:11px;font-weight:750;color:#d8c5a5}
+.spells-toolbar input{background:#0e1d2c;border:1px solid #496072;border-radius:9px;color:#f3e9dc;padding:11px 12px;font:inherit;font-size:12px;min-height:41px;width:100%}
+.spells-toolbar input:focus-visible{outline:2px solid #caa66b;outline-offset:2px}
+.spells-filters{display:flex;flex-wrap:wrap;gap:6px}
+.spells-filters button{background:#233447;border:1px solid #496072;border-radius:8px;padding:10px 12px;color:#d9e4ed;font-size:11px;font-weight:700;min-height:40px;cursor:pointer}
+.spells-filters button.is-active{background:#75562e;border-color:#cca36a;color:#fff0ce}
+.spells-filters button:focus-visible{outline:2px solid #d5b475;outline-offset:2px}
+.spells-result-count{font-size:11px;color:#acbdcc;margin:12px 0}
+.spells-level-group{margin-top:20px}.spells-level-group h4{margin:0 0 11px;font:700 17px Georgia,serif;color:#f0dfbc}.spells-level-group h4 span{font:600 12px Arial,sans-serif;color:#acbac9}
+.spells-card-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.spells-card{border:1px solid #3d5166;background:#1c2b3b;border-radius:11px;min-width:0;overflow:hidden}
+.spells-card[open]{border-color:#a68856}
+.spells-card>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px;cursor:pointer;list-style:none;min-height:89px}
+.spells-card>summary::-webkit-details-marker{display:none}
+.spells-card>summary:focus-visible{outline:2px solid #d5af73;outline-offset:-3px}
+.spells-card-identity{display:flex;flex-direction:column;gap:5px;min-width:0;overflow-wrap:anywhere}
+.spells-card-identity>strong{color:#f7e7c8;font-size:15px}
+.spells-card-source{font-size:10px;color:#c8ac7e;font-weight:750;line-height:1.35}
+.spells-card-identity>small{font-size:10px;color:#b4c3cf;line-height:1.5}
+.spells-use-pill{flex-shrink:0;max-width:150px;background:#273b46;border:1px solid #638b84;border-radius:7px;padding:7px 8px;color:#d2f0e4;text-align:center;font-size:10px;line-height:1.4;font-weight:700}
+.spells-use-pill.is-at-will{border-color:#72809b;background:#2b3550;color:#d4dafa}
+.spells-card-details{padding:0 15px 15px;border-top:1px solid #3d5166;font-size:12px;line-height:1.6;color:#d3dde6}
+.spells-card-details p{margin:10px 0 0}.spells-rule-note{color:#aebecb}
+.spells-details-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:13px}
+.spells-details-stats span{display:flex;flex-direction:column;gap:5px;padding:9px;background:#142230;border:1px solid #3b4c5c;border-radius:8px;font-size:10px;color:#c4cfd8;min-width:0;overflow-wrap:anywhere}
+.spells-details-stats strong{color:#f2d9aa;font-size:12px}
+.spells-empty{padding:22px;background:#202e3d;border:1px dashed #596b7d;border-radius:11px;color:#c0cfdb;font-size:12px;line-height:1.7}
+.spells-empty h4{color:#eee0c8;margin:0 0 8px;font-size:17px}.spells-empty p{margin:0 0 15px}
+.spells-limitations h3{font:700 18px Georgia,serif;color:#f1dfc2;margin:0 0 10px}
+.spells-limitations p{font-size:12px;line-height:1.7;color:#c3d0dc;margin:9px 0 0}
+.spells-unavailable{padding:20px}.spells-unavailable h2{color:#eed9ad}
+@media(max-width:960px){.spells-card-grid{grid-template-columns:1fr}.spells-title{padding:19px}}
+@media(max-width:660px){.spells-title{flex-direction:column;gap:14px}.spells-counters{gap:7px}.spells-counters>div{padding:11px 9px}.spells-counters span{font-size:10px}.spells-counters strong{font-size:24px}.spells-abilities,.spells-collection,.spells-limitations{padding:16px}.spells-toolbar{flex-direction:column;align-items:stretch}.spells-toolbar>label{min-width:0;flex:auto;width:100%}.spells-card>summary{align-items:flex-start;flex-direction:column}.spells-use-pill{max-width:none}.spells-details-stats{grid-template-columns:1fr 1fr}.spells-heading{align-items:flex-start;flex-direction:column}}
+@media(prefers-reduced-motion:reduce){.spells-page *{scroll-behavior:auto}}
