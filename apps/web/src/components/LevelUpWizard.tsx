@@ -1,6 +1,7 @@
 "use client";
 
-import {useEffect,useMemo,useRef,useState} from 'react';
+import {useMemo,useRef,useState} from 'react';
+import LevelUpDialogFrame from './LevelUpDialogFrame';
 import {ABILITIES,type Ability} from '../../../../packages/rules-engine/src/abilities';
 import {EPIC_BOONS,type EpicBoonId} from '../../../../packages/rules-engine/src/epic-boons';
 import {type GuidedFighterInput} from '../../../../packages/rules-engine/src/guided';
@@ -43,13 +44,6 @@ export default function LevelUpWizard({input,adventure,outOfSync,onClose,onConfi
   const [showRecovery,setShowRecovery]=useState(false);
   const [commitError,setCommitError]=useState('');
   const submitting=useRef(false);
-  const dialogRef=useRef<HTMLElement>(null);
-  useEffect(()=>{
-    dialogRef.current?.focus();
-    const onEscape=(event:KeyboardEvent)=>{if(event.key==='Escape')onClose();};
-    document.addEventListener('keydown',onEscape);
-    return ()=>document.removeEventListener('keydown',onEscape);
-  },[onClose]);
   const target=input.level+1;
   const requirements=fighterLevelUpRequirements(target);
   const choices=useMemo<FighterLevelUpChoices>(()=>({
@@ -99,18 +93,17 @@ export default function LevelUpWizard({input,adventure,outOfSync,onClose,onConfi
     }
   }
   if(input.level>=20)return null;
-  return <div className="level-wizard-backdrop">
-    <section ref={dialogRef} tabIndex={-1} className="level-wizard" role="dialog" aria-modal="true" aria-labelledby="level-wizard-title">
-      <header className="level-wizard-top">
-        <div><span className="eyebrow">PROGRESIÓN · GUERRERO / CAMPEÓN</span>
-          <h2 id="level-wizard-title">Subir del nivel {input.level} al {target}</h2>
-          <p>Las elecciones se aplicarán juntas al confirmar. Puedes cancelar sin alterar tu personaje.</p></div>
-        <button type="button" className="level-wizard-close" onClick={onClose} aria-label="Cerrar asistente">×</button>
-      </header>
-      <nav className="level-wizard-steps" aria-label="Pasos de subida de nivel">
-        {(['Novedades','Elecciones','Confirmación'] as const).map((label,index)=><span key={label} className={stage===index?'is-current':stage>index?'is-done':''} aria-current={stage===index?'step':undefined}><b>{index+1}</b>{label}</span>)}
-      </nav>
-      <div className="level-wizard-body">
+  return <LevelUpDialogFrame eyebrow="PROGRESIÓN · GUERRERO / CAMPEÓN" title={`Subir del nivel ${input.level} al ${target}`} subtitle="Las elecciones se aplicarán juntas al confirmar. Puedes cancelar sin alterar tu personaje." stage={stage} onClose={onClose} footer={<>
+        <button type="button" className="level-wizard-cancel" onClick={onClose}>Cancelar</button>
+        <div className="level-wizard-actions-right">
+          {stage>0&&<button type="button" className="level-wizard-back" onClick={()=>{setStage(prev=>(prev-1) as 0|1|2);setCommitError('');}}>Atrás</button>}
+          {stage<2?<button type="button" onClick={()=>setStage(prev=>(prev+1) as 0|1|2)} disabled={stage===1&&!assessment.preview}>Siguiente</button>
+            :<button type="button" onClick={confirm} disabled={!assessment.preview||(outOfSync&&!allowSync&&!allowFresh)}>
+              {allowFresh?'Confirmar con sesión nueva':'Confirmar subida a nivel '+target}
+            </button>}
+        </div>
+</>}>
+
         {stage===0&&<div className="level-wizard-section">
           <h3>Qué recibes al alcanzar el nivel {target}</h3>
           <ul className="level-wizard-milestones">{milestones.map(item=><li key={item}><strong>{item}</strong><Explanation text={explainFighterMilestone(item)}/></li>)}</ul>
@@ -208,17 +201,6 @@ export default function LevelUpWizard({input,adventure,outOfSync,onClose,onConfi
             <p className="muted-note">Al confirmar se actualizarán juntos el nivel, las elecciones y la sesión local. Después tendrás que pulsar «Actualizar guardado» para persistirlos en PostgreSQL.</p>
           </>:<p className="level-wizard-error" role="alert">{assessment.error}</p>}
         </div>}
-      </div>
-      <footer className="level-wizard-actions">
-        <button type="button" className="level-wizard-cancel" onClick={onClose}>Cancelar</button>
-        <div className="level-wizard-actions-right">
-          {stage>0&&<button type="button" className="level-wizard-back" onClick={()=>{setStage(prev=>(prev-1) as 0|1|2);setCommitError('');}}>Atrás</button>}
-          {stage<2?<button type="button" onClick={()=>setStage(prev=>(prev+1) as 0|1|2)} disabled={stage===1&&!assessment.preview}>Siguiente</button>
-            :<button type="button" onClick={confirm} disabled={!assessment.preview||(outOfSync&&!allowSync&&!allowFresh)}>
-              {allowFresh?'Confirmar con sesión nueva':'Confirmar subida a nivel '+target}
-            </button>}
-        </div>
-      </footer>
-    </section>
-  </div>;
+
+  </LevelUpDialogFrame>;
 }

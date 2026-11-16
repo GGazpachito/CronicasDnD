@@ -12,6 +12,7 @@ import {calculateArmorClass} from './defense';
 import {equippedArmor,type InventoryAction,type InventoryState} from './inventory';
 import {wizardInventory} from './wizard-inventory';
 import type {BackgroundEquipmentChoice} from './background-equipment';
+import {validateWizardSpellSelection,type WizardSpellSelection} from './wizard-spell-library';
 
 export const WIZARD_SKILL_OPTIONS=['arcana','history','insight','investigation','medicine','nature','religion'] as const satisfies readonly Skill[];
 export type WizardSkill=(typeof WIZARD_SKILL_OPTIONS)[number];
@@ -90,6 +91,8 @@ export type GuidedWizardInput=Readonly<{
  humanSize?:'small'|'medium';elfLineage?:ElfLineage;
  equipmentChoice:WizardEquipmentChoice; backgroundEquipment?:BackgroundEquipmentChoice; inventoryActions?:readonly InventoryAction[];
  cantripIds:readonly string[];spellbookIds:readonly string[];preparedIds:readonly string[];
+ /** Biblioteca manual opcional: sin límites de cantidad, independiente del avance reglamentario. */
+ spellSelection?:WizardSpellSelection;
  /** Nivel 2: la habilidad de Erudito debe estar ya entrenada. */
  scholarSkill?:WizardScholarSkill;
  /** Nivel 3: única tradición implementada. */
@@ -178,6 +181,7 @@ export function calculateGuidedWizard(input:GuidedWizardInput):WizardLevelOneVie
  if(bonus.some(sp=>sp.school!=='evocation'||sp.level>highest)||new Set([...main,...bonus].map(sp=>sp.id)).size!==main.length+bonus.length)
   throw new RangeError('Los conjuros gratuitos deben ser evocaciones nuevas de nivel 1 o 2');
  const spells=validateWizardSpellChoices(input.level,{...choices,spellbook:[...main,...bonus]},input.level>=3?'evoker':undefined);
+ if(input.spellSelection!==undefined)validateWizardSpellSelection(input.spellSelection);
  const bonuses=abilityModifiers(scores);
  const proficiency=[...new Set<Skill>([...bg.skills as readonly Skill[],...input.wizardSkills,...(input.species==='human'?[input.humanSkill!]:[])])];
  const inventory=wizardInventory(input);
@@ -244,7 +248,7 @@ export function validateWizardCharacterSnapshot(raw:unknown):WizardCharacterSnap
  if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new RangeError('Guardado de Mago inválido');
  const value=raw as Record<string,unknown>;
  if(value.schemaVersion!==3||value.ruleset!=='dnd-2024'||Object.keys(value).some(k=>!['schemaVersion','ruleset','input','wizardState'].includes(k)))throw new RangeError('Versión o estructura de Mago incorrectas');
- const permitted=['scholarSkill','subclass','evokerBonusSpellIds','classId','level','name','profile','background','species','assignedAbilities','increaseMode','plusTwoAbility','plusOneAbility','wizardSkills','humanSkill','humanFeat','humanSize','elfLineage','equipmentChoice','backgroundEquipment','inventoryActions','cantripIds','spellbookIds','preparedIds'];
+ const permitted=['spellSelection','scholarSkill','subclass','evokerBonusSpellIds','classId','level','name','profile','background','species','assignedAbilities','increaseMode','plusTwoAbility','plusOneAbility','wizardSkills','humanSkill','humanFeat','humanSize','elfLineage','equipmentChoice','backgroundEquipment','inventoryActions','cantripIds','spellbookIds','preparedIds'];
  if(!value.input||typeof value.input!=='object'||Array.isArray(value.input)||Object.keys(value.input as Record<string,unknown>).some(key=>!permitted.includes(key)))throw new RangeError('La creación de Mago incluye campos desconocidos');
  let clean:GuidedWizardInput;
  try{const json=JSON.stringify(value.input);if(json.length>120_000)throw new Error();clean=JSON.parse(json) as GuidedWizardInput;}catch{throw new RangeError('Datos de Mago demasiado grandes o no serializables');}

@@ -5,6 +5,7 @@ import {wizardAdvanceMagicState,wizardProgression,WIZARD_FEATURES,EVOKER_FEATURE
 import {calculateGuidedWizard,validateWizardOneState,WIZARD_SPELL_CATALOG,WIZARD_SCHOLAR_OPTIONS,
  type GuidedWizardInput,type WizardLevelOneState,type WizardScholarSkill} from './wizard-creation';
 import {wizardAllSlotMarks} from './wizard-slot-marks';
+import {mergeWizardLevelSpells} from './wizard-spell-library';
 export type WizardLevelUpChoices=Readonly<{
  newSpellIds:readonly [string,string];
  preparedIds:readonly string[];
@@ -38,7 +39,8 @@ export function prepareWizardLevelUp(input:GuidedWizardInput,state:WizardLevelOn
  if(input.preparedIds.some(id=>!choices.preparedIds.includes(id)))throw new RangeError('Los conjuros preparados anteriores se conservan hasta completar un descanso largo');
  const nextInput:GuidedWizardInput={...input,level:nextLevel,
   spellbookIds:[...input.spellbookIds,...newIds],preparedIds:[...choices.preparedIds],
-  ...(nextLevel===2?{scholarSkill:choices.scholarSkill}:{subclass:'evoker' as const,evokerBonusSpellIds:choices.evokerBonusSpellIds})};
+  ...(nextLevel===2?{scholarSkill:choices.scholarSkill}:{subclass:'evoker' as const,evokerBonusSpellIds:choices.evokerBonusSpellIds}),
+  ...(input.spellSelection?{spellSelection:mergeWizardLevelSpells(input,[...newIds,...(choices.evokerBonusSpellIds??[])],choices.preparedIds)}:{})};
  const next=calculateGuidedWizard(nextInput);
  const magic=wizardAdvanceMagicState(state.magic,input.level,nextLevel===3?'evoker':undefined);
  const oldMaximum=state.magic.slots.maximum,newMaximum=magic.slots.maximum;

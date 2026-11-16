@@ -896,3 +896,55 @@
 .wizard-level-up-prepared{max-height:240px;overflow-y:auto}
 
 .wizard-progression-hint{font-size:.85rem;opacity:.73;margin:.25rem 0 .75rem}
+
+/* 51.1: rombos compactos para hasta nueve filas de ranuras. No cambia su estado interno. */
+.spell-diamond-line{padding:.35rem 0;gap:.65rem}
+.spell-diamonds{gap:.48rem;padding:.3rem .15rem}
+.spell-diamond{width:1.38rem;height:1.38rem;border-width:1.5px;border-radius:.16rem}
+.spell-diamond span{width:56%;height:56%;border-radius:.05rem}
+
+/* Catálogo común, tres listas y fichas de reglas compartidas con el asistente. */
+.wizard-spell-library{display:grid;gap:15px;margin-top:19px}
+.wizard-spell-summary{display:flex;gap:8px 20px;flex-wrap:wrap;padding:12px 15px;border:1px solid #40566c;border-radius:10px;font-size:12px}
+.wizard-spell-summary strong{color:var(--gold)}
+.wizard-spell-tabbar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;border-bottom:1px solid #4b5762;padding-bottom:9px}
+.wizard-spell-tabbar button{display:flex;gap:7px;align-items:center;justify-content:center;padding:12px 6px;background:#1c2a38;border:1px solid #425369;border-radius:9px;color:inherit;font-weight:600;cursor:pointer;line-height:1.3}
+.wizard-spell-tabbar button.is-active{border-color:#cca56a;background:#344031;color:#ffe4b6}
+.wizard-spell-tabbar button small{opacity:.7;font-size:11px}
+.wizard-spell-search{display:grid;gap:6px;font-size:13px}
+.wizard-spell-search input{width:100%;border-radius:8px;border:1px solid #45566c;background:#101c28;color:inherit;padding:11px}
+.wizard-spell-filters{display:grid;grid-template-columns:minmax(180px,1fr) minmax(240px,2fr);gap:13px}
+.wizard-spell-filters fieldset{border:1px solid #3f5269;border-radius:10px;padding:12px;min-width:0}
+.wizard-spell-filters legend{font-size:13px;font-weight:700;padding:0 6px}
+.wizard-spell-filters fieldset>label{display:block;font-size:13px}
+.wizard-spell-filters fieldset>small{display:block;margin-top:8px;color:var(--muted);font-size:11px}
+.wizard-spell-level-filters{display:flex;flex-wrap:wrap;gap:10px}
+.wizard-spell-level-filters label{display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer}
+.wizard-spell-filters input,.wizard-spell-entry-check input{accent-color:#b48548}
+.wizard-spell-list{display:grid;gap:11px;max-height:690px;overflow-y:auto;padding:4px 5px 9px 0}
+.wizard-spell-entry{background:#152330;border:1px solid #405064;border-radius:11px;padding:13px;min-width:0}
+.wizard-spell-entry-top{display:flex;justify-content:space-between;align-items:start;gap:13px}
+.wizard-spell-entry h4{margin:0 0 4px;font-size:15px;color:#f4e0bc}
+.wizard-spell-entry-top small{font-size:11px;color:#a6bccc}
+.wizard-spell-entry-check{display:flex;align-items:center;gap:8px;white-space:nowrap;font-size:12px;cursor:pointer}
+.wizard-spell-entry-check input{width:17px;height:17px}
+.wizard-spell-details{margin-top:10px;border-top:1px solid #35485e;padding-top:8px}
+.wizard-spell-details>summary{font-size:12px;font-weight:600;color:#dfc08b;cursor:pointer}
+.wizard-spell-details-body{padding-top:11px;display:grid;gap:9px}
+.wizard-spell-full-text{margin:0;font-size:13px;line-height:1.6;white-space:normal}
+.wizard-spell-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px}
+.wizard-spell-facts>span{display:grid;gap:4px;padding:8px;border:1px solid #34475a;border-radius:7px;overflow-wrap:anywhere;font-size:12px}
+.wizard-spell-facts strong{font-size:10px;color:#c59e64}
+.wizard-spell-rolls{display:flex;flex-wrap:wrap;gap:7px}
+.wizard-spell-rolls button,.wizard-attack-actions button{border:1px solid #a68b60;border-radius:8px;background:#283a4a;color:#f4ddad;padding:8px 11px;cursor:pointer;font-size:12px}
+.wizard-spell-rolls button:hover,.wizard-attack-actions button:hover{background:#375064}
+.wizard-spell-result{display:block;background:#213849;border-left:3px solid #be9863;padding:8px 12px;font-size:13px;font-weight:700}
+.wizard-attack-actions{display:flex;align-items:center;gap:13px;flex-wrap:wrap;padding:12px 0}
+.wizard-attack-actions>output{font-size:13px;color:#ebd1a3}
+/* Unificar el selector del asistente con la ficha de explicación usada en Hechizos. */
+.level-wizard .wizard-spell-choice-list{max-height:310px}
+.level-wizard .wizard-spell-option{display:block;padding:10px;min-width:0;cursor:default}
+.level-wizard .wizard-spell-option>label{display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600}
+.level-wizard .wizard-spell-option>label small{margin-left:auto}
+.level-wizard .wizard-spell-details{margin-top:6px}
+@media(max-width:690px){.wizard-spell-filters{grid-template-columns:1fr}.wizard-spell-tabbar button{font-size:11px;padding:10px 4px}.wizard-spell-entry-top{flex-wrap:wrap}}

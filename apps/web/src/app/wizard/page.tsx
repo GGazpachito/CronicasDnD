@@ -8,6 +8,7 @@ import TraitsPanel from '../../components/TraitsPanel';
 import EquipmentPanel from '../../components/EquipmentPanel';
 import SpellSlotDiamonds from '../../components/SpellSlotDiamonds';
 import WizardLevelUpWizard from '../../components/WizardLevelUpWizard';
+import WizardSpellLibrary from '../../components/WizardSpellLibrary';
 import BasicWeaponAttacks from '../../components/BasicWeaponAttacks';
 import SheetPlaceholder from '../../components/SheetPlaceholder';
 import {collectWizardTraits} from '../../../../../packages/rules-engine/src/wizard-traits';
@@ -21,10 +22,11 @@ import {SKILLS,type Skill} from '../../../../../packages/rules-engine/src/profic
 import {BACKGROUNDS,SPECIES_NAMES,STANDARD_ARRAY,type BackgroundId,type SpeciesId} from '../../../../../packages/rules-engine/src/guided';
 import {EMPTY_CHARACTER_PROFILE} from '../../../../../packages/rules-engine/src/character-profile';
 import {wizardProgression} from '../../../../../packages/rules-engine/src/wizard';
-import {type D20Mode} from '../../../../../packages/rules-engine/src/d20';
+import {rollD20,type D20Mode} from '../../../../../packages/rules-engine/src/d20';
+import {type WizardSpellSelection} from '../../../../../packages/rules-engine/src/wizard-spell-library';
 import {
   WIZARD_SKILL_OPTIONS,WIZARD_LEVEL_ONE_CANTRIPS,WIZARD_LEVEL_ONE_SPELLS,WIZARD_LEVEL_ONE_DEFAULTS,
-  WIZARD_LEVEL_ONE_EQUIPMENT,WIZARD_SPELL_CATALOG,calculateGuidedWizard,initialWizardOneState,
+  WIZARD_LEVEL_ONE_EQUIPMENT,calculateGuidedWizard,initialWizardOneState,
   makeWizardCharacterSnapshot,validateWizardCharacterSnapshot,wizardInputForPreview,
   type GuidedWizardInput,type WizardLevelOneState,
 } from '../../../../../packages/rules-engine/src/wizard-creation';
@@ -51,6 +53,7 @@ export default function WizardPage(){
  const [tempDraft,setTempDraft]=useState('');
  const [profileRevision,setProfileRevision]=useState(0);
  const [error,setError]=useState('');
+ const [magicAttackResult,setMagicAttackResult]=useState('');
  const computed=useMemo(()=>{
   try{return {sheet:calculateGuidedWizard(wizardInputForPreview(input)),error:''};}
   catch(e){return {sheet:null,error:e instanceof Error?e.message:'Elecciones inválidas'};}
@@ -135,7 +138,7 @@ export default function WizardPage(){
      onEdit={()=>setEditing(true)}
      onLevelUp={input.level<3&&actualSnapshot?()=>{setLevelUpOpen(true);setEditing(false);}:undefined}/>
    <p className="wizard-progression-hint">{input.level>=3?'Próxima etapa: progresión a nivel 4.':`Próxima subida disponible: Mago de nivel ${input.level+1}.`}</p>
-  {levelUpOpen&&<WizardLevelUpWizard input={input} state={state} onCancel={()=>setLevelUpOpen(false)} onConfirm={next=>{setInput(next.input);setState(next.state);setLevelUpOpen(false);setEditing(false);setTab('principal');setError('');}}/>}
+  {levelUpOpen&&<WizardLevelUpWizard input={input} state={state} mode={mode} onCancel={()=>setLevelUpOpen(false)} onConfirm={next=>{setInput(next.input);setState(next.state);setLevelUpOpen(false);setEditing(false);setTab('principal');setError('');}}/>}
   <SaveLoadPanel characterClass="wizard" snapshot={actualSnapshot} validate={validateWizardCharacterSnapshot} onLoad={restore}
      normalize={saved=>makeWizardCharacterSnapshot(saved.input,saved.wizardState)}
      onPendingChange={pending=>{pendingSaveNavigation.current=pending;}}/>
@@ -214,11 +217,11 @@ export default function WizardPage(){
     <p className="overview-panel-note">El Mago no tiene competencia con armaduras ni escudos. Equiparlos puede impedir lanzar conjuros hasta obtener la formación adecuada.</p>
    </section>
    <section id="sheet-panel-hechizos" role="tabpanel" aria-labelledby="sheet-tab-hechizos" hidden={tab!=='hechizos'} className="sheet-tab-panel"><div className="wizard-module panel"><h2>Hechizos del Mago</h2>
-    <div className="stat-cards"><div className="stat-card"><span>CD DE SALVACIÓN</span><strong>{sheet?.spellSaveDC??'—'}</strong><small>8 + competencia + Inteligencia</small></div><div className="stat-card"><span>ATAQUE MÁGICO</span><strong>{sheet?signed(sheet.spellAttackBonus):'—'}</strong><small>Competencia + Inteligencia</small></div><div className="stat-card"><span>CONJUROS PREPARADOS</span><strong>{input.preparedIds.length}</strong><small>Del libro de conjuros</small></div></div>
+    <div className="wizard-attack-actions"><span>Bonificador de ataque mágico: <strong>{sheet?signed(sheet.spellAttackBonus):'—'}</strong></span><button type="button" disabled={!sheet} onClick={()=>{if(!sheet)return;try{const result=rollD20(sheet.spellAttackBonus,mode);setMagicAttackResult(`${result.dice.join(' / ')} ${signed(sheet.spellAttackBonus)} = ${result.total}`);}catch(e){setMagicAttackResult(e instanceof Error?e.message:'No se pudo tirar el dado');}}}>Tirar ataque mágico · d20</button>{magicAttackResult&&<output aria-live="polite">{magicAttackResult}</output>}</div>
     {[1,2].filter(l=>state.magic.slots.maximum[l-1]>0).map(l=><SpellSlotDiamonds key={l} level={l} spent={wizardSlotMarks(state,l)} onToggle={index=>toggleSlot(index,l)}/>)}
     <div className="wizard-delta"><button type="button" disabled={state.magic.arcaneRecoveryUsed||state.magic.slots.remaining[0]===state.magic.slots.maximum[0]} onClick={()=>recoverArcane([1])}>Recuperar una ranura nivel 1</button>{input.level>=3&&<button type="button" disabled={state.magic.arcaneRecoveryUsed||state.magic.slots.remaining[1]===state.magic.slots.maximum[1]} onClick={()=>recoverArcane([2])}>Recuperar una ranura nivel 2</button>}{input.level>=3&&<button type="button" disabled={state.magic.arcaneRecoveryUsed||state.magic.slots.maximum[0]-state.magic.slots.remaining[0]<2} onClick={()=>recoverArcane([1,1])}>Recuperar dos ranuras nivel 1</button>}<button type="button" onClick={rest}>Descanso largo</button></div>
-    <div className="wizard-pair"><div><h3>Trucos ({input.cantripIds.length})</h3>{input.cantripIds.map(id=><div className="data-row" key={id}>{WIZARD_LEVEL_ONE_CANTRIPS.find(s=>s.id===id)?.name??id}</div>)}</div><div><h3>Libro de conjuros ({input.spellbookIds.length+(input.evokerBonusSpellIds?.length??0)})</h3>{[...input.spellbookIds,...(input.evokerBonusSpellIds??[])].map(id=><div className="data-row" key={id}><span>{WIZARD_SPELL_CATALOG.find(s=>s.id===id)?.name??id}</span><small>{input.preparedIds.includes(id)?'Preparado':input.evokerBonusSpellIds?.includes(id)?'Concedido por Evocación':'En el libro'}</small></div>)}</div></div>
-    <p className="muted-note">Rombo marcado = disponible; rombo vacío = gastado. Las elecciones de combate y el lanzamiento de hechizos siguen siendo manuales.</p></div></section>
+    {sheet&&<WizardSpellLibrary input={input} spellAttackBonus={sheet.spellAttackBonus} spellSaveDC={sheet.spellSaveDC} mode={mode} onChange={(selection:WizardSpellSelection)=>patch({spellSelection:selection})}/>}
+    <p className="muted-note">Rombo marcado = disponible; vacío = gastado. Preparar, aprender o tirar dados no lanza conjuros ni consume ranuras.</p></div></section>
    <section id="sheet-panel-personaje" role="tabpanel" aria-labelledby="sheet-tab-personaje" hidden={tab!=='personaje'} className="sheet-tab-panel"><CharacterProfilePanel key={profileRevision} profile={input.profile??EMPTY_CHARACTER_PROFILE} name={input.name} species={SPECIES_NAMES[input.species]} background={background.name} level={input.level} onChange={profile=>patch({profile})} onEditIdentity={()=>setEditing(true)}/></section>
    <section id="sheet-panel-combate" role="tabpanel" aria-labelledby="sheet-tab-combate" hidden={tab!=='combate'} className="sheet-tab-panel"><SheetPlaceholder eyebrow="COMBATE · DESARROLLO FUTURO" title="Coming Soon" description="La interfaz de combate llegará más adelante. Mientras tanto, realiza tiradas desde Principal y gestiona las ranuras desde Hechizos; los turnos y objetivos siguen en manos de los jugadores." actionLabel="Volver a Principal" onAction={()=>setTab('principal')}/></section>
    <footer className="footer">Hoja compartida · Mago nivel {input.level} · Guardado manual en PostgreSQL.</footer>
