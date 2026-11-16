@@ -130,17 +130,20 @@ export function calculateGuidedWizardOne(input:GuidedWizardInput):WizardLevelOne
   spellAttackBonus:core.spellAttackBonus,spellSaveDC:core.spellSaveDC,
   equipment:WIZARD_LEVEL_ONE_EQUIPMENT[input.equipmentChoice],spells,backgroundFeat:bg.feat};
 }
+export type WizardDeathMarks=Readonly<{successes:readonly [boolean,boolean,boolean];failures:readonly [boolean,boolean,boolean]}>;
 export type WizardLevelOneState=Readonly<{
  hitPointsCurrent:number;temporaryHitPoints:number;heroicInspiration:boolean;magic:WizardMagicState;
+ /** Registro manual opcional para mantener la compatibilidad con guardados de la 48. */
+ manualDeathMarks?:WizardDeathMarks;
 }>;
 export function initialWizardOneState(input:GuidedWizardInput):WizardLevelOneState{
  const sheet=calculateGuidedWizardOne(input);
- return {hitPointsCurrent:sheet.maximumHitPoints,temporaryHitPoints:0,heroicInspiration:input.species==='human',magic:initialWizardMagicState(1)};
+ return {hitPointsCurrent:sheet.maximumHitPoints,temporaryHitPoints:0,heroicInspiration:input.species==='human',magic:initialWizardMagicState(1),manualDeathMarks:{successes:[false,false,false],failures:[false,false,false]}};
 }
 export function validateWizardOneState(raw:unknown,sheet:WizardLevelOneView):WizardLevelOneState{
  if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new RangeError('Estado de Mago inválido');
  const state=raw as Record<string,unknown>;
- if(Object.keys(state).some(k=>!['hitPointsCurrent','temporaryHitPoints','heroicInspiration','magic'].includes(k)))throw new RangeError('Estado de Mago contiene datos desconocidos');
+ if(Object.keys(state).some(k=>!['hitPointsCurrent','temporaryHitPoints','heroicInspiration','magic','manualDeathMarks'].includes(k)))throw new RangeError('Estado de Mago contiene datos desconocidos');
  const hp=state.hitPointsCurrent,tp=state.temporaryHitPoints;
  if(!Number.isInteger(hp)||(hp as number)<0||(hp as number)>sheet.maximumHitPoints||!Number.isInteger(tp)||(tp as number)<0||(tp as number)>10000||typeof state.heroicInspiration!=='boolean')throw new RangeError('PG o inspiración del Mago inválidos');
  const magic=state.magic as WizardMagicState;
@@ -148,7 +151,15 @@ export function validateWizardOneState(raw:unknown,sheet:WizardLevelOneView):Wiz
   throw new RangeError('Recursos de magia de Mago inválidos');
  const slots=createSlotPool(magic.slots.maximum,magic.slots.remaining);
  if(slots.maximum.join(',')!==wizardProgression(1).spellSlots.join(','))throw new RangeError('Ranuras de nivel distinto al 1');
- return {hitPointsCurrent:hp as number,temporaryHitPoints:tp as number,heroicInspiration:state.heroicInspiration,magic:{slots,arcaneRecoveryUsed:magic.arcaneRecoveryUsed,overchannelUses:0,signatureUsed:[]}};
+ let manualDeathMarks:WizardDeathMarks|undefined;
+ if(state.manualDeathMarks!==undefined){
+  const marks=state.manualDeathMarks as Record<string,unknown>;
+  if(!marks||typeof marks!=='object'||Array.isArray(marks)||Object.keys(marks).some(k=>k!=='successes'&&k!=='failures'))throw new RangeError('Marcadores manuales inválidos');
+  const validTrack=(value:unknown):value is [boolean,boolean,boolean]=>Array.isArray(value)&&value.length===3&&value.every(x=>typeof x==='boolean');
+  if(!validTrack(marks.successes)||!validTrack(marks.failures))throw new RangeError('Los marcadores manuales requieren tres booleanos por grupo');
+  manualDeathMarks={successes:[...marks.successes],failures:[...marks.failures]};
+ }
+ return {hitPointsCurrent:hp as number,temporaryHitPoints:tp as number,heroicInspiration:state.heroicInspiration,magic:{slots,arcaneRecoveryUsed:magic.arcaneRecoveryUsed,overchannelUses:0,signatureUsed:[]},...(manualDeathMarks?{manualDeathMarks}:{})};
 }
 export type WizardCharacterSnapshot=Readonly<{
  schemaVersion:3;ruleset:'dnd-2024';input:GuidedWizardInput;wizardState:WizardLevelOneState;

@@ -9,11 +9,13 @@ type CharacterHeaderProps = {
   background: string;
   species: string;
   valid: boolean;
+  className?: string;
+  subclass?: string;
   onEdit: () => void;
-  onLevelUp: () => void;
+  onLevelUp?: () => void;
 };
 
-export default function CharacterHeader({ name, portraitDataUrl, level, background, species, valid, onEdit, onLevelUp }: CharacterHeaderProps) {
+export default function CharacterHeader({ name, portraitDataUrl, level, background, species, valid, onEdit, onLevelUp, className="Guerrero", subclass }: CharacterHeaderProps) {
   const displayName = name.trim() || "Personaje sin nombre";
   return (
     <section className="character-header panel" aria-label="Identificación del personaje">
@@ -24,14 +26,14 @@ export default function CharacterHeader({ name, portraitDataUrl, level, backgrou
       <div className="character-identity">
         <span className="eyebrow">HOJA DE PERSONAJE · D&D 2024</span>
         <h1>{displayName}</h1>
-        <p>Guerrero {level >= 3 ? "· Campeón " : ""}· Nivel {level} · {species} · {background}</p>
+        <p>{className}{subclass ? ` · ${subclass}` : className === "Guerrero" && level >= 3 ? " · Campeón" : ""} · Nivel {level} · {species} · {background}</p>
         <span className={`character-validity${valid ? "" : " is-invalid"}`} role="status">
           {valid ? "Hoja calculada" : "Revisar elecciones de la hoja"}
         </span>
       </div>
       <div className="character-header-actions">
         <button type="button" onClick={onEdit}>Editar personaje</button>
-        <button type="button" className="primary" onClick={onLevelUp}>Gestionar nivel</button>
+        <button type="button" className="primary" onClick={onLevelUp} disabled={!onLevelUp} title={!onLevelUp?"Subida de nivel del Mago pendiente de implementación":undefined}>{onLevelUp?"Gestionar nivel":"Progresión próximamente"}</button>
       </div>
     </section>
   );

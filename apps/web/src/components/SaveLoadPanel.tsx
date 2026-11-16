@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { GuidedFighterInput } from '../../../../packages/rules-engine/src/guided';
 import type { AdventureState } from '../../../../packages/rules-engine/src/adventure';
@@ -24,6 +24,8 @@ function snapshotFingerprint(snapshot:CharacterSnapshot):string{
 
 export default function SaveLoadPanel({input,adventure,valid,onLoad}:Props){
   const router=useRouter();
+  const onLoadRef=useRef(onLoad);
+  useEffect(()=>{onLoadRef.current=onLoad;},[onLoad]);
   const [entries,setEntries]=useState<Summary[]>([]);
   const [selected,setSelected]=useState<string>('');
   const [active,setActive]=useState<{id:string;revision:number;savedLevel:number}|null>(null);
@@ -68,6 +70,30 @@ export default function SaveLoadPanel({input,adventure,valid,onLoad}:Props){
         if(!cancelled)setEntries(d.characters);
       }catch(e){if(!cancelled)setError(e instanceof Error?e.message:'No se pudo conectar con PostgreSQL');}
       finally{if(!cancelled)setListLoading(false);}
+    })();
+    return ()=>{cancelled=true;};
+  },[]);
+
+  // Carga directa desde la galería. Reutiliza el mismo guardado y control de revisión.
+  useEffect(()=>{
+    const id=new URLSearchParams(window.location.search).get('character');
+    if(!id)return;
+    let cancelled=false;
+    (async()=>{
+      try{
+        const response=await fetch(`/api/characters/${encodeURIComponent(id)}`,{cache:'no-store'});
+        const data=await jsonOrThrow<{character:Detail}>(response);
+        if(data.character.characterClass==='wizard')throw new Error('El enlace apunta a un Mago. Ábrelo desde la galería.');
+        const snapshot=data.character.snapshot;
+        if(data.character.level!==snapshot.input.level||data.character.level!==snapshot.adventure.fighter.fighterLevel)
+          throw new Error('Los niveles de este personaje guardado no coinciden.');
+        if(cancelled)return;
+        onLoadRef.current(snapshot);
+        setActive({id:data.character.id,revision:data.character.revision,savedLevel:data.character.level});
+        setSelected(data.character.id);
+        setSavedFingerprint(snapshotFingerprint(snapshot));
+        setMessage(`Personaje «${data.character.name}» cargado desde la galería.`);
+      }catch(reason){if(!cancelled)setError(reason instanceof Error?reason.message:'No se pudo abrir el personaje');}
     })();
     return ()=>{cancelled=true;};
   },[]);
