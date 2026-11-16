@@ -14,7 +14,9 @@ import WizardSpellLibrary from '../../components/WizardSpellLibrary';
 import BasicWeaponAttacks from '../../components/BasicWeaponAttacks';
 import SheetPlaceholder from '../../components/SheetPlaceholder';
 import {collectWizardTraits} from '../../../../../packages/rules-engine/src/wizard-traits';
-import {toggleWizardSlotMark,wizardSlotMarks,recoverWizardArcaneSlots,resetWizardSlots} from '../../../../../packages/rules-engine/src/wizard-slot-marks';
+import {toggleWizardSlotMark,wizardSlotMarks,recoverWizardArcaneSlots,resetWizardSlots,wizardArcaneRecoveryOptions} from '../../../../../packages/rules-engine/src/wizard-slot-marks';
+import {wizardMemorizePreparedSpell} from '../../../../../packages/rules-engine/src/wizard-level-up';
+import {WIZARD_SPELL_CATALOG} from '../../../../../packages/rules-engine/src/wizard-creation';
 import {nextMagicInstanceId,type InventoryAction,equippedArmor,INVENTORY_NAMES} from '../../../../../packages/rules-engine/src/inventory';
 import CharacterHeader from '../../components/CharacterHeader';
 import CharacterProfilePanel from '../../components/CharacterProfilePanel';
@@ -57,6 +59,8 @@ export default function WizardPage(){
  const [profileRevision,setProfileRevision]=useState(0);
  const [error,setError]=useState('');
  const [magicAttackResult,setMagicAttackResult]=useState('');
+ const [memorizeOld,setMemorizeOld]=useState('');
+ const [memorizeNew,setMemorizeNew]=useState('');
  const computed=useMemo(()=>{
   try{return {sheet:calculateGuidedWizard(wizardInputForPreview(input)),error:''};}
   catch(e){return {sheet:null,error:e instanceof Error?e.message:'Elecciones inválidas'};}
@@ -71,6 +75,10 @@ export default function WizardPage(){
   catch(e){return {preview:null,error:e instanceof Error?e.message:'No se pudo calcular el nivel inferior'};}
  },[levelDownOpen,input,state]);
  const sheet=computed.sheet;
+ const recoveryOptions=wizardArcaneRecoveryOptions(state,input.level);
+ const memorizedKnown=new Set([...input.spellbookIds,...(input.evokerBonusSpellIds??[]),...(input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[])]);
+ const spellLabel=(id:string)=>WIZARD_SPELL_CATALOG.find(spell=>spell.id===id)?.name??id;
+ function recoveryLabel(slots:readonly number[]):string{const counts=new Map<number,number>();for(const n of slots)counts.set(n,(counts.get(n)??0)+1);return [...counts].map(([level,n])=>`${n} ${n===1?'ranura':'ranuras'} de nivel ${level}`).join(' + ');}
  const background=BACKGROUNDS[input.background];
  function patch(values:Partial<GuidedWizardInput>){setInput(previous=>({...previous,...values}));}
  function changeBackground(next:BackgroundId){
@@ -120,8 +128,9 @@ export default function WizardPage(){
    return {...previous,manualDeathMarks:{...current,[kind]:next}};
   });
  }
- function recoverArcane(slotLevels:readonly number[]=[1]){try{setState(previous=>recoverWizardArcaneSlots(previous,slotLevels));setError('');}catch(e){setError(e instanceof Error?e.message:'Recuperación no disponible');}}
- function rest(){setState(previous=>({...resetWizardSlots(previous),hitPointsCurrent:sheet?.maximumHitPoints??previous.hitPointsCurrent,temporaryHitPoints:0,heroicInspiration:input.species==='human'?true:previous.heroicInspiration}));setError('');}
+ function recoverArcane(slotLevels:readonly number[]=[1]){try{setState(previous=>recoverWizardArcaneSlots(previous,slotLevels,input.level));setError('');}catch(e){setError(e instanceof Error?e.message:'Recuperación no disponible');}}
+ function rest(){setState(previous=>({...resetWizardSlots(previous,input.level),hitPointsCurrent:sheet?.maximumHitPoints??previous.hitPointsCurrent,temporaryHitPoints:0,heroicInspiration:input.species==='human'?true:previous.heroicInspiration}));setError('');}
+ function memorize(){try{const next=wizardMemorizePreparedSpell(input,memorizeOld,memorizeNew);setInput(next);setMemorizeOld('');setMemorizeNew('');setError('');}catch(e){setError(e instanceof Error?e.message:'No se ha podido memorizar el conjuro');}}
  function toggleSlot(index:number,slotLevel=1){try{setState(previous=>toggleWizardSlotMark(previous,index,slotLevel));setError('');}catch(e){setError(e instanceof Error?e.message:'Ranura no válida');}}
  function transact(action:InventoryAction):string|null{
   try{
@@ -144,9 +153,9 @@ export default function WizardPage(){
    <CharacterHeader name={input.name} portraitDataUrl={input.profile?.portraitDataUrl} level={input.level}
      background={background.name} species={SPECIES_NAMES[input.species]} className="Mago" subclass={input.level>=3?'Evocación':undefined} valid={Boolean(actualSnapshot)}
      onEdit={()=>setEditing(true)}
-     onLevelUp={input.level<3&&actualSnapshot?()=>{setLevelUpOpen(true);setEditing(false);}:undefined}
+     onLevelUp={input.level<5&&actualSnapshot?()=>{setLevelUpOpen(true);setEditing(false);}:undefined}
      onLevelDown={input.level>1&&actualSnapshot?()=>setLevelDownOpen(true):undefined}/>
-   <p className="wizard-progression-hint">{input.level>=3?'Próxima etapa: progresión a nivel 4.':`Próxima subida disponible: Mago de nivel ${input.level+1}.`}</p>
+   <p className="wizard-progression-hint">{input.level>=5?'Próxima etapa: progresión al nivel 6.':`Próxima subida disponible: Mago de nivel ${input.level+1}.`}</p>
   {levelDownOpen&&<LevelDownDialog preview={levelDownAssessment.preview} error={levelDownAssessment.error}
      onClose={()=>setLevelDownOpen(false)} onConfirm={()=>{
       const next=levelDownAssessment.preview;
@@ -212,8 +221,8 @@ export default function WizardPage(){
         </div>)}
        </div><p className="overview-health-hint">Escribe +5 o -5 y pulsa Intro. El daño consume primero PG temporales.</p></div>}
       attacksContent={<BasicWeaponAttacks inventory={sheet.inventory} scores={sheet.abilityScores} proficiency={wizardProgression(input.level,input.level>=3?'evoker':undefined).proficiencyBonus} mode={mode}/>}
-      resourcesContent={<section className="overview-panel panel"><div className="overview-panel-heading"><h3>Recursos</h3><span>Clase</span></div><div className="overview-record"><span>Recuperación arcana</span><strong>{state.magic.arcaneRecoveryUsed?'Gastada':'Disponible'}</strong></div><button className="overview-link" type="button" disabled={state.magic.arcaneRecoveryUsed||state.magic.slots.remaining.every((n,i)=>n===state.magic.slots.maximum[i])} onClick={()=>input.level>=3?setTab('hechizos'):recoverArcane([1])}>{input.level>=3?'Ver opciones de Recuperación arcana':'Usar Recuperación arcana'}</button><p className="overview-panel-note">Después de un descanso corto, recupera ranuras gastadas hasta el límite de Recuperación arcana. Elige cuántas ranuras recuperar desde Hechizos.</p></section>}
-      spellSlotsContent={<section className="overview-panel panel" aria-label="Espacios de conjuro"><div className="overview-panel-heading"><h3>Espacios de conjuro</h3><span>Rasgo de lanzador</span></div>{[1,2].filter(l=>state.magic.slots.maximum[l-1]>0).map(l=><SpellSlotDiamonds key={l} level={l} spent={wizardSlotMarks(state,l)} onToggle={index=>toggleSlot(index,l)}/>)}<div className="overview-quick-actions"><button type="button" onClick={rest}>Descanso largo</button></div><p className="overview-panel-note">Gastar una ranura no lanza el conjuro automáticamente.</p></section>}
+      resourcesContent={<section className="overview-panel panel"><div className="overview-panel-heading"><h3>Recursos</h3><span>Clase</span></div><div className="overview-record"><span>Recuperación arcana</span><strong>{state.magic.arcaneRecoveryUsed?'Gastada':'Disponible'}</strong></div><button className="overview-link" type="button" disabled={state.magic.arcaneRecoveryUsed||state.magic.slots.remaining.every((n,i)=>n===state.magic.slots.maximum[i])} onClick={()=>setTab('hechizos')}>Ver opciones de Recuperación arcana</button><p className="overview-panel-note">Después de un descanso corto, recupera ranuras gastadas hasta el límite de Recuperación arcana. Elige cuántas ranuras recuperar desde Hechizos.</p></section>}
+      spellSlotsContent={<section className="overview-panel panel" aria-label="Espacios de conjuro"><div className="overview-panel-heading"><h3>Espacios de conjuro</h3><span>Rasgo de lanzador</span></div>{[1,2,3].filter(l=>state.magic.slots.maximum[l-1]>0).map(l=><SpellSlotDiamonds key={l} level={l} spent={wizardSlotMarks(state,l)} onToggle={index=>toggleSlot(index,l)}/>)}<div className="overview-quick-actions"><button type="button" onClick={rest}>Descanso largo</button></div><p className="overview-panel-note">Gastar una ranura no lanza el conjuro automáticamente.</p></section>}
       warningContent={error&&<div className="overview-action-message is-error" role="alert">{error}</div>}
       footerContent={<>
        <section className="overview-panel panel"><h3>Percepción pasiva</h3><strong className="overview-spotlight">{10+sheet.skillBonuses.perception}</strong><p className="overview-panel-note">10 + Percepción {signed(sheet.skillBonuses.perception)}</p></section>
@@ -234,8 +243,19 @@ export default function WizardPage(){
    </section>
    <section id="sheet-panel-hechizos" role="tabpanel" aria-labelledby="sheet-tab-hechizos" hidden={tab!=='hechizos'} className="sheet-tab-panel"><div className="wizard-module panel"><h2>Hechizos del Mago</h2>
     <div className="wizard-attack-actions"><span>Bonificador de ataque mágico: <strong>{sheet?signed(sheet.spellAttackBonus):'—'}</strong></span><button type="button" disabled={!sheet} onClick={()=>{if(!sheet)return;try{const result=rollD20(sheet.spellAttackBonus,mode);setMagicAttackResult(`${result.dice.join(' / ')} ${signed(sheet.spellAttackBonus)} = ${result.total}`);}catch(e){setMagicAttackResult(e instanceof Error?e.message:'No se pudo tirar el dado');}}}>Tirar ataque mágico · d20</button>{magicAttackResult&&<output aria-live="polite">{magicAttackResult}</output>}</div>
-    {[1,2].filter(l=>state.magic.slots.maximum[l-1]>0).map(l=><SpellSlotDiamonds key={l} level={l} spent={wizardSlotMarks(state,l)} onToggle={index=>toggleSlot(index,l)}/>)}
-    <div className="wizard-delta"><button type="button" disabled={state.magic.arcaneRecoveryUsed||state.magic.slots.remaining[0]===state.magic.slots.maximum[0]} onClick={()=>recoverArcane([1])}>Recuperar una ranura nivel 1</button>{input.level>=3&&<button type="button" disabled={state.magic.arcaneRecoveryUsed||state.magic.slots.remaining[1]===state.magic.slots.maximum[1]} onClick={()=>recoverArcane([2])}>Recuperar una ranura nivel 2</button>}{input.level>=3&&<button type="button" disabled={state.magic.arcaneRecoveryUsed||state.magic.slots.maximum[0]-state.magic.slots.remaining[0]<2} onClick={()=>recoverArcane([1,1])}>Recuperar dos ranuras nivel 1</button>}<button type="button" onClick={rest}>Descanso largo</button></div>
+    {[1,2,3].filter(l=>state.magic.slots.maximum[l-1]>0).map(l=><SpellSlotDiamonds key={l} level={l} spent={wizardSlotMarks(state,l)} onToggle={index=>toggleSlot(index,l)}/>)}
+    <div className="wizard-delta" aria-label="Recuperación arcana">
+     <p className="muted-note">Recuperación arcana: una vez por descanso largo, tras un descanso corto. Puedes recuperar ranuras cuyo total de niveles no supere {Math.ceil(input.level/2)}.</p>
+     {recoveryOptions.map(slots=><button type="button" key={slots.join('-')} onClick={()=>recoverArcane(slots)}>Recuperar {recoveryLabel(slots)}</button>)}
+     {recoveryOptions.length===0&&<p className="muted-note">Sin opciones de recuperación (todas las ranuras disponibles o recuperación ya utilizada).</p>}
+     <button type="button" onClick={rest}>Descanso largo</button>
+    </div>
+    {input.level>=5&&<fieldset className="level-wizard-fieldset wizard-memorize-panel"><legend>Memorizar conjuro · Nivel 5</legend>
+     <p className="muted-note">Al terminar un descanso corto puedes sustituir un conjuro preparado de nivel 1 o superior por otro de tu libro. No se gastan ranuras ni se eligen objetivos.</p>
+     <label className="field"><span>Conjuro preparado que retiras</span><select value={memorizeOld} onChange={e=>setMemorizeOld(e.target.value)}><option value="">Selecciona el preparado</option>{input.preparedIds.map(id=><option key={id} value={id}>{spellLabel(id)}</option>)}</select></label>
+     <label className="field"><span>Conjuro del libro que preparas</span><select value={memorizeNew} onChange={e=>setMemorizeNew(e.target.value)}><option value="">Selecciona el nuevo conjuro</option>{[...memorizedKnown].filter(id=>!input.preparedIds.includes(id)).map(id=><option key={id} value={id}>{spellLabel(id)}</option>)}</select></label>
+     <button type="button" disabled={!memorizeOld||!memorizeNew} onClick={memorize}>Confirmar cambio tras descanso corto</button>
+    </fieldset>}
     {sheet&&<WizardSpellLibrary input={input} spellAttackBonus={sheet.spellAttackBonus} spellSaveDC={sheet.spellSaveDC} mode={mode} onChange={(selection:WizardSpellSelection)=>patch({spellSelection:selection})}/>}
     <p className="muted-note">Rombo marcado = disponible; vacío = gastado. Preparar, aprender o tirar dados no lanza conjuros ni consume ranuras.</p></div></section>
    <section id="sheet-panel-personaje" role="tabpanel" aria-labelledby="sheet-tab-personaje" hidden={tab!=='personaje'} className="sheet-tab-panel"><CharacterProfilePanel key={profileRevision} profile={input.profile??EMPTY_CHARACTER_PROFILE} name={input.name} species={SPECIES_NAMES[input.species]} background={background.name} level={input.level} onChange={profile=>patch({profile})} onEditIdentity={()=>setEditing(true)}/></section>

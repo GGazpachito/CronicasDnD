@@ -13,7 +13,7 @@ export type WizardSpellSelection=Readonly<{
 function validIds(){return new Set<string>([...WIZARD_LEVEL_ONE_CANTRIPS,...WIZARD_SPELL_CATALOG].map(spell=>spell.id));}
 export function wizardSpellSelection(input:GuidedWizardInput):WizardSpellSelection{
  return input.spellSelection??{
-  learnedIds:[...input.cantripIds,...input.spellbookIds,...(input.evokerBonusSpellIds??[])],
+  learnedIds:[...input.cantripIds,...input.spellbookIds,...(input.evokerBonusSpellIds??[]),...(input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[])],
   preparedIds:[...input.cantripIds,...input.preparedIds],
  };
 }
@@ -45,8 +45,9 @@ export function setWizardSpellPrepared(selection:WizardSpellSelection,id:string,
 export function mergeWizardLevelSpells(previous:GuidedWizardInput,learned:readonly string[],prepared:readonly string[]):WizardSpellSelection|undefined{
  if(previous.spellSelection===undefined)return undefined;
  const selection=wizardSpellSelection(previous);
+ const gainedCantrips=learned.filter(id=>WIZARD_LEVEL_ONE_CANTRIPS.some(spell=>spell.id===id));
  return validateWizardSpellSelection({
   learnedIds:[...new Set([...selection.learnedIds,...learned])],
-  preparedIds:[...new Set([...selection.preparedIds,...prepared.filter(id=>!previous.preparedIds.includes(id)&&(selection.learnedIds.includes(id)||learned.includes(id)))])],
+  preparedIds:[...new Set([...selection.preparedIds,...gainedCantrips,...prepared.filter(id=>!previous.preparedIds.includes(id)&&(selection.learnedIds.includes(id)||learned.includes(id)))])],
  });
 }

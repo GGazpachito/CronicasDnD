@@ -98,9 +98,9 @@ describe('Actualización 51: progresión atómica de Mago y rombos invertidos en
  it('la galería muestra Evocación al cargar un Mago de nivel 3',()=>{
   expect(getCharacterCardDetails(makeWizardCharacterSnapshot(to3().input,to3().state)).subclass).toBe('Evocación');
  });
- it('no permite saltarse un nivel ni continuar por encima de nivel 3',()=>{
+ it('solo permite un paso y la nueva actualización amplía la progresión hasta nivel 5',()=>{
   const three=to3();expect(()=>prepareWizardLevelUp(three.input,three.state,lev3(three.input))).toThrow();
-  expect(wizardLevelUpChoicesPreview(three.input)).toBe(null);
+  expect(wizardLevelUpChoicesPreview(three.input)?.nextLevel).toBe(4);
  });
  it('el borrador no modifica las elecciones ni el estado originales',()=>{
   const state=initialWizardOneState(base),before=JSON.stringify({base,state});

@@ -21,9 +21,10 @@ describe('Actualización 51.1: catálogo, reglas y selección manual de Mago',()
  it('catalogo contiene todos los trucos y conjuros implementados de nivel 1 y 2',()=>{
   const counts=[0,1,2].map(level=>WIZARD_SPELL_RULES.filter(spell=>spell.level===level).length);
   expect(counts).toEqual([20,31,39]);
-  expect(WIZARD_SPELL_RULES).toHaveLength(90);
+  expect(WIZARD_SPELL_RULES.filter(spell=>spell.level<=2)).toHaveLength(90);
+  expect(WIZARD_SPELL_RULES).toHaveLength(122);
   expect(WIZARD_SPELL_RULES.every(spell=>spell.description.length>70)).toBe(true);
-  expect(new Set(WIZARD_SPELL_RULES.map(spell=>spell.id)).size).toBe(90);
+  expect(new Set(WIZARD_SPELL_RULES.map(spell=>spell.id)).size).toBe(122);
  });
  it('marcar como aprendido desde Catálogo no altera la progresión reglamentaria',()=>{
   const selection=setWizardSpellLearned(wizardSpellSelection(base),'burning_hands',true);
@@ -55,10 +56,10 @@ describe('Actualización 51.1: catálogo, reglas y selección manual de Mago',()
  });
  it('rechaza conjuros inyectados, duplicados y preparados ausentes',()=>{
   const known=wizardSpellSelection(base);
-  expect(()=>validateWizardSpellSelection({learnedIds:['fireball'],preparedIds:[]})).toThrow();
+  expect(()=>validateWizardSpellSelection({learnedIds:['unknown_fake_spell'],preparedIds:[]})).toThrow();
   expect(()=>validateWizardSpellSelection({learnedIds:['shield','shield'],preparedIds:[]})).toThrow();
   expect(()=>validateWizardSpellSelection({learnedIds:['shield'],preparedIds:['web']})).toThrow();
-  expect(()=>makeWizardCharacterSnapshot({...base,spellSelection:{learnedIds:['fireball'],preparedIds:[]}})).toThrow();
+  expect(()=>makeWizardCharacterSnapshot({...base,spellSelection:{learnedIds:['unknown_fake_spell'],preparedIds:[]}})).toThrow();
   expect(()=>validateWizardSpellSelection({...known,evil:'x'})).toThrow();
  });
  it('subir a nivel 2 incorpora nuevas elecciones sin borrar la biblioteca manual',()=>{

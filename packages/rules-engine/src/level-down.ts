@@ -114,30 +114,38 @@ export function previewFighterLevelDown(input:GuidedFighterInput,adventure:Adven
 }
 
 const spellName=(id:string)=>[...WIZARD_LEVEL_ONE_CANTRIPS,...WIZARD_SPELL_CATALOG].find(s=>s.id===id)?.name??id;
-/** Retroceso reglamentario 3→2 y 2→1, los niveles actualmente accesibles en la web.
- * Los últimos dos conjuros ordinarios corresponden a la subida más reciente.
+/** Retroceso 5→4→3→2→1, conservando las elecciones adquiridas antes
+ * del nivel retirado, las ranuras válidas y el estado persistido de la partida.
  */
 export function previewWizardLevelDown(input:GuidedWizardInput,state:WizardLevelOneState):WizardLevelDownPreview{
- if(input.level<=1||input.level>3)throw new RangeError('Mago: no se puede bajar del nivel 1');
+ if(input.level<=1||input.level>5)throw new RangeError('Mago: no se puede bajar del nivel 1');
  const before=calculateGuidedWizard(input);
  const valid=validateWizardOneState(state,before);
- const target=(input.level-1) as 1|2;
+ const target=(input.level-1) as 1|2|3|4;
  const gainedSpells=input.spellbookIds.slice(-2);
  const lostBonus=input.level===3?[...(input.evokerBonusSpellIds??[])]:[];
- const lostSpellIds=[...gainedSpells,...lostBonus];
+ const lostFree5=input.level===5&&input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[];
+ const lostCantrip=input.level===4?[input.cantripIds[input.cantripIds.length-1]]:[];
+ const lostSpellIds=[...gainedSpells,...lostBonus,...lostFree5,...lostCantrip];
  const trimmedBook=input.spellbookIds.slice(0,-2);
- const wanted=wizardProgression(target).preparedSpellCount;
- const filtered=input.preparedIds.filter(id=>trimmedBook.includes(id));
- const prepared=[...new Set([...filtered,...trimmedBook])].slice(0,wanted);
- const {scholarSkill,subclass,evokerBonusSpellIds,spellSelection,...other}=input;
+ const keptExtras=[...(target>=3?input.evokerBonusSpellIds??[]:[]),...(target>=5&&input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[])];
+ const permitted=new Set([...trimmedBook,...keptExtras]);
+ const wanted=wizardProgression(target,target>=3?'evoker':undefined).preparedSpellCount;
+ const filtered=input.preparedIds.filter(id=>permitted.has(id));
+ const prepared=[...new Set([...filtered,...trimmedBook,...keptExtras])].slice(0,wanted);
+ const {scholarSkill,subclass,evokerBonusSpellIds,evokerLevelThreeSpellId,level4Improvement,spellSelection,...other}=input;
  const selection=spellSelection===undefined?undefined:validateWizardSpellSelection({
   learnedIds:spellSelection.learnedIds.filter(id=>!lostSpellIds.includes(id)),
   preparedIds:spellSelection.preparedIds.filter(id=>!lostSpellIds.includes(id)),
  });
  const nextInput:GuidedWizardInput={...other,level:target,spellbookIds:trimmedBook,preparedIds:prepared,
-  ...(target>=2?{scholarSkill}:{}),...(selection?{spellSelection:selection}:{})};
+  cantripIds:target<4?input.cantripIds.slice(0,3):input.cantripIds,
+  ...(target>=2?{scholarSkill}:{}),
+  ...(target>=3?{subclass,evokerBonusSpellIds}:{}),
+  ...(target>=4?{level4Improvement}:{}),
+  ...(selection?{spellSelection:selection}:{})};
  const after=calculateGuidedWizard(nextInput);
- const maximum=wizardProgression(target).spellSlots;
+ const maximum=wizardProgression(target,target>=3?'evoker':undefined).spellSlots;
  const oldMaximum=valid.magic.slots.maximum;
  const oldMarks=wizardAllSlotMarks(valid);
  const marks:boolean[]=[];
@@ -157,14 +165,16 @@ export function previewWizardLevelDown(input:GuidedWizardInput,state:WizardLevel
  const snapshot=makeWizardCharacterSnapshot(nextInput,validateWizardOneState(nextState,after));
  const lostFeatures:LevelDownNotice[]=[...WIZARD_FEATURES,...EVOKER_FEATURES].filter(f=>f.level===input.level).map(f=>({title:f.title,description:f.description}));
  if(input.level===2&&scholarSkill)lostFeatures.push({title:'Pericia de Erudito',description:`Dejas de duplicar la competencia de ${SKILL_LABELS[scholarSkill]}.`});
- const lost:LevelDownNotice[]=[...lostFeatures,...lostSpellIds.map(id=>({title:`Conjuro: ${spellName(id)}`,description:'Deja de estar concedido por la subida de nivel y se retira de las listas de progresión y de la selección manual.'}))];
+ const lost:LevelDownNotice[]=[...lostFeatures,...lostSpellIds.map(id=>({title:`Conjuro: ${spellName(id)}`,description:id===lostCantrip[0]?'Pierdes el truco adicional del nivel 4.':'Deja de estar concedido por la subida de nivel y se retira de las listas de progresión y de la selección manual.'}))];
  const changes:LevelDownNotice[]=[
   {title:'Puntos de golpe',description:`Máximo: ${before.maximumHitPoints} → ${after.maximumHitPoints}. Actuales: ${valid.hitPointsCurrent} → ${hp}. Se conserva el daño en la medida posible.`},
-  {title:'Competencia',description:`Bonificador ${signed(wizardProgression(input.level,input.level===3?'evoker':undefined).proficiencyBonus)} → ${signed(wizardProgression(target).proficiencyBonus)}.`},
+  {title:'Competencia',description:`Bonificador ${signed(wizardProgression(input.level,input.level>=3?'evoker':undefined).proficiencyBonus)} → ${signed(wizardProgression(target,target>=3?'evoker':undefined).proficiencyBonus)}.`},
   {title:'Dados de golpe',description:`${input.level}d6 → ${target}d6.`},
   {title:'Preparación reglamentaria',description:`${input.preparedIds.length} → ${prepared.length} preparados. Se retiran los incompatibles y se mantiene la selección anterior siempre que sea posible.`},
   ...attributeChanges(before,after),
  ];
+ if(input.level===4)changes.push({title:'Trucos conocidos',description:`De ${input.cantripIds.length} a ${nextInput.cantripIds.length}. Se retira el truco adicional del nivel 4.`});
+ if(input.level===5&&input.evokerLevelThreeSpellId)changes.push({title:'Experto en Evocación',description:'Se retira el conjuro gratuito que se obtuvo al acceder a ranuras de nivel 3.'});
  if(before.spellAttackBonus!==after.spellAttackBonus)changes.push({title:'Ataque mágico',description:`Bonificador ${signed(before.spellAttackBonus)} → ${signed(after.spellAttackBonus)}.`});
  if(before.spellSaveDC!==after.spellSaveDC)changes.push({title:'CD de conjuros',description:`CD ${before.spellSaveDC} → ${after.spellSaveDC}.`});
  for(let i=0;i<9;i++)if(oldMaximum[i]!==maximum[i])changes.push({title:`Ranuras de nivel ${i+1}`,description:`Total: ${oldMaximum[i]} → ${maximum[i]}; disponibles: ${valid.magic.slots.remaining[i]} → ${remaining[i]}. Los rombos que desaparecen se eliminan con su estado.`});
