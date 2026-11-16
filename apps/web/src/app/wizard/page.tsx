@@ -1,9 +1,17 @@
 'use client';
 
-import {useEffect,useMemo,useState} from 'react';
-import {useRouter} from 'next/navigation';
+import {useMemo,useRef,useState} from 'react';
 import Link from 'next/link';
 import CharacterTabs,{type SheetTab} from '../../components/CharacterTabs';
+import SaveLoadPanel from '../../components/SaveLoadPanel';
+import TraitsPanel from '../../components/TraitsPanel';
+import EquipmentPanel from '../../components/EquipmentPanel';
+import SpellSlotDiamonds from '../../components/SpellSlotDiamonds';
+import BasicWeaponAttacks from '../../components/BasicWeaponAttacks';
+import SheetPlaceholder from '../../components/SheetPlaceholder';
+import {collectWizardTraits} from '../../../../../packages/rules-engine/src/wizard-traits';
+import {toggleWizardSlotMark,wizardSlotMarks,recoverWizardArcaneSlot,resetWizardSlots} from '../../../../../packages/rules-engine/src/wizard-slot-marks';
+import {nextMagicInstanceId,type InventoryAction,equippedArmor,INVENTORY_NAMES} from '../../../../../packages/rules-engine/src/inventory';
 import CharacterHeader from '../../components/CharacterHeader';
 import CharacterProfilePanel from '../../components/CharacterProfilePanel';
 import SharedPrincipalSheet from '../../components/SharedPrincipalSheet';
@@ -12,17 +20,16 @@ import {SKILLS,type Skill} from '../../../../../packages/rules-engine/src/profic
 import {BACKGROUNDS,SPECIES_NAMES,STANDARD_ARRAY,type BackgroundId,type SpeciesId} from '../../../../../packages/rules-engine/src/guided';
 import {EMPTY_CHARACTER_PROFILE} from '../../../../../packages/rules-engine/src/character-profile';
 import {type D20Mode} from '../../../../../packages/rules-engine/src/d20';
-import {wizardUseSlot,wizardArcaneRecovery,wizardLongRest} from '../../../../../packages/rules-engine/src/wizard';
 import {
   WIZARD_SKILL_OPTIONS,WIZARD_LEVEL_ONE_CANTRIPS,WIZARD_LEVEL_ONE_SPELLS,WIZARD_LEVEL_ONE_DEFAULTS,
   WIZARD_LEVEL_ONE_EQUIPMENT,calculateGuidedWizardOne,initialWizardOneState,
-  makeWizardCharacterSnapshot,validateWizardCharacterSnapshot,
+  makeWizardCharacterSnapshot,validateWizardCharacterSnapshot,wizardInputForPreview,
   type GuidedWizardInput,type WizardLevelOneState,
 } from '../../../../../packages/rules-engine/src/wizard-creation';
 
 const ABILITY_NAMES:Record<Ability,string>={strength:'Fuerza',dexterity:'Destreza',constitution:'Constitución',intelligence:'Inteligencia',wisdom:'Sabiduría',charisma:'Carisma'};
 const SKILL_NAMES:Record<Skill,string>={acrobatics:'Acrobacias',animal_handling:'Trato con animales',arcana:'Arcanos',athletics:'Atletismo',deception:'Engaño',history:'Historia',insight:'Perspicacia',intimidation:'Intimidación',investigation:'Investigación',medicine:'Medicina',nature:'Naturaleza',perception:'Percepción',performance:'Interpretación',persuasion:'Persuasión',religion:'Religión',sleight_of_hand:'Juego de manos',stealth:'Sigilo',survival:'Supervivencia'};
-const defaultInput:GuidedWizardInput={classId:'wizard',level:1,name:'Elira',background:'sage',species:'dwarf',
+const defaultInput:GuidedWizardInput={classId:'wizard',level:1,name:'',background:'sage',species:'dwarf',
  assignedAbilities:{strength:8,dexterity:13,constitution:14,intelligence:15,wisdom:12,charisma:10},
  increaseMode:'two_plus_one',plusTwoAbility:'intelligence',plusOneAbility:'constitution',
  wizardSkills:['insight','investigation'],equipmentChoice:'equipment',
@@ -30,46 +37,31 @@ const defaultInput:GuidedWizardInput={classId:'wizard',level:1,name:'Elira',back
  preparedIds:[...WIZARD_LEVEL_ONE_DEFAULTS.prepared],profile:EMPTY_CHARACTER_PROFILE};
 const options=<T extends string>(choices:readonly T[],label:(v:T)=>string)=>choices.map(x=><option key={x} value={x}>{label(x)}</option>);
 const signed=(n:number)=>n>=0?`+${n}`:String(n);
-type SavedEntry={id:string;name:string;level:number;characterClass?:string;revision:number;updatedAt:string};
-async function responseData<T>(response:Response):Promise<T>{
- const data=await response.json().catch(()=>({})) as {error?:string};
- if(!response.ok)throw new Error(data.error??`HTTP ${response.status}`);
- return data as T;
-}
 export default function WizardPage(){
- const router=useRouter();
+ const pendingSaveNavigation=useRef(false);
  const [input,setInput]=useState<GuidedWizardInput>(defaultInput);
- const [state,setState]=useState<WizardLevelOneState>(()=>initialWizardOneState(defaultInput));
+ const [state,setState]=useState<WizardLevelOneState>(()=>initialWizardOneState(wizardInputForPreview(defaultInput)));
  const [tab,setTab]=useState<SheetTab>('principal');
  const [editing,setEditing]=useState(true);
  const [mode,setMode]=useState<D20Mode>('normal');
  const [hpDraft,setHpDraft]=useState('');
  const [tempDraft,setTempDraft]=useState('');
  const [profileRevision,setProfileRevision]=useState(0);
- const [characters,setCharacters]=useState<SavedEntry[]>([]);
- const [selected,setSelected]=useState('');
- const [active,setActive]=useState<{id:string;revision:number}|null>(null);
- const [savedFingerprint,setSavedFingerprint]=useState<string|null>(null);
- const [busy,setBusy]=useState(false);
- const [message,setMessage]=useState('');
  const [error,setError]=useState('');
- const [loading,setLoading]=useState(true);
  const computed=useMemo(()=>{
-  try{return {sheet:calculateGuidedWizardOne(input),error:''};}
+  try{return {sheet:calculateGuidedWizardOne(wizardInputForPreview(input)),error:''};}
   catch(e){return {sheet:null,error:e instanceof Error?e.message:'Elecciones inválidas'};}
  },[input]);
  const actualSnapshot=useMemo(()=>{
   if(!computed.sheet)return null;
   try{return makeWizardCharacterSnapshot(input,state);}catch{return null;}
  },[input,state,computed.sheet]);
- const fingerprint=actualSnapshot?JSON.stringify(actualSnapshot):null;
- const pending=active!==null&&(fingerprint===null||fingerprint!==savedFingerprint);
  const sheet=computed.sheet;
  const background=BACKGROUNDS[input.background];
  function patch(values:Partial<GuidedWizardInput>){setInput(previous=>({...previous,...values}));}
  function changeBackground(next:BackgroundId){
   const b=BACKGROUNDS[next];const allowed=WIZARD_SKILL_OPTIONS.filter(k=>!(b.skills as readonly string[]).includes(k));
-  patch({background:next,plusTwoAbility:b.abilities[0],plusOneAbility:b.abilities[1],wizardSkills:allowed.slice(0,2),
+  patch({background:next,backgroundEquipment:{startingPackage:'a',...(next==='soldier'?{gamingSet:'dice_set' as const}:{})},inventoryActions:[],plusTwoAbility:b.abilities[0],plusOneAbility:b.abilities[1],wizardSkills:allowed.slice(0,2),
    ...(input.species==='human'&&input.humanFeat===b.feat?{humanFeat:b.feat==='alert'?'tough':'alert'}:{})});
  }
  function changeSpecies(species:SpeciesId){
@@ -114,94 +106,47 @@ export default function WizardPage(){
    return {...previous,manualDeathMarks:{...current,[kind]:next}};
   });
  }
- function spellSlot(){try{setState({...state,magic:wizardUseSlot(state.magic,1)});setError('');}catch(e){setError(e instanceof Error?e.message:'No quedan ranuras');}}
- function recoverArcane(){try{setState({...state,magic:wizardArcaneRecovery(state.magic,1,[1])});setError('');}catch(e){setError(e instanceof Error?e.message:'Recuperación no disponible');}}
- function rest(){setState(s=>({...s,magic:wizardLongRest(s.magic,1),hitPointsCurrent:sheet?.maximumHitPoints??s.hitPointsCurrent,temporaryHitPoints:0,heroicInspiration:input.species==='human'?true:s.heroicInspiration}));setError('');}
- async function reload(){
-  const payload=await responseData<{characters:SavedEntry[]}>(await fetch('/api/characters',{cache:'no-store'}));
-  setCharacters(payload.characters.filter(c=>c.characterClass==='wizard'));
+ function recoverArcane(){try{setState(previous=>recoverWizardArcaneSlot(previous));setError('');}catch(e){setError(e instanceof Error?e.message:'Recuperación no disponible');}}
+ function rest(){setState(previous=>({...resetWizardSlots(previous),hitPointsCurrent:sheet?.maximumHitPoints??previous.hitPointsCurrent,temporaryHitPoints:0,heroicInspiration:input.species==='human'?true:previous.heroicInspiration}));setError('');}
+ function toggleSlot(index:number){try{setState(previous=>toggleWizardSlotMark(previous,index));setError('');}catch(e){setError(e instanceof Error?e.message:'Ranura no válida');}}
+ function transact(action:InventoryAction):string|null{
+  try{
+   const current=input.inventoryActions??[];
+   const registered=action.type==='magic_grant'?{...action,instanceId:nextMagicInstanceId(current)} as InventoryAction:action;
+   const next={...input,inventoryActions:[...current,registered]};
+   calculateGuidedWizardOne(wizardInputForPreview(next));
+   setInput(next);setError('');return null;
+  }catch(e){const message=e instanceof Error?e.message:'No se pudo modificar el equipo';setError(message);return message;}
  }
- async function loadCharacter(id:string){
-  const value=await responseData<{character:SavedEntry&{snapshot:unknown}}>(await fetch(`/api/characters/${encodeURIComponent(id)}`,{cache:'no-store'}));
-  const clean=validateWizardCharacterSnapshot(value.character.snapshot);
-  if(clean.input.level!==value.character.level||value.character.characterClass!=='wizard')throw new RangeError('El registro no es un Mago válido de nivel 1');
-  setInput(clean.input);setProfileRevision(n=>n+1);setState(clean.wizardState);setActive({id:value.character.id,revision:value.character.revision});
-  setSavedFingerprint(JSON.stringify(clean));setSelected(id);setMessage(`Mago «${clean.input.name}» recuperado.`);setEditing(false);
- }
- useEffect(()=>{
-  let cancelled=false;
-  (async()=>{
-   try{
-    const r=await responseData<{characters:SavedEntry[]}>(await fetch('/api/characters',{cache:'no-store'}));
-    if(cancelled)return;
-    setCharacters(r.characters.filter(c=>c.characterClass==='wizard'));
-    const params=new URLSearchParams(window.location.search);
-    const id=params.get('character');
-    if(!id&&params.get('new')==='1'&&!cancelled){setInput(previous=>({...previous,name:''}));setEditing(true);}
-    if(id){
-     const d=await responseData<{character:SavedEntry&{snapshot:unknown}}>(await fetch(`/api/characters/${encodeURIComponent(id)}`,{cache:'no-store'}));
-     const snap=validateWizardCharacterSnapshot(d.character.snapshot);
-     if(d.character.characterClass!=='wizard'||d.character.level!==1)throw new RangeError('El personaje solicitado no es un Mago de nivel 1');
-     if(!cancelled){setInput(snap.input);setProfileRevision(n=>n+1);setState(snap.wizardState);setSelected(id);setActive({id,revision:d.character.revision});setSavedFingerprint(JSON.stringify(snap));setEditing(false);setMessage(`Mago «${snap.input.name}» cargado.`);}
-    }
-   }catch(e){if(!cancelled)setError(e instanceof Error?e.message:'No se pudieron recuperar los Magos');}
-   finally{if(!cancelled)setLoading(false);}
-  })();return ()=>{cancelled=true;};
- },[]);
- useEffect(()=>{
-  if(!pending)return;
-  const guard=(e:BeforeUnloadEvent)=>{e.preventDefault();e.returnValue='';};
-  window.addEventListener('beforeunload',guard);return ()=>window.removeEventListener('beforeunload',guard);
- },[pending]);
- async function action(op:()=>Promise<void>){
-  setBusy(true);setError('');setMessage('');
-  try{await op();}catch(e){setError(e instanceof Error?e.message:'Error de operación');}finally{setBusy(false);}
- }
- async function save(asNew:boolean){
-  if(!actualSnapshot)return;
-  await action(async()=>{
-   const target=asNew?'/api/characters':`/api/characters/${encodeURIComponent(active!.id)}`;
-   const response=await fetch(target,{method:asNew?'POST':'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(asNew?{snapshot:actualSnapshot}:{revision:active!.revision,snapshot:actualSnapshot})});
-   const result=await responseData<{character:SavedEntry}>(response);
-   setActive({id:result.character.id,revision:result.character.revision});setSelected(result.character.id);
-   setSavedFingerprint(JSON.stringify(actualSnapshot));setMessage('Personaje guardado correctamente en PostgreSQL.');
-   try{await reload();}catch{setMessage('Guardado confirmado; no se pudo actualizar la lista.');}
-  });
- }
- function openFighterCreator(){
-  if(pending&&!window.confirm('Tienes cambios de este Mago sin guardar. ¿Volver al creador de Guerrero y descartarlos?'))return;
-  router.push('/fighter?new=1');
+ function undoInventory(){patch({inventoryActions:(input.inventoryActions??[]).slice(0,-1)});setError('');}
+ function resetInventory(){patch({inventoryActions:[]});setError('');}
+ function restore(snapshot:ReturnType<typeof validateWizardCharacterSnapshot>){
+  setInput(snapshot.input);setState(snapshot.wizardState);setProfileRevision(n=>n+1);setEditing(false);setTab('principal');setError('');
  }
  return <main className="app-shell wizard-page">
-  <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Mago · D&D 2024</span></div></div><Link href="/" className="wizard-class-link" onNavigate={event=>{if(pending&&!window.confirm("Tienes cambios de este Mago sin guardar. ¿Volver al menú y descartarlos?"))event.preventDefault();}}>Menú de personajes</Link></header>
+  <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Mago · D&D 2024</span></div></div><Link href="/" className="wizard-class-link" onNavigate={event=>{if(pendingSaveNavigation.current&&!window.confirm("Tienes cambios sin guardar. ¿Descartarlos y volver al menú?"))event.preventDefault();}}>Menú de personajes</Link></header>
   <div className="content">
-   <div className="class-switcher"><label htmlFor="wizard-class-choice">Clase</label><select id="wizard-class-choice" value="wizard" onChange={(e:{target:{value:string}})=>{if(e.target.value==='fighter')openFighterCreator();}}><option value="fighter">Guerrero</option><option value="wizard">Mago (nivel 1)</option></select><span>Evocación estará disponible desde el nivel 3.</span></div>
    <p className="sheet-release-note">CLASE · MAGO NIVEL 1 · PHB 2024</p>
    <CharacterHeader name={input.name} portraitDataUrl={input.profile?.portraitDataUrl} level={1}
-     background={background.name} species={SPECIES_NAMES[input.species]} className="Mago" valid={Boolean(sheet)}
+     background={background.name} species={SPECIES_NAMES[input.species]} className="Mago" valid={Boolean(actualSnapshot)}
      onEdit={()=>setEditing(true)}/>
-   <section className="save-panel panel" aria-label="Guardado de Magos">
-    <div className="save-panel-head"><div><span className="eyebrow">BASE DE DATOS LOCAL</span><h2>Mis Magos</h2></div><span className="save-label">PostgreSQL</span></div>
-    <p className="muted-note">El Mago se guarda por separado del Guerrero, con un estado propio de PG, ranuras e inspiración. Los cambios no se guardan automáticamente.</p>
-    <div className="save-controls"><div className="save-character-picker"><label className="field"><span>Magos guardados</span><select value={selected} onChange={(e:{target:{value:string}})=>setSelected(e.target.value)} disabled={busy||loading}><option value="">{loading?'Consultando…':'Selecciona un Mago'}</option>{characters.map(c=><option key={c.id} value={c.id}>{c.name} · Nivel {c.level}</option>)}</select></label><button type="button" className="save-refresh" onClick={()=>action(reload)} disabled={busy}>Actualizar lista</button></div>
-     <div className="save-buttons"><button type="button" disabled={busy||!actualSnapshot} onClick={()=>save(true)}>Guardar como nuevo</button><button type="button" disabled={busy||!active||!actualSnapshot||selected!==active.id} onClick={()=>save(false)}>Actualizar guardado</button><button type="button" disabled={busy||!selected} onClick={()=>{if(pending&&!window.confirm('Descartar cambios sin guardar y cargar otro Mago?'))return;void action(()=>loadCharacter(selected));}}>Cargar elegido</button></div></div>
-    {active&&<p className={pending?'play-warning':'save-success'}>{pending?'Hay cambios sin guardar. Pulsa «Actualizar guardado».':'Guardado al día.'}</p>}
-    {message&&<p className="save-success" role="status">{message}</p>}
-    {error&&<p className="save-error" role="alert">{error}</p>}
-   </section>
+   <SaveLoadPanel characterClass="wizard" snapshot={actualSnapshot} validate={validateWizardCharacterSnapshot} onLoad={restore}
+     normalize={saved=>makeWizardCharacterSnapshot(saved.input,saved.wizardState)}
+     onPendingChange={pending=>{pendingSaveNavigation.current=pending;}}/>
    {editing&&<section className="wizard-editor panel" aria-label="Creación de Mago">
     <div className="panel-heading"><div><span className="eyebrow">CREACIÓN · NIVEL 1</span><h2>Opciones de Mago</h2><p>Elige origen, características, competencias, trucos y libro de conjuros.</p></div></div>
     <div className="wizard-editor-grid">
      <div>
       <label className="field"><span>Nombre</span><input maxLength={120} value={input.name} onChange={(e:{target:{value:string}})=>patch({name:e.target.value})}/></label>
-      <label className="field"><span>Clase</span><select aria-label="Clase del personaje" value="wizard" onChange={(e:{target:{value:string}})=>{if(e.target.value==='fighter')openFighterCreator();}}><option value="fighter">Guerrero</option><option value="wizard">Mago (nivel 1)</option></select></label>
-      <p className="muted-note">El Guerrero utiliza su hoja de creación propia. Al cambiar de clase no se convierten los atributos ni conjuros de este Mago.</p>
       <label className="field"><span>Trasfondo</span><select value={input.background} onChange={(e:{target:{value:string}})=>changeBackground(e.target.value as BackgroundId)}>{options(Object.keys(BACKGROUNDS) as BackgroundId[],b=>BACKGROUNDS[b].name)}</select></label>
       <label className="field"><span>Especie</span><select value={input.species} onChange={(e:{target:{value:string}})=>changeSpecies(e.target.value as SpeciesId)}>{options(Object.keys(SPECIES_NAMES) as SpeciesId[],s=>SPECIES_NAMES[s])}</select></label>
       {input.species==='elf'&&<label className="field"><span>Linaje élfico</span><select value={input.elfLineage} onChange={(e:{target:{value:string}})=>patch({elfLineage:e.target.value as NonNullable<GuidedWizardInput['elfLineage']>})}><option value="high_elf">Alto elfo</option><option value="wood_elf">Elfo silvano</option><option value="drow">Drow</option></select></label>}
       {input.species==='human'&&<><label className="field"><span>Competencia humana adicional</span><select value={input.humanSkill} onChange={(e:{target:{value:string}})=>patch({humanSkill:e.target.value as Skill})}>{options(SKILLS,s=>SKILL_NAMES[s])}</select></label><label className="field"><span>Dote humana (opciones provisionales)</span><select value={input.humanFeat} onChange={(e:{target:{value:string}})=>patch({humanFeat:e.target.value as 'alert'|'tough'})}>{(background.feat!=='alert')&&<option value="alert">Alerta</option>}{(true)&&<option value="tough">Duro</option>}</select></label><label className="field"><span>Tamaño humano</span><select value={input.humanSize??'medium'} onChange={(e:{target:{value:string}})=>patch({humanSize:e.target.value as 'small'|'medium'})}><option value="medium">Mediano</option><option value="small">Pequeño</option></select></label></>}
-      <label className="field"><span>Paquete inicial de Mago</span><select value={input.equipmentChoice} onChange={(e:{target:{value:string}})=>patch({equipmentChoice:e.target.value as GuidedWizardInput['equipmentChoice']})}><option value="equipment">Equipo y 5 po</option><option value="gold">55 po</option></select></label>
+      <label className="field"><span>Paquete inicial de Mago</span><select value={input.equipmentChoice} onChange={(e:{target:{value:string}})=>patch({equipmentChoice:e.target.value as GuidedWizardInput['equipmentChoice'],inventoryActions:[]})}><option value="equipment">Equipo y 5 po</option><option value="gold">55 po</option></select></label>
       <p className="muted-note">{WIZARD_LEVEL_ONE_EQUIPMENT[input.equipmentChoice].description}</p>
+      <label className="field"><span>Equipo del trasfondo</span><select value={input.backgroundEquipment?.startingPackage??'a'} onChange={e=>patch({backgroundEquipment:{startingPackage:e.target.value as 'a'|'b',...(input.background==='soldier'?{gamingSet:input.backgroundEquipment?.gamingSet??'dice_set'}:{})},inventoryActions:[]})}><option value="a">A · Objetos y monedas</option><option value="b">B · 50 po</option></select></label>
+      {input.background==='soldier'&&<label className="field"><span>Juego de soldado</span><select value={input.backgroundEquipment?.gamingSet??'dice_set'} onChange={e=>patch({backgroundEquipment:{startingPackage:input.backgroundEquipment?.startingPackage??'a',gamingSet:e.target.value as 'dice_set'|'dragonchess_set'|'playing_card_set'|'three_dragon_ante_set'},inventoryActions:[]})}><option value="dice_set">Dados</option><option value="dragonchess_set">Dragonchess</option><option value="playing_card_set">Naipes</option><option value="three_dragon_ante_set">Tres dragones</option></select></label>}
+      {(input.inventoryActions?.length??0)>0&&<p className="muted-note">Cambiar el equipo inicial reinicia los movimientos de inventario de esta creación.</p>}
      </div>
      <div>
       <div className="section-label"><h3>Distribución de características</h3><span>15, 14, 13, 12, 10, 8</span></div>
@@ -218,7 +163,7 @@ export default function WizardPage(){
     <h3>Conjuros preparados ({input.preparedIds.length}/4)</h3>
     <div className="wizard-spell-picker">{WIZARD_LEVEL_ONE_SPELLS.filter(s=>input.spellbookIds.includes(s.id)).map(s=><label key={s.id} className="wizard-spell-option"><input type="checkbox" checked={input.preparedIds.includes(s.id)} onChange={()=>toggleSpell('preparedIds',s.id,4)}/>{s.name}</label>)}</div>
     {computed.error&&<p className="error" role="alert">{computed.error}</p>}
-    {sheet&&!actualSnapshot&&<p className="warning">Revisa el estado de partida antes de guardar. Si has reducido los PG máximos, utiliza «Ajustar PG» en Principal.</p>}
+    {sheet&&!actualSnapshot&&<p className="warning">{!input.name.trim()?'Introduce el nombre del personaje para habilitar el guardado.':'Revisa el estado de partida antes de guardar. Si has reducido los PG máximos, utiliza «Ajustar PG» en Principal.'}</p>}
    </section>}
    <CharacterTabs activeTab={tab} onChange={setTab}/>
    <section id="sheet-panel-principal" role="tabpanel" aria-labelledby="sheet-tab-principal" hidden={tab!=='principal'} className="sheet-tab-panel">
@@ -227,7 +172,7 @@ export default function WizardPage(){
       abilityScores={sheet.abilityScores} abilityModifiers={sheet.abilityModifiers} proficiencyBonus={2}
       skillBonuses={sheet.skillBonuses} savingThrowBonuses={sheet.savingThrowBonuses}
       trainedSkills={new Set<Skill>(sheet.skillProficiencies)} trainedSaves={new Set<Ability>(['intelligence','wisdom'])}
-      armorClass={sheet.armorClass} armorDescription="10 + modificador de Destreza · sin armadura"
+      armorClass={sheet.armorClass} armorDescription={equippedArmor(sheet.inventory)?`Armadura equipada: ${INVENTORY_NAMES[equippedArmor(sheet.inventory)!]} · Sin entrenamiento en armaduras`:'10 + modificador de Destreza · sin armadura'}
       initiative={sheet.initiative} mode={mode} onModeChange={setMode}
       hitDiceDescription="Dados de golpe: 1d6 · Mago nivel 1"
       hpContent={<div className="overview-health-inline" aria-label="Modificar PG del Mago"><div className="overview-health-pair">
@@ -239,9 +184,9 @@ export default function WizardPage(){
          </div>
         </div>)}
        </div><p className="overview-health-hint">Escribe +5 o -5 y pulsa Intro. El daño consume primero PG temporales.</p></div>}
-      attacksContent={<section className="overview-panel panel" aria-label="Ataques y armas"><div className="overview-panel-heading"><h3>Ataques y armas</h3><span>Equipo actual</span></div><p className="overview-panel-note">El Mago aún no tiene inventario equipable integrado. No se muestran armas inexistentes ni bonificadores inventados.</p></section>}
+      attacksContent={<BasicWeaponAttacks inventory={sheet.inventory} scores={sheet.abilityScores} proficiency={2} mode={mode}/>}
       resourcesContent={<section className="overview-panel panel"><div className="overview-panel-heading"><h3>Recursos</h3><span>Clase</span></div><div className="overview-record"><span>Recuperación arcana</span><strong>{state.magic.arcaneRecoveryUsed?'Gastada':'Disponible'}</strong></div><button className="overview-link" type="button" disabled={state.magic.arcaneRecoveryUsed||state.magic.slots.remaining[0]>=2} onClick={recoverArcane}>Usar Recuperación arcana</button><p className="overview-panel-note">Después de un descanso corto, recupera una ranura de nivel 1 gastada.</p></section>}
-      spellSlotsContent={<section className="overview-panel panel" aria-label="Espacios de conjuro"><div className="overview-panel-heading"><h3>Espacios de conjuro</h3><span>Rasgo de lanzador</span></div><div className="overview-record"><span>Ranuras de nivel 1</span><strong>{state.magic.slots.remaining[0]}/2</strong></div><div className="overview-quick-actions"><button type="button" disabled={state.magic.slots.remaining[0]===0} onClick={spellSlot}>Gastar ranura</button><button type="button" onClick={rest}>Descanso largo</button></div><p className="overview-panel-note">Gastar una ranura no lanza el conjuro automáticamente.</p></section>}
+      spellSlotsContent={<section className="overview-panel panel" aria-label="Espacios de conjuro"><div className="overview-panel-heading"><h3>Espacios de conjuro</h3><span>Rasgo de lanzador</span></div><SpellSlotDiamonds level={1} spent={wizardSlotMarks(state)} onToggle={toggleSlot}/><div className="overview-quick-actions"><button type="button" onClick={rest}>Descanso largo</button></div><p className="overview-panel-note">Gastar una ranura no lanza el conjuro automáticamente.</p></section>}
       warningContent={error&&<div className="overview-action-message is-error" role="alert">{error}</div>}
       footerContent={<>
        <section className="overview-panel panel"><h3>Percepción pasiva</h3><strong className="overview-spotlight">{10+sheet.skillBonuses.perception}</strong><p className="overview-panel-note">10 + Percepción {signed(sheet.skillBonuses.perception)}</p></section>
@@ -251,12 +196,19 @@ export default function WizardPage(){
       </>}
     />}
    </section>
-   <section id="sheet-panel-rasgos" role="tabpanel" aria-labelledby="sheet-tab-rasgos" hidden={tab!=='rasgos'} className="sheet-tab-panel"><div className="wizard-module panel"><h2>Rasgos de Mago</h2><div className="wizard-pair"><div><h3>Lanzamiento de conjuros</h3><p>Conoces tres trucos y tienes seis conjuros de nivel 1 escritos en el libro. Puedes preparar cuatro. Usas Inteligencia y tu libro o un foco arcano para lanzar conjuros.</p></div><div><h3>Adepto ritual</h3><p>Puedes lanzar como ritual cualquier conjuro de tu libro con la etiqueta Ritual, aunque no lo hayas preparado. No gasta ranura.</p></div><div><h3>Recuperación arcana</h3><p>Tras un descanso corto puedes recuperar una ranura de nivel 1 gastada, una vez por descanso largo.</p></div><div><h3>Origen</h3><p>Dote de trasfondo: {sheet?.backgroundFeat??background.feat}. Los efectos complejos de especie y dotes adicionales se ampliarán en la siguiente etapa.</p></div></div></div></section>
-   <section id="sheet-panel-equipo" role="tabpanel" aria-labelledby="sheet-tab-equipo" hidden={tab!=='equipo'} className="sheet-tab-panel"><div className="wizard-module panel"><h2>Equipo inicial del Mago</h2><p>{sheet?.equipment.description??WIZARD_LEVEL_ONE_EQUIPMENT[input.equipmentChoice].description}</p><p className="muted-note">La gestión dinámica de inventario y monedas de Mago se integrará después; no se comparte el inventario del Guerrero.</p></div></section>
-   <section id="sheet-panel-hechizos" role="tabpanel" aria-labelledby="sheet-tab-hechizos" hidden={tab!=='hechizos'} className="sheet-tab-panel"><div className="wizard-module panel"><h2>Hechizos del Mago</h2><div className="stat-cards"><div className="stat-card"><span>CD DE SALVACIÓN</span><strong>{sheet?.spellSaveDC??'—'}</strong><small>8 + competencia + Inteligencia</small></div><div className="stat-card"><span>ATAQUE MÁGICO</span><strong>{sheet?signed(sheet.spellAttackBonus):'—'}</strong><small>Competencia + Inteligencia</small></div><div className="stat-card"><span>RANURAS DE NIVEL 1</span><strong>{state.magic.slots.remaining[0]}/2</strong><small>Recuperadas al descansar</small></div></div><div className="wizard-delta"><button type="button" disabled={state.magic.slots.remaining[0]===0} onClick={spellSlot}>Gastar ranura de nivel 1</button><button type="button" disabled={state.magic.arcaneRecoveryUsed||state.magic.slots.remaining[0]===2} onClick={recoverArcane}>Recuperación arcana</button><button type="button" onClick={rest}>Descanso largo</button></div><div className="wizard-pair"><div><h3>Trucos ({input.cantripIds.length})</h3>{input.cantripIds.map(id=><div className="data-row" key={id}>{WIZARD_LEVEL_ONE_CANTRIPS.find(s=>s.id===id)?.name??id}</div>)}</div><div><h3>Libro de conjuros ({input.spellbookIds.length})</h3>{input.spellbookIds.map(id=><div className="data-row" key={id}><span>{WIZARD_LEVEL_ONE_SPELLS.find(s=>s.id===id)?.name??id}</span><small>{input.preparedIds.includes(id)?'Preparado':'En el libro'}</small></div>)}</div></div><p className="muted-note">Lanzar un conjuro y gastar su ranura son acciones manuales separadas. La verificación de componentes, concentración y efectos llegará en la actualización 49.</p></div></section>
+   <section id="sheet-panel-rasgos" role="tabpanel" aria-labelledby="sheet-tab-rasgos" hidden={tab!=='rasgos'} className="sheet-tab-panel">
+    <TraitsPanel collection={sheet?collectWizardTraits(input,sheet):undefined} error={computed.error} onEdit={()=>setEditing(true)}/>
+   </section>
+   <section id="sheet-panel-equipo" role="tabpanel" aria-labelledby="sheet-tab-equipo" hidden={tab!=='equipo'} className="sheet-tab-panel">
+    <EquipmentPanel inventory={sheet?.inventory??null} error={computed.error} outOfSync={false} actionCount={input.inventoryActions?.length??0}
+      onInventoryAction={transact} onUndo={undoInventory} onReset={resetInventory} onEdit={()=>{setEditing(true);setTab('principal');}}
+      onOpenAttacks={()=>setTab('principal')}/>
+    <p className="overview-panel-note">El Mago no tiene competencia con armaduras ni escudos. Equiparlos puede impedir lanzar conjuros hasta obtener la formación adecuada.</p>
+   </section>
+   <section id="sheet-panel-hechizos" role="tabpanel" aria-labelledby="sheet-tab-hechizos" hidden={tab!=='hechizos'} className="sheet-tab-panel"><div className="wizard-module panel"><h2>Hechizos del Mago</h2><div className="stat-cards"><div className="stat-card"><span>CD DE SALVACIÓN</span><strong>{sheet?.spellSaveDC??'—'}</strong><small>8 + competencia + Inteligencia</small></div><div className="stat-card"><span>ATAQUE MÁGICO</span><strong>{sheet?signed(sheet.spellAttackBonus):'—'}</strong><small>Competencia + Inteligencia</small></div><div className="stat-card"><span>RANURAS DE NIVEL 1</span><strong>{state.magic.slots.remaining[0]}/2</strong><small>Recuperadas al descansar</small></div></div><SpellSlotDiamonds level={1} spent={wizardSlotMarks(state)} onToggle={toggleSlot}/><div className="wizard-delta"><button type="button" disabled={state.magic.arcaneRecoveryUsed||state.magic.slots.remaining[0]===2} onClick={recoverArcane}>Recuperación arcana</button><button type="button" onClick={rest}>Descanso largo</button></div><div className="wizard-pair"><div><h3>Trucos ({input.cantripIds.length})</h3>{input.cantripIds.map(id=><div className="data-row" key={id}>{WIZARD_LEVEL_ONE_CANTRIPS.find(s=>s.id===id)?.name??id}</div>)}</div><div><h3>Libro de conjuros ({input.spellbookIds.length})</h3>{input.spellbookIds.map(id=><div className="data-row" key={id}><span>{WIZARD_LEVEL_ONE_SPELLS.find(s=>s.id===id)?.name??id}</span><small>{input.preparedIds.includes(id)?'Preparado':'En el libro'}</small></div>)}</div></div><p className="muted-note">Lanzar un conjuro y gastar su ranura son acciones manuales separadas. La verificación de componentes, concentración y efectos se incorporará en próximas actualizaciones.</p></div></section>
    <section id="sheet-panel-personaje" role="tabpanel" aria-labelledby="sheet-tab-personaje" hidden={tab!=='personaje'} className="sheet-tab-panel"><CharacterProfilePanel key={profileRevision} profile={input.profile??EMPTY_CHARACTER_PROFILE} name={input.name} species={SPECIES_NAMES[input.species]} background={background.name} level={1} onChange={profile=>patch({profile})} onEditIdentity={()=>setEditing(true)}/></section>
-   <section id="sheet-panel-combate" role="tabpanel" aria-labelledby="sheet-tab-combate" hidden={tab!=='combate'} className="sheet-tab-panel"><div className="wizard-module panel"><h2>Combate: próximamente</h2><p>El Mago puede realizar tiradas d20 desde Principal y gestionar ranuras desde Hechizos. No se automatizan enemigos ni turnos.</p></div></section>
-   <footer className="footer">Mago nivel 1 · Implementación inicial. Guardado en desarrollo local, sin migraciones PostgreSQL.</footer>
+   <section id="sheet-panel-combate" role="tabpanel" aria-labelledby="sheet-tab-combate" hidden={tab!=='combate'} className="sheet-tab-panel"><SheetPlaceholder eyebrow="COMBATE · DESARROLLO FUTURO" title="Coming Soon" description="La interfaz de combate llegará más adelante. Mientras tanto, realiza tiradas desde Principal y gestiona las ranuras desde Hechizos; los turnos y objetivos siguen en manos de los jugadores." actionLabel="Volver a Principal" onAction={()=>setTab('principal')}/></section>
+   <footer className="footer">Hoja compartida · Mago nivel 1 · Guardado manual en PostgreSQL.</footer>
   </div>
  </main>;
 }

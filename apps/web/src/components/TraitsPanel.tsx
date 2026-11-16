@@ -5,8 +5,8 @@ import { collectCharacterTraits, type CharacterTrait, type TraitAutomation, type
 import type { GuidedFighterInput, GuidedFighterResult } from "../../../../packages/rules-engine/src/guided";
 
 const GROUPS: readonly {id: TraitGroup; title: string; description: string}[] = [
-  {id: "class", title: "Rasgos de clase", description: "Progresión del Guerrero según tu nivel actual."},
-  {id: "subclass", title: "Rasgos de subclase", description: "Capacidades del Campeón que ya has desbloqueado."},
+  {id: "class", title: "Rasgos de clase", description: "Capacidades de clase obtenidas hasta el nivel actual."},
+  {id: "subclass", title: "Rasgos de subclase", description: "Capacidades de subclase desbloqueadas, si corresponde."},
   {id: "species", title: "Rasgos de especie", description: "Capacidades de nacimiento y elecciones de linaje."},
   {id: "feats", title: "Dotes y origen", description: "Dotes del trasfondo, dote adicional humana y beneficio épico cuando corresponda."},
 ];
@@ -35,23 +35,24 @@ function TraitCard({ trait }: {trait:CharacterTrait}) {
 }
 
 type TraitsPanelProps = {
-  input: GuidedFighterInput;
-  result: GuidedFighterResult | null;
+  input?: GuidedFighterInput;
+  result?: GuidedFighterResult | null;
+  collection?: ReturnType<typeof collectCharacterTraits>;
   error: string | null;
   onEdit: (step:number)=>void;
 };
 
 /** Se alimenta exclusivamente de la proyección validada. El filtro es estado efímero de UI. */
-export default function TraitsPanel({input,result,error,onEdit}:TraitsPanelProps) {
+export default function TraitsPanel({input,result,collection:externalCollection,error,onEdit}:TraitsPanelProps) {
   const [query,setQuery] = useState("");
   const [groupFilter,setGroupFilter] = useState<TraitGroup | "all">("all");
-  if (!result) return <section className="panel traits-unavailable" role="alert">
+  if (!externalCollection && (!result||!input)) return <section className="panel traits-unavailable" role="alert">
     <h2>No se pueden mostrar los rasgos</h2>
     <p>{error ?? "Revisa las elecciones para calcular correctamente el personaje."}</p>
     <button type="button" onClick={()=>onEdit(0)}>Revisar personaje</button>
   </section>;
 
-  const collection=collectCharacterTraits(input,result);
+  const collection=externalCollection??collectCharacterTraits(input!,result!);
   const term=query.trim().toLocaleLowerCase("es");
   const visible=collection.traits.filter(trait=>(groupFilter==="all" || trait.group===groupFilter) &&
     (!term || [trait.title,trait.source,trait.summary,trait.explanation??"",...trait.details].join(" ").toLocaleLowerCase("es").includes(term)));

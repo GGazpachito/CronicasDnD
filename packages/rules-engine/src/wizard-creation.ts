@@ -8,6 +8,10 @@ import {BACKGROUNDS,SPECIES_NAMES,STANDARD_ARRAY,type BackgroundId,type SpeciesI
 import {EMPTY_CHARACTER_PROFILE,validateCharacterProfile,type CharacterProfile} from './character-profile';
 import {wizardCoreStatistics,wizardProgression,validateWizardSpellChoices,initialWizardMagicState,type WizardMagicState,type WizardSpellChoices,type WizardSpellReference} from './wizard';
 import {createSlotPool} from './spellcasting-core';
+import {calculateArmorClass} from './defense';
+import {equippedArmor,type InventoryAction,type InventoryState} from './inventory';
+import {wizardInventory} from './wizard-inventory';
+import type {BackgroundEquipmentChoice} from './background-equipment';
 
 export const WIZARD_SKILL_OPTIONS=['arcana','history','insight','investigation','medicine','nature','religion'] as const satisfies readonly Skill[];
 export type WizardSkill=(typeof WIZARD_SKILL_OPTIONS)[number];
@@ -57,9 +61,21 @@ export type GuidedWizardInput=Readonly<{
  increaseMode:'two_plus_one'|'three_ones';plusTwoAbility:Ability;plusOneAbility:Ability;
  wizardSkills:readonly WizardSkill[];humanSkill?:Skill;humanFeat?:'alert'|'tough';
  humanSize?:'small'|'medium';elfLineage?:ElfLineage;
- equipmentChoice:WizardEquipmentChoice;
+ equipmentChoice:WizardEquipmentChoice; backgroundEquipment?:BackgroundEquipmentChoice; inventoryActions?:readonly InventoryAction[];
  cantripIds:readonly string[];spellbookIds:readonly string[];preparedIds:readonly string[];
 }>;
+/**
+ * Proyección visual de un Mago todavía sin nombre. La validación estricta de
+ * calculateGuidedWizardOne y del snapshot permanece intacta: este identificador
+ * temporal NUNCA se escribe en el input persistido.
+ *
+ * Es necesario durante el prerenderizado de /wizard, que comienza con el
+ * campo Nombre vacío. El resultado solo sirve para calcular la vista previa
+ * y el estado inicial de juego.
+ */
+export function wizardInputForPreview(input:GuidedWizardInput):GuidedWizardInput{
+ return input.name.trim()?input:{...input,name:'Mago provisional'};
+}
 export type WizardLevelOneView=Readonly<{
  classId:'wizard';level:1;name:string;abilityScores:AbilityScores;
  abilityModifiers:ReturnType<typeof abilityModifiers>;
@@ -68,7 +84,7 @@ export type WizardLevelOneView=Readonly<{
  skillProficiencies:readonly Skill[];
  maximumHitPoints:number;armorClass:number;initiative:number;speedFeet:number;
  size:'small'|'medium';spellAttackBonus:number;spellSaveDC:number;
- equipment:typeof WIZARD_LEVEL_ONE_EQUIPMENT[WizardEquipmentChoice];
+ equipment:typeof WIZARD_LEVEL_ONE_EQUIPMENT[WizardEquipmentChoice]; inventory:InventoryState;
  spells:ReturnType<typeof validateWizardSpellChoices>;
  backgroundFeat:string;
 }>;
@@ -117,24 +133,28 @@ export function calculateGuidedWizardOne(input:GuidedWizardInput):WizardLevelOne
  const spells=validateWizardSpellChoices(1,choices);
  const bonuses=abilityModifiers(scores);
  const proficiency=[...new Set<Skill>([...bg.skills as readonly Skill[],...input.wizardSkills,...(input.species==='human'?[input.humanSkill!]:[])])];
+ const inventory=wizardInventory(input);
+ const armorClass=calculateArmorClass({dexterityScore:scores.dexterity,strengthScore:scores.strength,armor:equippedArmor(inventory),shieldEquipped:inventory.equipped.shield,shieldTrained:false}).value;
  const hpBonus=(input.species==='dwarf'?1:0)+(input.humanFeat==='tough'?2:0);
  const core=wizardCoreStatistics(1,scores);
  return {classId:'wizard',level:1,name:input.name.trim(),abilityScores:scores,abilityModifiers:bonuses,
   skillBonuses:calculateSkillBonuses(scores,1,{skills:proficiency}),skillProficiencies:proficiency,
   savingThrowBonuses:calculateSavingThrows(scores,1,{savingThrows:['intelligence','wisdom']}),
   maximumHitPoints:Math.max(1,6+bonuses.constitution)+hpBonus,
-  armorClass:10+bonuses.dexterity,
+  armorClass,
   initiative:bonuses.dexterity+((bg.feat==='alert'||input.humanFeat==='alert')?2:0),
   speedFeet:input.species==='elf'&&input.elfLineage==='wood_elf'?35:30,
   size:input.species==='halfling'||(input.species==='human'&&input.humanSize==='small')?'small':'medium',
   spellAttackBonus:core.spellAttackBonus,spellSaveDC:core.spellSaveDC,
-  equipment:WIZARD_LEVEL_ONE_EQUIPMENT[input.equipmentChoice],spells,backgroundFeat:bg.feat};
+  equipment:WIZARD_LEVEL_ONE_EQUIPMENT[input.equipmentChoice],inventory,spells,backgroundFeat:bg.feat};
 }
 export type WizardDeathMarks=Readonly<{successes:readonly [boolean,boolean,boolean];failures:readonly [boolean,boolean,boolean]}>;
 export type WizardLevelOneState=Readonly<{
  hitPointsCurrent:number;temporaryHitPoints:number;heroicInspiration:boolean;magic:WizardMagicState;
  /** Registro manual opcional para mantener la compatibilidad con guardados de la 48. */
  manualDeathMarks?:WizardDeathMarks;
+ /** Marcas individuales de ranura gastada: opcionales por compatibilidad con la actualización 48. */
+ slotMarks?:readonly boolean[];
 }>;
 export function initialWizardOneState(input:GuidedWizardInput):WizardLevelOneState{
  const sheet=calculateGuidedWizardOne(input);
@@ -143,7 +163,7 @@ export function initialWizardOneState(input:GuidedWizardInput):WizardLevelOneSta
 export function validateWizardOneState(raw:unknown,sheet:WizardLevelOneView):WizardLevelOneState{
  if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new RangeError('Estado de Mago inválido');
  const state=raw as Record<string,unknown>;
- if(Object.keys(state).some(k=>!['hitPointsCurrent','temporaryHitPoints','heroicInspiration','magic','manualDeathMarks'].includes(k)))throw new RangeError('Estado de Mago contiene datos desconocidos');
+ if(Object.keys(state).some(k=>!['hitPointsCurrent','temporaryHitPoints','heroicInspiration','magic','manualDeathMarks','slotMarks'].includes(k)))throw new RangeError('Estado de Mago contiene datos desconocidos');
  const hp=state.hitPointsCurrent,tp=state.temporaryHitPoints;
  if(!Number.isInteger(hp)||(hp as number)<0||(hp as number)>sheet.maximumHitPoints||!Number.isInteger(tp)||(tp as number)<0||(tp as number)>10000||typeof state.heroicInspiration!=='boolean')throw new RangeError('PG o inspiración del Mago inválidos');
  const magic=state.magic as WizardMagicState;
@@ -159,7 +179,10 @@ export function validateWizardOneState(raw:unknown,sheet:WizardLevelOneView):Wiz
   if(!validTrack(marks.successes)||!validTrack(marks.failures))throw new RangeError('Los marcadores manuales requieren tres booleanos por grupo');
   manualDeathMarks={successes:[...marks.successes],failures:[...marks.failures]};
  }
- return {hitPointsCurrent:hp as number,temporaryHitPoints:tp as number,heroicInspiration:state.heroicInspiration,magic:{slots,arcaneRecoveryUsed:magic.arcaneRecoveryUsed,overchannelUses:0,signatureUsed:[]},...(manualDeathMarks?{manualDeathMarks}:{})};
+ const marks=state.slotMarks;
+ if(marks!==undefined&&(!Array.isArray(marks)||marks.length!==2||marks.some(value=>typeof value!=='boolean')||marks.filter(Boolean).length!==2-slots.remaining[0]))
+  throw new RangeError('Las marcas de espacios de conjuro no coinciden con las ranuras disponibles');
+ return {hitPointsCurrent:hp as number,temporaryHitPoints:tp as number,heroicInspiration:state.heroicInspiration,magic:{slots,arcaneRecoveryUsed:magic.arcaneRecoveryUsed,overchannelUses:0,signatureUsed:[]},...(manualDeathMarks?{manualDeathMarks}:{}),...(marks!==undefined?{slotMarks:[...(marks as boolean[])]}:{})};
 }
 export type WizardCharacterSnapshot=Readonly<{
  schemaVersion:3;ruleset:'dnd-2024';input:GuidedWizardInput;wizardState:WizardLevelOneState;
@@ -168,7 +191,7 @@ export function validateWizardCharacterSnapshot(raw:unknown):WizardCharacterSnap
  if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new RangeError('Guardado de Mago inválido');
  const value=raw as Record<string,unknown>;
  if(value.schemaVersion!==3||value.ruleset!=='dnd-2024'||Object.keys(value).some(k=>!['schemaVersion','ruleset','input','wizardState'].includes(k)))throw new RangeError('Versión o estructura de Mago incorrectas');
- const permitted=['classId','level','name','profile','background','species','assignedAbilities','increaseMode','plusTwoAbility','plusOneAbility','wizardSkills','humanSkill','humanFeat','humanSize','elfLineage','equipmentChoice','cantripIds','spellbookIds','preparedIds'];
+ const permitted=['classId','level','name','profile','background','species','assignedAbilities','increaseMode','plusTwoAbility','plusOneAbility','wizardSkills','humanSkill','humanFeat','humanSize','elfLineage','equipmentChoice','backgroundEquipment','inventoryActions','cantripIds','spellbookIds','preparedIds'];
  if(!value.input||typeof value.input!=='object'||Array.isArray(value.input)||Object.keys(value.input as Record<string,unknown>).some(key=>!permitted.includes(key)))throw new RangeError('La creación de Mago incluye campos desconocidos');
  let clean:GuidedWizardInput;
  try{const json=JSON.stringify(value.input);if(json.length>120_000)throw new Error();clean=JSON.parse(json) as GuidedWizardInput;}catch{throw new RangeError('Datos de Mago demasiado grandes o no serializables');}
@@ -177,6 +200,5 @@ export function validateWizardCharacterSnapshot(raw:unknown):WizardCharacterSnap
  return {schemaVersion:3,ruleset:'dnd-2024',input:clean,wizardState:validateWizardOneState(value.wizardState,sheet)};
 }
 export function makeWizardCharacterSnapshot(input:GuidedWizardInput,state?:WizardLevelOneState):WizardCharacterSnapshot{
- const sheet=calculateGuidedWizardOne(input);
  return validateWizardCharacterSnapshot({schemaVersion:3,ruleset:'dnd-2024',input:{...input,profile:validateCharacterProfile(input.profile??EMPTY_CHARACTER_PROFILE)},wizardState:state??initialWizardOneState(input)});
 }

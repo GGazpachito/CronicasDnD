@@ -865,3 +865,21 @@
 .unified-inspiration .wizard-star{font-size:30px;color:#e9b96b}
 .unified-inspiration input{accent-color:#d6b479}
 @media(max-width:700px){.front-content{margin:5vh auto;padding:0 16px}.front-action-grid{grid-template-columns:1fr;gap:15px}.front-action-card{min-height:200px;padding:24px}.front-character-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}.front-character-portrait{height:170px}}
+
+/* Actualización 49.2: módulos y guardado comunes */
+.save-only-controls{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+.save-only-controls p{margin:0;flex:1;min-width:12rem}
+.save-only-controls button{padding:.7rem 1.3rem;border-radius:.7rem;cursor:pointer}
+.save-only-controls button:disabled{cursor:not-allowed;opacity:.55}
+.spell-diamond-line{display:flex;align-items:center;justify-content:space-between;gap:1.1rem;flex-wrap:wrap;padding:.6rem 0}
+.spell-diamond-label{display:flex;flex-direction:column;gap:.2rem}
+.spell-diamond-label span{font-size:.83rem;opacity:.75}
+.spell-diamonds{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;padding:.4rem}
+.spell-diamond{width:2.05rem;height:2.05rem;border:2px solid currentColor;border-radius:.25rem;background:transparent;transform:rotate(45deg);display:grid;place-items:center;cursor:pointer;transition:background .16s,transform .16s}
+.spell-diamond span{height:55%;width:55%;background:transparent;border-radius:.1rem}
+.spell-diamond.is-spent{background:rgba(176,126,65,.36);border-color:#b48548}
+.spell-diamond.is-spent span{background:#b48548}
+.spell-diamond:hover{transform:rotate(45deg) scale(1.1)}
+.spell-diamond:focus-visible{outline:3px solid #d6ae72;outline-offset:4px}
+.spell-diamond:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:600px){.spell-diamond-line{align-items:flex-start;flex-direction:column}.save-only-controls{align-items:stretch;flex-direction:column}.save-only-controls button{width:100%}}

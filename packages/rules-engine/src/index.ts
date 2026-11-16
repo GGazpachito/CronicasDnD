@@ -43,3 +43,8 @@ export * from './epic-boons';
 // Actualización 47: núcleo de magia reutilizable y clase Mago/Evocación.
 export * from './spellcasting-core';
 export * from './wizard';
+
+// Actualización 50: inventario de clase y marcadores de ranuras sobre módulos comunes.
+export * from './wizard-inventory';
+export * from './wizard-slot-marks';
+export * from './wizard-traits';

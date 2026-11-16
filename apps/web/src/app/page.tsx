@@ -8,7 +8,7 @@ export default function Home(){
     <Link href="/create" className="front-action-card"><span className="front-action-symbol" aria-hidden="true">✦</span><h2>Crear personaje</h2><p>Elige una clase y empieza en el nivel 1.</p><strong>Empezar creación</strong></Link>
     <Link href="/load" className="front-action-card"><span className="front-action-symbol" aria-hidden="true">▣</span><h2>Cargar personaje</h2><p>Recupera tus aventureros de PostgreSQL con su retrato y sus datos.</p><strong>Ver personajes</strong></Link>
    </div>
-   <p className="front-smallprint">Los personajes se guardan únicamente cuando confirmas «Guardar» o «Actualizar guardado» en su hoja.</p>
+   <p className="front-smallprint">Los personajes se guardan únicamente cuando confirmas «Guardar personaje» o «Guardar cambios» en su hoja.</p>
   </div>
  </main>;
 }

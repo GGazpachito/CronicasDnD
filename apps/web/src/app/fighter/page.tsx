@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {EPIC_BOONS,type EpicBoonId} from "../../../../../packages/rules-engine/src/epic-boons";
 import SaveLoadPanel from "../../components/SaveLoadPanel";
@@ -27,7 +26,7 @@ import {conditionCapabilities,initialConditionLedger} from "../../../../../packa
 import type { WeaponAttackProfile,AttackResolution } from "../../../../../packages/rules-engine/src/attacks";
 import type {MasteryContext} from "../../../../../packages/rules-engine/src/mastery-effects";
 import { initialAdventureState, validateAdventureState, updateAdventureCombat, type AdventureState } from "../../../../../packages/rules-engine/src/adventure";
-import type { CharacterSnapshot } from "../../../../../packages/rules-engine/src/persistence";
+import {makeCharacterSnapshot,validateCharacterSnapshot,type CharacterSnapshot} from "../../../../../packages/rules-engine/src/persistence";
 import { EMPTY_CHARACTER_PROFILE, validateCharacterProfile, type CharacterProfile } from "../../../../../packages/rules-engine/src/character-profile";
 import { calculateGuidedFighter, BACKGROUNDS, SPECIES_NAMES, FIGHTER_SKILL_OPTIONS, HUMAN_FEATS, type BackgroundId, type SpeciesId, type ElfLineage, type GuidedFighterInput, type HumanOriginFeat } from "../../../../../packages/rules-engine/src/guided";
 import { adjacentFighterLevel, type SupportedFighterLevel } from "../../../../../packages/rules-engine/src/progression";
@@ -60,7 +59,7 @@ function initialForBackground(bg:BackgroundId):{plusTwoAbility:Ability;plusOneAb
 const b=BACKGROUNDS[bg];return {plusTwoAbility:b.abilities[0] as Ability,plusOneAbility:b.abilities[1] as Ability,fighterSkills:validSkills(bg).slice(0,2)};
 }
 export default function Home(){
-  const router=useRouter();
+  const pendingSaveNavigation=useRef(false);
   const [step,setStep]=useState(0);
   const [activeTab,setActiveTab]=useState<SheetTab>("principal");
   const editorDetailsRef=useRef<HTMLDetailsElement>(null);
@@ -299,19 +298,13 @@ export default function Home(){
         ?.scrollIntoView({behavior:'smooth',block:'start'});
     });
   }
-  function openWizardCreator(){
-    if(window.confirm('Cambiar al creador de Mago abrirá otra hoja. Este cambio no convierte a tu Guerrero en Mago. Guarda primero los cambios pendientes. ¿Continuar?')){
-      router.push('/wizard?new=1');
-    }
-  }
   function openExistingTools(target:"attacks"|"resources") {
     toolsDetailsRef.current?.setAttribute("open", "");
     window.requestAnimationFrame(()=>document.getElementById(target==="attacks"?"existing-attacks-panel":"existing-play-tools")?.scrollIntoView({behavior:"smooth",block:"start"}));
   }
   return <main className="app-shell">
-    <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Hoja digital · D&D 2024</span></div></div><div className="status"><Link href="/" className="wizard-class-link">Menú de personajes</Link><span className="status-dot"/> Edición local · Guardado manual</div></header>
+    <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Hoja digital · D&D 2024</span></div></div><div className="status"><Link href="/" className="wizard-class-link" onNavigate={event=>{if(pendingSaveNavigation.current&&!window.confirm("Tienes cambios sin guardar. ¿Descartarlos y volver al menú?"))event.preventDefault();}}>Menú de personajes</Link><span className="status-dot"/> Edición local · Guardado manual</div></header>
     <div className="content">
-      <div className="class-switcher"><label htmlFor="class-choice">Clase</label><select id="class-choice" value="fighter" onChange={e=>{if(e.target.value==='wizard')openWizardCreator();}}><option value="fighter">Guerrero</option><option value="wizard">Mago (nivel 1)</option></select><span>Ambas clases se guardan en Mis personajes.</span></div>
       <p className="sheet-release-note">HOJA DE PERSONAJE · D&D 2024 · GUERRERO</p>
       <CharacterHeader
         name={name}
@@ -326,7 +319,11 @@ export default function Home(){
       {levelWizardOpen&&level<20&&<LevelUpWizard
         input={input} adventure={adventure} outOfSync={sessionCheck.outOfSync}
         onClose={()=>setLevelWizardOpen(false)} onConfirmed={confirmWizardLevelUp}/>}
-      <SaveLoadPanel input={input} adventure={sessionCheck.outOfSync?null:sessionCheck.state} valid={Boolean(output.result&&!sessionCheck.outOfSync)} onLoad={loadSavedSnapshot}/>
+      <SaveLoadPanel characterClass="fighter"
+        snapshot={output.result&&!sessionCheck.outOfSync&&sessionCheck.state?makeCharacterSnapshot(input,sessionCheck.state):null}
+        validate={validateCharacterSnapshot} onLoad={loadSavedSnapshot}
+        normalize={saved=>makeCharacterSnapshot(saved.input,saved.adventure)}
+        onPendingChange={pending=>{pendingSaveNavigation.current=pending;}}/>
       <CharacterTabs activeTab={activeTab} onChange={setActiveTab}/>
       <section id="sheet-panel-principal" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-principal" hidden={activeTab!=='principal'}>
         <div className="sheet-section-heading"><div><span className="eyebrow">PÁGINA PRINCIPAL</span><h2>Tu hoja de personaje</h2><p>Valores calculados por el motor, tiradas manuales y gestión directa del estado de partida.</p></div></div>
@@ -355,8 +352,6 @@ export default function Home(){
           <div className="panel-heading"><div><span className="eyebrow">PASO {step+1} DE {STEPS.length}</span><h2>{STEPS[step]}</h2></div><span className="step-marker">MVP</span></div>
           {step===0&&<>
             <label className="field"><span>Nombre del personaje</span><input value={name} maxLength={120} onChange={e=>setName(e.target.value)}/></label>
-            <label className="field"><span>Clase</span><select aria-label="Clase del personaje" value="fighter" onChange={e=>{if(e.target.value==='wizard')openWizardCreator();}}><option value="fighter">Guerrero</option><option value="wizard">Mago (nivel 1)</option></select></label>
-            <p className="muted-note">El Mago dispone de un creador propio para sus hechizos y ranuras. Al seleccionarlo se abrirá su hoja, sin convertir ni sobrescribir este Guerrero.</p>
             <div className="field"><span className="field-label">Nivel del personaje</span>
               <div id="fighter-level-stepper" className="level-stepper" role="group" aria-label="Cambiar nivel del Guerrero">
                 <button type="button" className="level-stepper-arrow" aria-label="Bajar un nivel" title="Bajar un nivel" disabled={adjacentFighterLevel(level,-1)===null}
@@ -527,7 +522,7 @@ export default function Home(){
                 <span>{MAGIC_WARD_CATALOG[it.itemId].label}{it.armorId?` (${INVENTORY_NAMES[it.armorId]})`:''}{it.weaponId?` (${WEAPONS[it.weaponId].name})`:''}{it.enhancement?` +${it.enhancement}`:''}{it.damageType?` (${it.damageType})`:''}<small className="item-origin">Objeto mágico recibido del DM · {it.worn?(it.itemId==='weapon_enhancement'?'Preparada':'Puesto'):'Guardado'} · {it.attuned?'Vinculado':MAGIC_WARD_CATALOG[it.itemId].attunement?'Sin vincular':'Sin vinculación requerida'}</small></span><strong>×1</strong>
               </div>)}</div>}
               <p className="muted-note">Equipo efectivo: {armor?INVENTORY_NAMES[armor]:'sin armadura'} · Escudo: {shield?'sí':'no'} · La CA se recalcula al equipar o desequipar. Los objetos mágicos reemplazan la pieza mundana correspondiente.</p>
-              <p className="muted-note">Los paquetes de aventurero siguen siendo un único objeto. El inventario puede guardarse mediante el panel Mis personajes.</p>
+              <p className="muted-note">Los paquetes de aventurero siguen siendo un único objeto. El inventario queda incluido al pulsar Guardar cambios.</p>
             </div>}
             {output.result.spells.length>0&&<div className="preview-section"><div className="section-label"><h3>Conjuros de origen</h3><span>{output.result.spells.length} concedidos</span></div><div className="spell-list">{output.result.spells.map((sp,i)=><div className="spell-entry" key={`${sp.source}-${sp.id}-${i}`}><div><strong>{sp.name}</strong><small>{sp.source==='background'?'Trasfondo':sp.source==='human_feat'?'Dote humana':'Linaje élfico'} · {sp.level===0?'Truco':'Nivel 1'} · {NAMES[sp.spellcastingAbility]}</small></div>{sp.freeCastPerLongRest&&<span className="mode-chip">1 gratis / descanso largo</span>}</div>)}</div><p className="muted-note">Los conjuros están validados y registrados; sus tiradas, efectos y usos consumidos aún no se ejecutan.</p></div>}
             <div className="preview-section pending-section"><div className="section-label"><h3>Automatizaciones pendientes</h3><span>{output.result.pendingAutomation.length}</span></div><ul className="feature-list">{output.result.pendingAutomation.map((p,i)=><li key={i}>{p}</li>)}</ul></div>
