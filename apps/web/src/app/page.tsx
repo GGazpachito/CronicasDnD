@@ -293,6 +293,11 @@ export default function Home(){
         ?.scrollIntoView({behavior:'smooth',block:'start'});
     });
   }
+  function openWizardCreator(){
+    if(window.confirm('Cambiar al creador de Mago abrirá otra hoja. Este cambio no convierte a tu Guerrero en Mago. Guarda primero los cambios pendientes. ¿Continuar?')){
+      router.push('/wizard');
+    }
+  }
   function openExistingTools(target:"attacks"|"resources") {
     toolsDetailsRef.current?.setAttribute("open", "");
     window.requestAnimationFrame(()=>document.getElementById(target==="attacks"?"existing-attacks-panel":"existing-play-tools")?.scrollIntoView({behavior:"smooth",block:"start"}));
@@ -300,7 +305,7 @@ export default function Home(){
   return <main className="app-shell">
     <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Hoja digital · D&D 2024</span></div></div><div className="status"><span className="status-dot"/> Edición local · Guardado manual</div></header>
     <div className="content">
-      <div className="class-switcher"><label htmlFor="class-choice">Clase</label><select id="class-choice" value="fighter" onChange={e=>{if(e.target.value==='wizard'&&window.confirm('Cambiar al creador de Mago abrirá otra hoja. Guarda primero los cambios de tu Guerrero. ¿Continuar?'))router.push('/wizard');}}><option value="fighter">Guerrero</option><option value="wizard">Mago (nivel 1)</option></select><span>Ambas clases se guardan en Mis personajes.</span></div>
+      <div className="class-switcher"><label htmlFor="class-choice">Clase</label><select id="class-choice" value="fighter" onChange={e=>{if(e.target.value==='wizard')openWizardCreator();}}><option value="fighter">Guerrero</option><option value="wizard">Mago (nivel 1)</option></select><span>Ambas clases se guardan en Mis personajes.</span></div>
       <p className="sheet-release-note">HOJA DE PERSONAJE · D&D 2024 · GUERRERO</p>
       <CharacterHeader
         name={name}
@@ -344,7 +349,8 @@ export default function Home(){
           <div className="panel-heading"><div><span className="eyebrow">PASO {step+1} DE {STEPS.length}</span><h2>{STEPS[step]}</h2></div><span className="step-marker">MVP</span></div>
           {step===0&&<>
             <label className="field"><span>Nombre del personaje</span><input value={name} maxLength={120} onChange={e=>setName(e.target.value)}/></label>
-            <div className="field"><span className="field-label">Clase</span><div className="info-line">Guerrero (única clase disponible en esta versión)</div></div>
+            <label className="field"><span>Clase</span><select aria-label="Clase del personaje" value="fighter" onChange={e=>{if(e.target.value==='wizard')openWizardCreator();}}><option value="fighter">Guerrero</option><option value="wizard">Mago (nivel 1)</option></select></label>
+            <p className="muted-note">El Mago dispone de un creador propio para sus hechizos y ranuras. Al seleccionarlo se abrirá su hoja, sin convertir ni sobrescribir este Guerrero.</p>
             <div className="field"><span className="field-label">Nivel del personaje</span>
               <div id="fighter-level-stepper" className="level-stepper" role="group" aria-label="Cambiar nivel del Guerrero">
                 <button type="button" className="level-stepper-arrow" aria-label="Bajar un nivel" title="Bajar un nivel" disabled={adjacentFighterLevel(level,-1)===null}

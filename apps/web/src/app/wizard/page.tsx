@@ -151,10 +151,14 @@ export default function WizardPage(){
   });
  }
  const proficiencies=sheet?.skillProficiencies??[];
+ function openFighterCreator(){
+  if(pending&&!window.confirm('Tienes cambios de este Mago sin guardar. ¿Volver al creador de Guerrero y descartarlos?'))return;
+  router.push('/');
+ }
  return <main className="app-shell wizard-page">
   <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Mago · D&D 2024</span></div></div><Link href="/" className="wizard-class-link" onNavigate={event=>{if(pending&&!window.confirm("Tienes cambios de este Mago sin guardar. ¿Volver a Guerrero y descartarlos?"))event.preventDefault();}}>Volver a Guerrero</Link></header>
   <div className="content">
-   <div className="class-switcher"><label htmlFor="wizard-class-choice">Clase</label><select id="wizard-class-choice" value="wizard" onChange={(e:{target:{value:string}})=>{if(e.target.value==='fighter'&&window.confirm('Abrir la hoja del Guerrero puede descartar cambios no guardados de este Mago. ¿Continuar?'))router.push('/');}}><option value="fighter">Guerrero</option><option value="wizard">Mago (nivel 1)</option></select><span>Evocación estará disponible desde el nivel 3.</span></div>
+   <div className="class-switcher"><label htmlFor="wizard-class-choice">Clase</label><select id="wizard-class-choice" value="wizard" onChange={(e:{target:{value:string}})=>{if(e.target.value==='fighter')openFighterCreator();}}><option value="fighter">Guerrero</option><option value="wizard">Mago (nivel 1)</option></select><span>Evocación estará disponible desde el nivel 3.</span></div>
    <p className="sheet-release-note">CLASE · MAGO NIVEL 1 · PHB 2024</p>
    <div className="wizard-identity panel"><div><span className="eyebrow">HOJA DE PERSONAJE</span><h1>{input.name||'Mago sin nombre'}</h1><p>{background.name} · {SPECIES_NAMES[input.species]} · Mago 1</p></div><div className="wizard-identity-actions"><button type="button" onClick={()=>setEditing(v=>!v)}>{editing?'Cerrar creador':'Editar personaje'}</button><span className="roundel">1</span></div></div>
    <section className="save-panel panel" aria-label="Guardado de Magos">
@@ -171,6 +175,8 @@ export default function WizardPage(){
     <div className="wizard-editor-grid">
      <div>
       <label className="field"><span>Nombre</span><input maxLength={120} value={input.name} onChange={(e:{target:{value:string}})=>patch({name:e.target.value})}/></label>
+      <label className="field"><span>Clase</span><select aria-label="Clase del personaje" value="wizard" onChange={(e:{target:{value:string}})=>{if(e.target.value==='fighter')openFighterCreator();}}><option value="fighter">Guerrero</option><option value="wizard">Mago (nivel 1)</option></select></label>
+      <p className="muted-note">El Guerrero utiliza su hoja de creación propia. Al cambiar de clase no se convierten los atributos ni conjuros de este Mago.</p>
       <label className="field"><span>Trasfondo</span><select value={input.background} onChange={(e:{target:{value:string}})=>changeBackground(e.target.value as BackgroundId)}>{options(Object.keys(BACKGROUNDS) as BackgroundId[],b=>BACKGROUNDS[b].name)}</select></label>
       <label className="field"><span>Especie</span><select value={input.species} onChange={(e:{target:{value:string}})=>changeSpecies(e.target.value as SpeciesId)}>{options(Object.keys(SPECIES_NAMES) as SpeciesId[],s=>SPECIES_NAMES[s])}</select></label>
       {input.species==='elf'&&<label className="field"><span>Linaje élfico</span><select value={input.elfLineage} onChange={(e:{target:{value:string}})=>patch({elfLineage:e.target.value as NonNullable<GuidedWizardInput['elfLineage']>})}><option value="high_elf">Alto elfo</option><option value="wood_elf">Elfo silvano</option><option value="drow">Drow</option></select></label>}
