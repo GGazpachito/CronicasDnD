@@ -4,7 +4,7 @@
 import {SPECIES_NAMES,BACKGROUNDS} from './guided';
 import {ORIGIN_FEATS} from './origin-feats';
 import {ORIGIN_FEAT_EXPLANATIONS,SPECIES_TRAIT_EXPLANATIONS} from './rules-explanations';
-import {WIZARD_FEATURES} from './wizard';
+import {WIZARD_FEATURES,EVOKER_FEATURES} from './wizard';
 import type {CharacterTrait,TraitCollection} from './traits';
 import type {GuidedWizardInput,WizardLevelOneView} from './wizard-creation';
 export function collectWizardTraits(input:GuidedWizardInput,view:WizardLevelOneView):TraitCollection{
@@ -15,6 +15,20 @@ export function collectWizardTraits(input:GuidedWizardInput,view:WizardLevelOneV
   for(const feature of WIZARD_FEATURES.filter(feature=>feature.level<=input.level)){
     add(`wizard:${feature.id}`,feature.title,'Mago','class',feature.description,feature.description,
       feature.id==='spellcasting'?'calculated':'partial',feature.id==='spellcasting'?[`CD de salvación: ${view.spellSaveDC}. Ataque mágico: ${view.spellAttackBonus>=0?'+':''}${view.spellAttackBonus}.`]:[]);
+  }
+  if(input.level>=2&&input.scholarSkill){
+    const names:Record<string,string>={arcana:'Arcanos',history:'Historia',investigation:'Investigación',medicine:'Medicina',nature:'Naturaleza',religion:'Religión'};
+    add('wizard:scholar_expertise',`Pericia: ${names[input.scholarSkill]}`,'Mago','class',
+      `Doblas la competencia en ${names[input.scholarSkill]}.`,
+      'El rasgo Erudito permite elegir una habilidad académica en la que ya seas competente y duplicar el bonificador de competencia para sus pruebas.','calculated',
+      [`Bonificador actual: ${view.skillBonuses[input.scholarSkill]>=0?'+':''}${view.skillBonuses[input.scholarSkill]}.`]);
+  }
+  if(input.level>=3&&input.subclass==='evoker'){
+    for(const feature of EVOKER_FEATURES.filter(f=>f.level<=input.level)){
+      add(`evoker:${feature.id}`,feature.title,'Evocación','subclass',feature.description,feature.description,
+        feature.id==='evocation_savant'?'calculated':'manual',
+        feature.id==='evocation_savant'?[`Conjuros gratuitos: ${(input.evokerBonusSpellIds??[]).join(', ')}.`]:[]);
+    }
   }
   const origin=SPECIES_NAMES[input.species];
   const speciesTraits:Record<string,readonly [string,string,string][]>={

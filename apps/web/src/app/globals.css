@@ -877,9 +877,22 @@
 .spell-diamonds{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;padding:.4rem}
 .spell-diamond{width:2.05rem;height:2.05rem;border:2px solid currentColor;border-radius:.25rem;background:transparent;transform:rotate(45deg);display:grid;place-items:center;cursor:pointer;transition:background .16s,transform .16s}
 .spell-diamond span{height:55%;width:55%;background:transparent;border-radius:.1rem}
-.spell-diamond.is-spent{background:rgba(176,126,65,.36);border-color:#b48548}
-.spell-diamond.is-spent span{background:#b48548}
+.spell-diamond.is-available{background:rgba(176,126,65,.36);border-color:#b48548}
+.spell-diamond.is-available span{background:#b48548}
 .spell-diamond:hover{transform:rotate(45deg) scale(1.1)}
 .spell-diamond:focus-visible{outline:3px solid #d6ae72;outline-offset:4px}
 .spell-diamond:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:600px){.spell-diamond-line{align-items:flex-start;flex-direction:column}.save-only-controls{align-items:stretch;flex-direction:column}.save-only-controls button{width:100%}}
+/* Actualización 51: asistente de progresión sobre la hoja compartida */
+.wizard-level-controls{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin:.75rem 0 1rem}
+.wizard-level-controls span{font-size:.82rem;opacity:.7}
+.wizard-level-controls button{padding:.65rem 1.1rem;border-radius:.55rem;border:1px solid #a77a48;background:#372b20;color:#f4e6c8;cursor:pointer}
+.wizard-level-controls button:disabled{opacity:.5;cursor:default}
+.wizard-level-up{position:relative;z-index:3;margin:1rem 0 1.3rem;border:2px solid #b48548}
+.wizard-level-up-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:1.25rem;margin:.9rem 0}
+.wizard-upgrade-summary,.wizard-upgrade-preview{padding:1rem;border-radius:.65rem;background:rgba(176,126,65,.12);margin:1rem 0}
+.wizard-upgrade-summary>div{margin:.65rem 0}.wizard-upgrade-summary p,.wizard-upgrade-preview p{margin:.3rem 0;font-size:.9rem}
+.wizard-level-up-skill{max-width:390px}
+.wizard-level-up-prepared{max-height:240px;overflow-y:auto}
+
+.wizard-progression-hint{font-size:.85rem;opacity:.73;margin:.25rem 0 .75rem}

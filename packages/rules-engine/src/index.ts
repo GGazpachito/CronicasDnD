@@ -48,3 +48,6 @@ export * from './wizard';
 export * from './wizard-inventory';
 export * from './wizard-slot-marks';
 export * from './wizard-traits';
+
+// Actualización 51: progresión transaccional de Mago, niveles 2 y 3.
+export * from './wizard-level-up';

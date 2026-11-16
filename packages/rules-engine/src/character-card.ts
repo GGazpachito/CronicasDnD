@@ -9,7 +9,7 @@ export function getCharacterCardDetails(snapshot:CharacterSnapshot|WizardCharact
  const isWizard=snapshot.schemaVersion===3;
  return {
   species,
-  subclass:isWizard?null:(input.level>=3?'Campeón':null),
+  subclass:isWizard?(input.level>=3?'Evocación':null):(input.level>=3?'Campeón':null),
   portraitDataUrl:input.profile?.portraitDataUrl||undefined,
  };
 }
