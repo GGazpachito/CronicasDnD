@@ -4,6 +4,7 @@
  */
 import {WIZARD_LEVEL_ONE_CANTRIPS,WIZARD_SPELL_CATALOG} from './wizard-creation';
 import {WIZARD_LEVEL_THREE_SPELLS} from './wizard-third-level';
+import {WIZARD_LEVEL_FOUR_SPELLS} from './wizard-fourth-level';
 export type SpellDice=Readonly<{label:string;formula:string;scales?:boolean}>;
 export type WizardSpellRule=Readonly<{id:string;name:string;level:number;school:string;ritual?:boolean;description:string;castingTime?:string;range?:string;components?:string;duration?:string;sourcePage?:number;attack:boolean;rolls:readonly SpellDice[];cantripScales:boolean}>;
 const descriptions:Record<string,string>={
@@ -937,7 +938,9 @@ const source:Record<string,Partial<WizardSpellRule>>={
   "duration": "Concentration, up to 1 hour"
  }
 };
-export const WIZARD_SPELL_RULES:readonly WizardSpellRule[]=([ ...WIZARD_LEVEL_ONE_CANTRIPS,...WIZARD_SPELL_CATALOG ] as readonly {id:string;name:string;level:number;school:string;ritual?:boolean}[]).map(spell=>({ ...spell,description:WIZARD_LEVEL_THREE_SPELLS.find(detail=>detail.id===spell.id)?.description??descriptions[spell.id],...source[spell.id],...WIZARD_LEVEL_THREE_SPELLS.find(detail=>detail.id===spell.id),attack:WIZARD_LEVEL_THREE_SPELLS.find(detail=>detail.id===spell.id)?.attack??attacks.has(spell.id),rolls:WIZARD_LEVEL_THREE_SPELLS.find(detail=>detail.id===spell.id)?.rolls??dice[spell.id]??[],cantripScales:scaling.has(spell.id)}));
+const EXTENDED_WIZARD_SPELLS=[...WIZARD_LEVEL_THREE_SPELLS,...WIZARD_LEVEL_FOUR_SPELLS];
+const extendedWizardSpell=(id:string)=>EXTENDED_WIZARD_SPELLS.find(detail=>detail.id===id);
+export const WIZARD_SPELL_RULES:readonly WizardSpellRule[]=([ ...WIZARD_LEVEL_ONE_CANTRIPS,...WIZARD_SPELL_CATALOG ] as readonly {id:string;name:string;level:number;school:string;ritual?:boolean}[]).map(spell=>({ ...spell,description:extendedWizardSpell(spell.id)?.description??descriptions[spell.id],...source[spell.id],...extendedWizardSpell(spell.id),attack:extendedWizardSpell(spell.id)?.attack??attacks.has(spell.id),rolls:extendedWizardSpell(spell.id)?.rolls??dice[spell.id]??[],cantripScales:scaling.has(spell.id)}));
 const rules=new Map(WIZARD_SPELL_RULES.map(spell=>[spell.id,spell]));
 export function wizardSpellRule(id:string):WizardSpellRule|undefined{return rules.get(id);}
 /** El dano de trucos basados en dados escala en 5/11/17; algunas excepciones no se automatizan. */

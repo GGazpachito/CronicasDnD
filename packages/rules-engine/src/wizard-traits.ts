@@ -27,7 +27,7 @@ export function collectWizardTraits(input:GuidedWizardInput,view:WizardLevelOneV
     for(const feature of EVOKER_FEATURES.filter(f=>f.level<=input.level)){
       add(`evoker:${feature.id}`,feature.title,'Evocación','subclass',feature.description,feature.description,
         feature.id==='evocation_savant'?'calculated':'manual',
-        feature.id==='evocation_savant'?[`Conjuros gratuitos: ${[...(input.evokerBonusSpellIds??[]),...(input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[])].join(', ')}.`]:[]);
+        feature.id==='evocation_savant'?[`Conjuros gratuitos: ${[...(input.evokerBonusSpellIds??[]),...(input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[]),...(input.evokerLevelFourSpellId?[input.evokerLevelFourSpellId]:[])].join(', ')}.`]:[]);
     }
   }
   const origin=SPECIES_NAMES[input.species];

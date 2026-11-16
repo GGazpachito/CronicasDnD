@@ -33,7 +33,7 @@ describe('Actualización 52: progresión de Mago niveles 4 y 5',()=>{
    expect(wizardSpellRule(spell.id)?.sourcePage).toBe(spell.sourcePage);
   }
   expect(WIZARD_SPELL_CATALOG.filter(s=>s.level===3)).toHaveLength(32);
-  expect(WIZARD_SPELL_RULES).toHaveLength(122);
+  expect(WIZARD_SPELL_RULES).toHaveLength(151);
  });
  it('Bola de fuego, Rayo relampagueante y Toque vampírico tienen dados base y datos de consulta',()=>{
   expect(wizardSpellRule('fireball')?.rolls[0]?.formula).toBe('8d6');
@@ -190,9 +190,10 @@ describe('Actualización 52: progresión de Mago niveles 4 y 5',()=>{
   expect(traits.traits.map(t=>t.title)).toContain('Memorizar conjuro');
   expect(traits.traits.map(t=>t.title)).toContain('Mejora de característica');
  });
- it('la progresión no salta niveles y bloquea el 6 hasta la siguiente entrega',()=>{
+ it('la progresión sigue siendo consecutiva y la fase 53 habilita el siguiente nivel',()=>{
   expect(wizardLevelUpChoicesPreview(to4().input)?.nextLevel).toBe(5);
-  expect(wizardLevelUpChoicesPreview(to5().input)).toBe(null);
-  const five=to5();expect(()=>prepareWizardLevelUp(five.input,five.state,fiveChoices(five.input))).toThrow();
+  expect(wizardLevelUpChoicesPreview(to5().input)?.nextLevel).toBe(6);
+  const five=to5();
+  expect(()=>prepareWizardLevelUp(five.input,five.state,fiveChoices(five.input))).toThrow();
  });
 });

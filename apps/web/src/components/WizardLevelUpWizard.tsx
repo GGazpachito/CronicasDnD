@@ -23,6 +23,7 @@ export default function WizardLevelUpWizard({input,state,mode,onConfirm,onCancel
  const [newSpells,setNewSpells]=useState<string[]>([]);
  const [bonusSpells,setBonusSpells]=useState<string[]>([]);
  const [bonusFive,setBonusFive]=useState('');
+ const [bonusSeven,setBonusSeven]=useState('');
  const [newCantrip,setNewCantrip]=useState('');
  const [improvement,setImprovement]=useState<WizardLevel4Improvement>({mode:'plus_two',first:'intelligence'});
  const [prepared,setPrepared]=useState<string[]>([...input.preparedIds]);
@@ -30,22 +31,23 @@ export default function WizardLevelUpWizard({input,state,mode,onConfirm,onCancel
  const [manualError,setManualError]=useState('');
  const submitting=useRef(false);
  const plan=wizardLevelUpChoicesPreview(input);
- const spellLevel=next>=5?3:next>=3?2:1;
+ const spellLevel=next>=7?4:next>=5?3:next>=3?2:1;
  const choices=useMemo(()=>{
   try{return {result:prepareWizardLevelUp(input,state,{newSpellIds:newSpells as unknown as [string,string],preparedIds:prepared,
    ...(next===2?{scholarSkill}:{}),...(next===3?{evokerBonusSpellIds:bonusSpells as [string,string]}:{}),
    ...(next===4?{newCantripId:newCantrip,level4Improvement:improvement}:{}),
-   ...(next===5?{evokerLevelThreeSpellId:bonusFive}:{})}),error:''};}
+   ...(next===5?{evokerLevelThreeSpellId:bonusFive}:{}),...(next===7?{evokerLevelFourSpellId:bonusSeven}:{})}),error:''};}
   catch(e){return {result:null,error:e instanceof Error?e.message:'Elecciones incompletas'};}
- },[input,state,newSpells,prepared,next,scholarSkill,bonusSpells,newCantrip,improvement,bonusFive]);
+ },[input,state,newSpells,prepared,next,scholarSkill,bonusSpells,newCantrip,improvement,bonusFive,bonusSeven]);
  if(!plan)return null;
- const alreadyKnown=new Set([...input.spellbookIds,...input.evokerBonusSpellIds??[],...(input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[])]);
+ const alreadyKnown=new Set([...input.spellbookIds,...input.evokerBonusSpellIds??[],...(input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[]),...(input.evokerLevelFourSpellId?[input.evokerLevelFourSpellId]:[])]);
  const search=spellFilter.trim().toLocaleLowerCase('es');
  const matches=(spell:(typeof WIZARD_SPELL_CATALOG)[number])=>!search||`${spell.name} ${spell.school}`.toLocaleLowerCase('es').includes(search);
  const list=WIZARD_SPELL_CATALOG.filter(spell=>spell.level<=spellLevel&&!alreadyKnown.has(spell.id)&&matches(spell));
  const bonusThree=WIZARD_SPELL_CATALOG.filter(spell=>spell.level<=2&&spell.school==='evocation'&&!alreadyKnown.has(spell.id)&&!newSpells.includes(spell.id)&&matches(spell));
  const bonusFiveOptions=WIZARD_SPELL_CATALOG.filter(spell=>spell.level<=3&&spell.school==='evocation'&&!alreadyKnown.has(spell.id)&&!newSpells.includes(spell.id)&&matches(spell));
- const availablePrepared=new Set([...alreadyKnown,...newSpells,...bonusSpells,...(bonusFive?[bonusFive]:[])]);
+ const bonusSevenOptions=WIZARD_SPELL_CATALOG.filter(spell=>spell.level<=4&&spell.school==='evocation'&&!alreadyKnown.has(spell.id)&&!newSpells.includes(spell.id)&&matches(spell));
+ const availablePrepared=new Set([...alreadyKnown,...newSpells,...bonusSpells,...(bonusFive?[bonusFive]:[]),...(bonusSeven?[bonusSeven]:[])]);
  const spellOptions=WIZARD_SPELL_CATALOG.filter(spell=>availablePrepared.has(spell.id)&&matches(spell));
  const nextCore=wizardCoreStatistics(next,current.abilityScores);
  const previousCore=wizardCoreStatistics(input.level,current.abilityScores);
@@ -78,11 +80,12 @@ export default function WizardLevelUpWizard({input,state,mode,onConfirm,onCancel
    <h3>Qué recibes al alcanzar el nivel {next}</h3>
    <ul className="level-wizard-milestones">{plan.features.map(feature=><li key={feature.id}><strong>{feature.title}</strong><p className="level-wizard-explanation">{feature.description}</p></li>)}
     {next===4&&<li><strong>Cuarto truco de Mago</strong><p className="level-wizard-explanation">Aprendes un truco nuevo. Puedes consultarlo antes de elegirlo; no ocupa ranura de conjuro.</p></li>}
+    {next===7&&<li><strong>Experto en Evocación: conjuro gratuito</strong><p className="level-wizard-explanation">Al adquirir ranuras de nivel 4 añades un conjuro gratuito de Evocación de nivel 1 a 4, distinto de los ya conocidos.</p></li>}
     {next===5&&<li><strong>Experto en Evocación: conjuro gratuito</strong><p className="level-wizard-explanation">Al acceder a ranuras de nivel 3 añades gratuitamente un conjuro de Evocación válido a tu libro, además de los dos de la progresión.</p></li>}
-    <li><strong>Libro de conjuros</strong><p className="level-wizard-explanation">Añades dos conjuros nuevos a tu libro{next===3?', más dos Evocaciones gratuitas':next===5?', más una Evocación gratuita':''}. Todos tendrán su ficha y tiradas disponibles.</p></li>
+    <li><strong>Libro de conjuros</strong><p className="level-wizard-explanation">Añades dos conjuros nuevos a tu libro{next===3?', más dos Evocaciones gratuitas':next===5||next===7?', más una Evocación gratuita':''}. Todos tendrán su ficha y tiradas disponibles.</p></li>
     <li><strong>Puntos de golpe y espacios</strong><p className="level-wizard-explanation">Tus PG máximos aumentan al menos en {estimatedHpGain} con las características actuales. {next===4?'La mejora de Constitución puede modificar también los PG de niveles anteriores. ':''}Conservas daño y ranuras gastadas; las nuevas empiezan disponibles.</p></li>
    </ul>
-   <div className="level-wizard-stats"><div className="level-wizard-stat"><span>PG máximos (sin nuevas elecciones)</span><strong>{current.maximumHitPoints} → {current.maximumHitPoints+estimatedHpGain}</strong></div><div className="level-wizard-stat"><span>Competencia</span><strong>+{previousCore.proficiencyBonus} → +{nextCore.proficiencyBonus}</strong></div><div className="level-wizard-stat"><span>Preparados reglamentarios</span><strong>{input.preparedIds.length} → {plan.progression.preparedSpellCount}</strong></div><div className="level-wizard-stat"><span>Trucos conocidos</span><strong>{input.cantripIds.length} → {plan.progression.cantripsKnown}</strong></div>{[1,2,3].map(l=><div className="level-wizard-stat" key={l}><span>Ranuras nivel {l}</span><strong>{state.magic.slots.maximum[l-1]} → {plan.progression.spellSlots[l-1]}</strong></div>)}<div className="level-wizard-stat"><span>Competencias nuevas</span><strong>{next===2?'Pericia Erudito':'Ninguna'}</strong></div></div>
+   <div className="level-wizard-stats"><div className="level-wizard-stat"><span>PG máximos (sin nuevas elecciones)</span><strong>{current.maximumHitPoints} → {current.maximumHitPoints+estimatedHpGain}</strong></div><div className="level-wizard-stat"><span>Competencia</span><strong>+{previousCore.proficiencyBonus} → +{nextCore.proficiencyBonus}</strong></div><div className="level-wizard-stat"><span>Preparados reglamentarios</span><strong>{input.preparedIds.length} → {plan.progression.preparedSpellCount}</strong></div><div className="level-wizard-stat"><span>Trucos conocidos</span><strong>{input.cantripIds.length} → {plan.progression.cantripsKnown}</strong></div>{[1,2,3,4].map(l=><div className="level-wizard-stat" key={l}><span>Ranuras nivel {l}</span><strong>{state.magic.slots.maximum[l-1]} → {plan.progression.spellSlots[l-1]}</strong></div>)}<div className="level-wizard-stat"><span>Competencias nuevas</span><strong>{next===2?'Pericia Erudito':'Ninguna'}</strong></div></div>
    {next===4&&<p className="level-wizard-note">El manual permite elegir dotes alternativas si cumples sus requisitos. El motor solo tiene implementada la dote Mejora de característica para esta subida.</p>}
    <p className="level-wizard-note">Los conjuros se explican en sus desplegables. El jugador decide cuándo lanzar, recuperar ranuras y aplicar los efectos.</p>
   </div>}
@@ -97,9 +100,10 @@ export default function WizardLevelUpWizard({input,state,mode,onConfirm,onCancel
    </fieldset>}
    {next===4&&<fieldset className="level-wizard-fieldset"><legend>Cuarto truco ({newCantrip?1:0}/1)</legend><p className="muted-note">Los trucos se pueden lanzar sin gastar ranuras. Consulta sus efectos antes de elegir.</p><div className="wizard-spell-picker">{WIZARD_LEVEL_ONE_CANTRIPS.filter(spell=>!input.cantripIds.includes(spell.id)).map(spell=>{const details=wizardSpellRule(spell.id);return <div className="wizard-spell-option" key={spell.id}><label><input type="radio" name="wizard-new-cantrip" checked={newCantrip===spell.id} onChange={()=>setNewCantrip(spell.id)}/><span>{spell.name}</span></label>{details&&<WizardSpellDetails spell={details} characterLevel={next} spellAttackBonus={projected?.spellAttackBonus??current.spellAttackBonus} mode={mode}/>}</div>;})}</div></fieldset>}
    <label className="field"><span>Buscar conjuros por nombre o escuela</span><input value={spellFilter} onChange={e=>setSpellFilter(e.target.value)} placeholder="Ej.: fuego, evocación..."/></label>
-   <fieldset className="level-wizard-fieldset"><legend>Dos conjuros nuevos ({newSpells.length}/2)</legend><p className="muted-note">Añádelos al libro. Puedes abrir «Ver reglas y tiradas» en cada opción.</p>{displaySpellChoices(list,newSpells,id=>{setNewSpells(v=>toggle(v,id,2));setBonusSpells(v=>v.filter(x=>x!==id));if(bonusFive===id)setBonusFive('');})}</fieldset>
+   <fieldset className="level-wizard-fieldset"><legend>Dos conjuros nuevos ({newSpells.length}/2)</legend><p className="muted-note">Añádelos al libro. Puedes abrir «Ver reglas y tiradas» en cada opción.</p>{displaySpellChoices(list,newSpells,id=>{setNewSpells(v=>toggle(v,id,2));setBonusSpells(v=>v.filter(x=>x!==id));if(bonusFive===id)setBonusFive('');if(bonusSeven===id)setBonusSeven('');})}</fieldset>
    {next===3&&<fieldset className="level-wizard-fieldset"><legend>Evocación: dos conjuros gratuitos ({bonusSpells.length}/2)</legend><p className="muted-note">Elige dos evocaciones distintas que no estén ya en tu libro.</p>{displaySpellChoices(bonusThree,bonusSpells,id=>setBonusSpells(v=>toggle(v,id,2)))}</fieldset>}
    {next===5&&<fieldset className="level-wizard-fieldset"><legend>Evocación: un conjuro gratuito ({bonusFive?1:0}/1)</legend><p className="muted-note">Al desbloquear ranuras de nivel 3 puedes incorporar otra Evocación de nivel 1, 2 o 3.</p><div className="wizard-spell-picker wizard-spell-choice-list">{bonusFiveOptions.map(spell=>{const details=wizardSpellRule(spell.id);return <div className="wizard-spell-option" key={spell.id}><label><input type="radio" name="wizard-free-evocation" checked={bonusFive===spell.id} onChange={()=>setBonusFive(spell.id)}/><span>{spell.name}</span><small>Nivel {spell.level}</small></label>{details&&<WizardSpellDetails spell={details} characterLevel={next} spellAttackBonus={projected?.spellAttackBonus??current.spellAttackBonus} mode={mode}/>}</div>;})}</div></fieldset>}
+   {next===7&&<fieldset className="level-wizard-fieldset"><legend>Evocación: un conjuro gratuito ({bonusSeven?1:0}/1)</legend><p className="muted-note">Al desbloquear ranuras de nivel 4, elige una Evocación nueva de nivel 1–4, además de los dos conjuros habituales. Consulta las fichas antes de decidir.</p><div className="wizard-spell-picker wizard-spell-choice-list">{bonusSevenOptions.map(spell=>{const details=wizardSpellRule(spell.id);return <div className="wizard-spell-option" key={spell.id}><label><input type="radio" name="wizard-free-evocation-7" checked={bonusSeven===spell.id} onChange={()=>setBonusSeven(spell.id)}/><span>{spell.name}</span><small>Nivel {spell.level}</small></label>{details&&<WizardSpellDetails spell={details} characterLevel={next} spellAttackBonus={projected?.spellAttackBonus??current.spellAttackBonus} mode={mode}/>}</div>;})}</div></fieldset>}
    <fieldset className="level-wizard-fieldset"><legend>Preparación de progresión ({prepared.length}/{plan.progression.preparedSpellCount})</legend><p className="muted-note">Se conserva la preparación anterior. En la pestaña Hechizos puedes marcar libremente conjuros adicionales, sin bloqueo numérico.</p>{displaySpellChoices(spellOptions,prepared,id=>setPrepared(v=>toggle(v,id,plan.progression.preparedSpellCount)),input.preparedIds)}</fieldset>
    {choices.result?<p className="level-wizard-ok">Todas las elecciones de progresión son válidas. Puedes revisar los cambios.</p>:<p className="level-wizard-error" role="status">Pendiente: {choices.error}</p>}
   </div>}
@@ -119,7 +123,7 @@ export default function WizardLevelUpWizard({input,state,mode,onConfirm,onCancel
     {next===4&&<p className="level-wizard-choice-info"><strong>Mejora de característica</strong>{ABILITIES.filter(id=>current.abilityScores[id]!==projected.abilityScores[id]).map(id=>`${ABILITY_NAMES[id]} ${current.abilityScores[id]} → ${projected.abilityScores[id]}`).join(' · ')}</p>}
     <div><h4>Capacidades obtenidas</h4><ul className="level-wizard-small-list">{choices.result.gainedFeatures.map(feature=><li key={feature.title}><strong>{feature.title}</strong><p className="level-wizard-explanation">{feature.description}</p></li>)}</ul></div>
     {next===2&&<p className="level-wizard-choice-info"><strong>Pericia obtenida</strong>{SKILL_NAMES[scholarSkill]}: se duplica la competencia.</p>}
-    <div><h4>Nuevos conjuros y explicación</h4>{[...newSpells,...bonusSpells,...(bonusFive?[bonusFive]:[]),...(newCantrip?[newCantrip]:[])].map(id=>{const spell=wizardSpellRule(id);return spell&&<div key={id} className="level-wizard-choice-info"><strong>{spell.name} · Nivel {spell.level}</strong><p>{spell.description}</p></div>;})}</div>
+    <div><h4>Nuevos conjuros y explicación</h4>{[...newSpells,...bonusSpells,...(bonusFive?[bonusFive]:[]),...(bonusSeven?[bonusSeven]:[]),...(newCantrip?[newCantrip]:[])].map(id=>{const spell=wizardSpellRule(id);return spell&&<div key={id} className="level-wizard-choice-info"><strong>{spell.name} · Nivel {spell.level}</strong><p>{spell.description}</p></div>;})}</div>
     <p className="muted-note">Se preservan daño, equipo, retrato, inspiración y ranuras gastadas. Tras confirmar, pulsa Guardar cambios para actualizar PostgreSQL.</p>
    </>:<p className="level-wizard-error" role="alert">{choices.error}</p>}
    {manualError&&<p className="level-wizard-error" role="alert">{manualError}</p>}
