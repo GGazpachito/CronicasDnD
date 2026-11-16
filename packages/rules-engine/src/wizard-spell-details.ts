@@ -5,6 +5,7 @@
 import {WIZARD_LEVEL_ONE_CANTRIPS,WIZARD_SPELL_CATALOG} from './wizard-creation';
 import {WIZARD_LEVEL_THREE_SPELLS} from './wizard-third-level';
 import {WIZARD_LEVEL_FOUR_SPELLS} from './wizard-fourth-level';
+import {WIZARD_LEVEL_FIVE_SPELLS} from './wizard-fifth-level';
 export type SpellDice=Readonly<{label:string;formula:string;scales?:boolean}>;
 export type WizardSpellRule=Readonly<{id:string;name:string;level:number;school:string;ritual?:boolean;description:string;castingTime?:string;range?:string;components?:string;duration?:string;sourcePage?:number;attack:boolean;rolls:readonly SpellDice[];cantripScales:boolean}>;
 const descriptions:Record<string,string>={
@@ -938,7 +939,7 @@ const source:Record<string,Partial<WizardSpellRule>>={
   "duration": "Concentration, up to 1 hour"
  }
 };
-const EXTENDED_WIZARD_SPELLS=[...WIZARD_LEVEL_THREE_SPELLS,...WIZARD_LEVEL_FOUR_SPELLS];
+const EXTENDED_WIZARD_SPELLS=[...WIZARD_LEVEL_THREE_SPELLS,...WIZARD_LEVEL_FOUR_SPELLS,...WIZARD_LEVEL_FIVE_SPELLS];
 const extendedWizardSpell=(id:string)=>EXTENDED_WIZARD_SPELLS.find(detail=>detail.id===id);
 export const WIZARD_SPELL_RULES:readonly WizardSpellRule[]=([ ...WIZARD_LEVEL_ONE_CANTRIPS,...WIZARD_SPELL_CATALOG ] as readonly {id:string;name:string;level:number;school:string;ritual?:boolean}[]).map(spell=>({ ...spell,description:extendedWizardSpell(spell.id)?.description??descriptions[spell.id],...source[spell.id],...extendedWizardSpell(spell.id),attack:extendedWizardSpell(spell.id)?.attack??attacks.has(spell.id),rolls:extendedWizardSpell(spell.id)?.rolls??dice[spell.id]??[],cantripScales:scaling.has(spell.id)}));
 const rules=new Map(WIZARD_SPELL_RULES.map(spell=>[spell.id,spell]));

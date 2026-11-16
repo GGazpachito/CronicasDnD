@@ -33,7 +33,7 @@ describe('Actualización 52: progresión de Mago niveles 4 y 5',()=>{
    expect(wizardSpellRule(spell.id)?.sourcePage).toBe(spell.sourcePage);
   }
   expect(WIZARD_SPELL_CATALOG.filter(s=>s.level===3)).toHaveLength(32);
-  expect(WIZARD_SPELL_RULES).toHaveLength(151);
+  expect(WIZARD_SPELL_RULES).toHaveLength(180);
  });
  it('Bola de fuego, Rayo relampagueante y Toque vampírico tienen dados base y datos de consulta',()=>{
   expect(wizardSpellRule('fireball')?.rolls[0]?.formula).toBe('8d6');

@@ -27,8 +27,8 @@ describe('Actualización 53: Mago Evocación de niveles 6 y 7',()=>{
  it('lista las 29 opciones de nivel 4 del Manual 2024, todas con ficha, dados cuando proceda y página',()=>{
   expect(WIZARD_LEVEL_FOUR_SPELLS).toHaveLength(29);
   expect(WIZARD_SPELL_CATALOG.filter(s=>s.level===4)).toHaveLength(29);
-  expect(WIZARD_SPELL_RULES).toHaveLength(151);
-  expect(new Set(WIZARD_SPELL_RULES.map(s=>s.id)).size).toBe(151);
+  expect(WIZARD_SPELL_RULES).toHaveLength(180);
+  expect(new Set(WIZARD_SPELL_RULES.map(s=>s.id)).size).toBe(180);
   for(const spell of WIZARD_LEVEL_FOUR_SPELLS){
    const rule=wizardSpellRule(spell.id)!;
    expect(spell.description.length>70).toBe(true);
@@ -59,7 +59,7 @@ describe('Actualización 53: Mago Evocación de niveles 6 y 7',()=>{
   expect(seven.input.preparedIds).toHaveLength(11);
   expect(wizardProgression(7,'evoker').preparedSpellCount).toBe(11);
   expect(view.spells.spellbook).toHaveLength(22);
-  expect(wizardLevelUpChoicesPreview(seven.input)).toBe(null);
+  expect(wizardLevelUpChoicesPreview(seven.input)?.nextLevel).toBe(8);
  });
  it('rechaza conjuro gratuito de Evocación duplicado, de otra escuela o de nivel incorrecto',()=>{
   const six=to6();const choices={newSpellIds:['dimension_door','polymorph'] as [string,string],preparedIds:[...six.input.preparedIds,'dimension_door'],evokerLevelFourSpellId:'ice_storm'};

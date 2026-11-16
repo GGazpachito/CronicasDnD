@@ -13,7 +13,7 @@ export type WizardSpellSelection=Readonly<{
 function validIds(){return new Set<string>([...WIZARD_LEVEL_ONE_CANTRIPS,...WIZARD_SPELL_CATALOG].map(spell=>spell.id));}
 export function wizardSpellSelection(input:GuidedWizardInput):WizardSpellSelection{
  return input.spellSelection??{
-  learnedIds:[...input.cantripIds,...input.spellbookIds,...(input.evokerBonusSpellIds??[]),...(input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[]),...(input.evokerLevelFourSpellId?[input.evokerLevelFourSpellId]:[])],
+  learnedIds:[...input.cantripIds,...input.spellbookIds,...(input.evokerBonusSpellIds??[]),...(input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[]),...(input.evokerLevelFourSpellId?[input.evokerLevelFourSpellId]:[]),...(input.evokerLevelFiveSpellId?[input.evokerLevelFiveSpellId]:[])],
   preparedIds:[...input.cantripIds,...input.preparedIds],
  };
 }
