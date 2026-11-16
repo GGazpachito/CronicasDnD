@@ -801,3 +801,32 @@
 .save-status-indicator{display:block;flex:0 0 9px;width:9px;height:9px;border-radius:50%;background:#d5ad67}
 .save-synced .save-status-indicator{background:#7ac4a3}
 @media(max-width:700px){.save-character-picker{align-items:stretch;flex-wrap:wrap}.save-character-picker>.field{flex:1 1 100%}.save-refresh{width:100%}.save-pending,.save-synced{align-items:flex-start}}
+
+/* Actualización 48: creador inicial de Mago y hoja de nivel 1. */
+.wizard-class-link{color:var(--gold);font-weight:700;text-decoration:none;border:1px solid #6d5839;padding:9px 13px;border-radius:9px}
+.wizard-class-link:hover{background:#2c3440}
+.wizard-identity{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:22px 26px;margin-bottom:20px}
+.wizard-identity h1{font-size:32px;margin:4px 0}.wizard-identity p{font-size:13px;color:var(--muted);margin:0}
+.wizard-identity-actions{display:flex;align-items:center;gap:14px}
+.wizard-identity-actions button,.wizard-delta button,.wizard-roll-row button{background:#293a4c;border:1px solid #93794b;color:#f8ebd1;border-radius:8px;padding:9px 12px;cursor:pointer;min-height:37px}
+.wizard-delta button:disabled{opacity:.4;cursor:not-allowed}
+.wizard-delta .is-active{background:#53634e;border-color:var(--teal)}
+.wizard-editor{padding:24px;margin-bottom:22px}
+.wizard-editor-grid,.wizard-page-cards,.wizard-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.wizard-score-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.wizard-score-grid .field{min-width:0}
+.wizard-spell-picker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;max-height:350px;overflow:auto;padding:8px;background:#111b26;border-radius:9px}
+.wizard-spell-option{display:flex;gap:7px;align-items:center;padding:7px 8px;border:1px solid #354256;border-radius:7px;font-size:12px;cursor:pointer;min-width:0}
+.wizard-spell-option input{accent-color:var(--gold)}.wizard-spell-option small{color:var(--teal);font-size:10px;margin-left:auto}
+.wizard-module{padding:23px;margin:0 0 20px;min-width:0}.wizard-module h2{font-size:23px;margin-bottom:12px}.wizard-module h3{font-size:14px;color:var(--gold);margin:15px 0 10px}
+.wizard-module p{font-size:13px;color:var(--muted)}.wizard-module .ability-grid{margin:17px 0}
+.wizard-delta{display:flex;flex-wrap:wrap;gap:8px;margin:15px 0}
+.wizard-roll-row{display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid var(--line);padding:7px 0;font-size:12px}
+.wizard-roll-row button{font-size:11px;padding:6px 9px;white-space:nowrap}
+.wizard-module textarea{display:block;width:100%;min-height:140px;background:#111b26;border:1px solid #465466;border-radius:9px;color:var(--text);font:inherit;padding:12px;resize:vertical}
+@media(max-width:850px){.wizard-editor-grid,.wizard-page-cards,.wizard-pair{grid-template-columns:1fr}.wizard-spell-picker{grid-template-columns:1fr 1fr}}
+@media(max-width:550px){.wizard-identity{padding:17px;align-items:flex-start}.wizard-identity h1{font-size:25px}.wizard-identity-actions{flex-direction:column}.wizard-score-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.wizard-spell-picker{grid-template-columns:1fr}.wizard-module,.wizard-editor{padding:16px}}
+
+.class-switcher{display:flex;gap:11px;align-items:center;flex-wrap:wrap;margin-bottom:13px;color:var(--gold);font-size:12px;font-weight:700}.class-switcher select{background:#202c3a;color:var(--text);padding:8px 12px;border:1px solid #806b48;border-radius:9px}.class-switcher span{font-weight:400;color:var(--muted)}
+
+.wizard-inspiration{display:flex;align-items:center;gap:8px;margin:15px 0;padding:10px 14px;border-radius:10px;background:#232e3a;border:1px solid #564f44;cursor:pointer}.wizard-inspiration input{accent-color:var(--gold);width:19px;height:19px}.wizard-star{color:#dfbf78;font-size:24px}.wizard-inspiration span:last-child{font-size:13px;color:var(--text)}

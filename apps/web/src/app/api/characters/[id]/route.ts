@@ -1,6 +1,5 @@
 import { db } from '@/lib/prisma';
-import { errorResponse,localDevelopmentOnly,readRevision,validCharacterId } from '@/lib/characters-api';
-import { validateCharacterSnapshot } from '@/lib/characters-api';
+import { errorResponse,localDevelopmentOnly,readRevision,validCharacterId,validateStoredSnapshot } from '@/lib/characters-api';
 import type { Prisma } from '@/generated/prisma/client';
 
 export const runtime='nodejs';
@@ -14,8 +13,10 @@ export async function GET(request:Request,context:Context){
   try{
     const c=await db().character.findUnique({where:{id}});
     if(!c)return Response.json({error:'Personaje no encontrado'},{status:404});
-    const snapshot=validateCharacterSnapshot(c.selection);
-    return Response.json({character:{id:c.id,name:c.name,level:c.level,revision:c.revision,snapshot,updatedAt:c.updatedAt}},{headers:{'Cache-Control':'no-store'}});
+    const snapshot=validateStoredSnapshot(c.selection);
+    if(c.characterClass!==(snapshot.schemaVersion===3?'wizard':'fighter')||c.level!==snapshot.input.level)
+      throw new RangeError('El tipo de clase o nivel guardado no coincide con la hoja');
+    return Response.json({character:{id:c.id,name:c.name,level:c.level,characterClass:c.characterClass,revision:c.revision,snapshot,updatedAt:c.updatedAt}},{headers:{'Cache-Control':'no-store'}});
   }catch(e){return errorResponse(e);}
 }
 
@@ -32,13 +33,13 @@ export async function PUT(request:Request,context:Context){
     const item=raw as Record<string,unknown>;
     const revision=readRevision(item.revision);
     // Se valida igual que en POST. No se confia en valores calculados del navegador.
-    const snapshot=validateCharacterSnapshot(item.snapshot);
+    const snapshot=validateStoredSnapshot(item.snapshot);
     const result=await db().character.updateMany({
-      where:{id,revision},
-      data:{name:snapshot.input.name.trim(),level:snapshot.input.level,schemaVersion:snapshot.schemaVersion,selection:snapshot as unknown as Prisma.InputJsonValue,revision:{increment:1}}
+      where:{id,revision,characterClass:snapshot.schemaVersion===3?'wizard':'fighter'},
+      data:{name:snapshot.input.name.trim(),level:snapshot.input.level,characterClass:snapshot.schemaVersion===3?'wizard':'fighter',schemaVersion:snapshot.schemaVersion,selection:snapshot as unknown as Prisma.InputJsonValue,revision:{increment:1}}
     });
     if(result.count===0)return Response.json({error:'Este personaje ha cambiado o no existe. Vuelve a cargarlo antes de sobrescribir.'},{status:409});
-    const current=await db().character.findUnique({where:{id},select:{id:true,name:true,level:true,revision:true,updatedAt:true}});
+    const current=await db().character.findUnique({where:{id},select:{id:true,name:true,level:true,characterClass:true,revision:true,updatedAt:true}});
     return Response.json({character:current},{headers:{'Cache-Control':'no-store'}});
   }catch(e){return errorResponse(e);}
 }

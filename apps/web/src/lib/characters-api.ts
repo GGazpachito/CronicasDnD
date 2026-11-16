@@ -1,4 +1,13 @@
 import { validateCharacterSnapshot, type CharacterSnapshot } from '../../../../packages/rules-engine/src/persistence';
+import { validateWizardCharacterSnapshot, type WizardCharacterSnapshot } from '../../../../packages/rules-engine/src/wizard-creation';
+
+export type StoredCharacterSnapshot=CharacterSnapshot|WizardCharacterSnapshot;
+export function validateStoredSnapshot(value:unknown):StoredCharacterSnapshot {
+  if(value&&typeof value==='object'&&!Array.isArray(value)&&(value as {schemaVersion?:unknown}).schemaVersion===3)
+    return validateWizardCharacterSnapshot(value);
+  return validateCharacterSnapshot(value);
+}
+
 
 export function localDevelopmentOnly(req:Request):Response|null {
   // Sin autenticacion no se debe exponer esta API en produccion.
@@ -13,7 +22,7 @@ export function localDevelopmentOnly(req:Request):Response|null {
   return null;
 }
 
-export async function readSnapshot(req:Request):Promise<CharacterSnapshot>{
+export async function readSnapshot(req:Request):Promise<StoredCharacterSnapshot>{
   const length=Number(req.headers.get('content-length')||0);
   if(length>130_000)throw new RangeError('La solicitud supera el limite permitido');
   const data=await req.text();
@@ -21,7 +30,7 @@ export async function readSnapshot(req:Request):Promise<CharacterSnapshot>{
   let parsed:unknown;
   try{parsed=JSON.parse(data);}catch{throw new RangeError('JSON invalido');}
   if(!parsed||typeof parsed!=='object'||Array.isArray(parsed)||!('snapshot' in parsed))throw new RangeError('Falta snapshot');
-  return validateCharacterSnapshot((parsed as {snapshot:unknown}).snapshot);
+  return validateStoredSnapshot((parsed as {snapshot:unknown}).snapshot);
 }
 
 export function validCharacterId(id:string):boolean {

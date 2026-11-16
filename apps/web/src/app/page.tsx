@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {EPIC_BOONS,type EpicBoonId} from "../../../../packages/rules-engine/src/epic-boons";
 import SaveLoadPanel from "../components/SaveLoadPanel";
 import CharacterHeader from "../components/CharacterHeader";
@@ -58,6 +59,7 @@ function initialForBackground(bg:BackgroundId):{plusTwoAbility:Ability;plusOneAb
 const b=BACKGROUNDS[bg];return {plusTwoAbility:b.abilities[0] as Ability,plusOneAbility:b.abilities[1] as Ability,fighterSkills:validSkills(bg).slice(0,2)};
 }
 export default function Home(){
+  const router=useRouter();
   const [step,setStep]=useState(0);
   const [activeTab,setActiveTab]=useState<SheetTab>("principal");
   const editorDetailsRef=useRef<HTMLDetailsElement>(null);
@@ -298,7 +300,8 @@ export default function Home(){
   return <main className="app-shell">
     <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Hoja digital · D&D 2024</span></div></div><div className="status"><span className="status-dot"/> Edición local · Guardado manual</div></header>
     <div className="content">
-      <p className="sheet-release-note">HOJA DE PERSONAJE · D&D 2024</p>
+      <div className="class-switcher"><label htmlFor="class-choice">Clase</label><select id="class-choice" value="fighter" onChange={e=>{if(e.target.value==='wizard'&&window.confirm('Cambiar al creador de Mago abrirá otra hoja. Guarda primero los cambios de tu Guerrero. ¿Continuar?'))router.push('/wizard');}}><option value="fighter">Guerrero</option><option value="wizard">Mago (nivel 1)</option></select><span>Ambas clases se guardan en Mis personajes.</span></div>
+      <p className="sheet-release-note">HOJA DE PERSONAJE · D&D 2024 · GUERRERO</p>
       <CharacterHeader
         name={name}
         portraitDataUrl={profile.portraitDataUrl}

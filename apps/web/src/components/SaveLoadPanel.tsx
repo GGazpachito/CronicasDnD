@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { GuidedFighterInput } from '../../../../packages/rules-engine/src/guided';
 import type { AdventureState } from '../../../../packages/rules-engine/src/adventure';
 import type { CharacterSnapshot } from '../../../../packages/rules-engine/src/persistence';
 import { makeCharacterSnapshot } from '../../../../packages/rules-engine/src/persistence';
 
-type Summary={id:string;name:string;level:number;revision:number;updatedAt:string};
+type Summary={id:string;name:string;level:number;characterClass?:'wizard'|'fighter';revision:number;updatedAt:string};
 type Detail=Summary&{snapshot:CharacterSnapshot};
 type Props={input:GuidedFighterInput;adventure:AdventureState|null;valid:boolean;onLoad:(snapshot:CharacterSnapshot)=>void};
 
@@ -22,6 +23,7 @@ function snapshotFingerprint(snapshot:CharacterSnapshot):string{
 }
 
 export default function SaveLoadPanel({input,adventure,valid,onLoad}:Props){
+  const router=useRouter();
   const [entries,setEntries]=useState<Summary[]>([]);
   const [selected,setSelected]=useState<string>('');
   const [active,setActive]=useState<{id:string;revision:number;savedLevel:number}|null>(null);
@@ -115,6 +117,10 @@ export default function SaveLoadPanel({input,adventure,valid,onLoad}:Props){
     await act(async()=>{
       const response=await fetch(`/api/characters/${encodeURIComponent(selected)}`,{cache:'no-store'});
       const d=await jsonOrThrow<{character:Detail}>(response);
+      if(d.character.characterClass==='wizard'){
+        router.push(`/wizard?character=${encodeURIComponent(d.character.id)}`);
+        return;
+      }
       if(d.character.level!==d.character.snapshot.input.level||d.character.level!==d.character.snapshot.adventure.fighter.fighterLevel)
         throw new Error('El nivel del registro no coincide con la hoja y la partida guardadas. No se ha cargado un personaje inconsistente.');
       onLoad(d.character.snapshot);
@@ -140,9 +146,9 @@ export default function SaveLoadPanel({input,adventure,valid,onLoad}:Props){
     <p className="muted-note">Guarda las elecciones, inventario y estado de partida (PG, recursos y dados). Las estadísticas máximas se recalculan al cargar.</p>
     <div className="save-controls">
       <div className="save-character-picker">
-        <label className="field"><span>Personajes guardados</span><select value={selected} onChange={e=>setSelected(e.target.value)} disabled={busy||listLoading}>
+        <label className="field"><span>Personajes guardados</span><select value={selected} onChange={(e:{target:{value:string}})=>setSelected(e.target.value)} disabled={busy||listLoading}>
           <option value="">{listLoading?'Consultando PostgreSQL…':'Selecciona un personaje'}</option>
-          {entries.map(entry=><option value={entry.id} key={entry.id}>{entry.name} · Guerrero {entry.level} · {new Date(entry.updatedAt).toLocaleDateString('es-ES')}</option>)}
+          {entries.map(entry=><option value={entry.id} key={entry.id}>{entry.name} · {entry.characterClass==='wizard'?'Mago':'Guerrero'} {entry.level} · {new Date(entry.updatedAt).toLocaleDateString('es-ES')}</option>)}
         </select></label>
         <button type="button" className="save-refresh" onClick={reloadList} disabled={busy||listLoading} aria-label="Volver a consultar personajes guardados">Actualizar lista</button>
       </div>
