@@ -25,7 +25,14 @@ export const BACKGROUNDS = {
   soldier: { name: 'Soldado', abilities: ['strength','dexterity','constitution'], skills: ['athletics','intimidation'], feat: 'savage_attacker', tool: 'Juego de azar (a elegir)' },
 } as const;
 export type BackgroundId = keyof typeof BACKGROUNDS;
-export type SpeciesId = 'human' | 'dwarf' | 'elf';
+/** Catálogo mínimo de especies implementadas del Manual del Jugador 2024. */
+export const SPECIES_NAMES = {
+  human: 'Humano',
+  dwarf: 'Enano',
+  elf: 'Elfo',
+  halfling: 'Mediano',
+} as const;
+export type SpeciesId = keyof typeof SPECIES_NAMES;
 export type ElfLineage = 'drow' | 'high_elf' | 'wood_elf';
 export type HumanOriginFeat = OriginFeatId;
 export const HUMAN_FEATS: readonly HumanOriginFeat[] = Object.keys(ORIGIN_FEATS) as HumanOriginFeat[];
@@ -99,7 +106,7 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
   if (!input || typeof input !== 'object') fail('Datos de creación necesarios');
   const bg = BACKGROUNDS[input.background];
   if (!bg) fail('Trasfondo no disponible');
-  if (!['human','dwarf','elf'].includes(input.species)) fail('Especie no disponible');
+  if (!Object.prototype.hasOwnProperty.call(SPECIES_NAMES,input.species)) fail('Especie no disponible');
   if (![1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20].includes(input.level)) fail('Solo Guerrero nivel 1 a 20');
   if (!input.name?.trim() || input.name.length > 120) fail('Introduce un nombre válido');
   if (!input.assignedAbilities || typeof input.assignedAbilities !== 'object') fail('Faltan características');
@@ -194,6 +201,13 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
   } else if (input.species==='dwarf') {
     bonusHitPointsPerLevel+=1;
     pending.push('Enano: visión en la oscuridad, ventaja en salvaciones contra Envenenado y Sentido de la piedra aún pendientes');
+  } else if (input.species==='halfling') {
+    // PHB 2024, p. 193: Mediano siempre es Pequeño, con velocidad de 30 pies.
+    // Suerte exige decidir si se repite un 1: no sustituimos esa decisión del jugador.
+    size='small';
+    pending.push('Mediano · Suerte: al obtener un 1 en un d20 de prueba, puedes repetirlo y debes usar el resultado nuevo. Repetición manual pendiente.');
+    pending.push('Mediano · Valentía: ventaja situacional en salvaciones para evitar o terminar Asustado; selección manual de ventaja.');
+    pending.push('Mediano · Agilidad de mediano y Sigilo natural: posición, movimiento y ocultación se resuelven en la mesa.');
   } else {
     if (!input.elfLineage || !['drow','high_elf','wood_elf'].includes(input.elfLineage)) fail('El elfo debe elegir linaje');
     if (!input.elfSenseSkill || !['insight','perception','survival'].includes(input.elfSenseSkill) || skills.has(input.elfSenseSkill)) fail('Elige una habilidad de Sentidos agudos no repetida');

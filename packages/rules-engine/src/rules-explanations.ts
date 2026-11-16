@@ -93,4 +93,8 @@ export const SPECIES_TRAIT_EXPLANATIONS:Readonly<Record<string,string>>={
   trance:'Tu descanso especial de elfo sustituye el sueño normal por una meditación de cuatro horas.',
   keen_senses:'Obtienes competencia en Perspicacia, Percepción o Supervivencia, según la elección de creación.',
   lineage:'Tu linaje élfico concede rasgos específicos y conjuros nuevos al alcanzar los niveles indicados.',
+  halfling_brave:'Tienes ventaja en las salvaciones para evitar o terminar el estado Asustado. Este beneficio solo se aplica en esa situación.',
+  halfling_nimbleness:'Puedes pasar por el espacio de una criatura de tamaño mayor que el tuyo, pero no acabar allí tu movimiento.',
+  halfling_luck:'Cuando sacas un 1 en el d20 de una prueba de d20, puedes repetir ese dado. Si lo haces, debes usar el resultado nuevo.',
+  halfling_naturally_stealthy:'Puedes usar Esconderse si te oculta únicamente una criatura que sea al menos un tamaño mayor que tú.',
 };

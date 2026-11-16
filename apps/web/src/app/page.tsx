@@ -27,7 +27,7 @@ import type {MasteryContext} from "../../../../packages/rules-engine/src/mastery
 import { initialAdventureState, validateAdventureState, updateAdventureCombat, type AdventureState } from "../../../../packages/rules-engine/src/adventure";
 import type { CharacterSnapshot } from "../../../../packages/rules-engine/src/persistence";
 import { EMPTY_CHARACTER_PROFILE, validateCharacterProfile, type CharacterProfile } from "../../../../packages/rules-engine/src/character-profile";
-import { calculateGuidedFighter, BACKGROUNDS, FIGHTER_SKILL_OPTIONS, HUMAN_FEATS, type BackgroundId, type SpeciesId, type ElfLineage, type GuidedFighterInput, type HumanOriginFeat } from "../../../../packages/rules-engine/src/guided";
+import { calculateGuidedFighter, BACKGROUNDS, SPECIES_NAMES, FIGHTER_SKILL_OPTIONS, HUMAN_FEATS, type BackgroundId, type SpeciesId, type ElfLineage, type GuidedFighterInput, type HumanOriginFeat } from "../../../../packages/rules-engine/src/guided";
 import { adjacentFighterLevel, type SupportedFighterLevel } from "../../../../packages/rules-engine/src/progression";
 import { ABILITIES, type Ability, type AbilityScores } from "../../../../packages/rules-engine/src/abilities";
 import { SKILLS, type Skill } from "../../../../packages/rules-engine/src/proficiencies";
@@ -304,7 +304,7 @@ export default function Home(){
         portraitDataUrl={profile.portraitDataUrl}
         level={level}
         background={bg.name}
-        species={species==='human'?'Humano':species==='dwarf'?'Enano':'Elfo'}
+        species={SPECIES_NAMES[species]}
         valid={Boolean(output.result&&!sessionCheck.outOfSync)}
         onEdit={()=>openEditorAt(0)}
         onLevelUp={()=>level<20?setLevelWizardOpen(true):openEditorAt(0)}
@@ -365,7 +365,7 @@ export default function Home(){
             <label className="field"><span>Trasfondo</span><select value={background} onChange={e=>onBackground(e.target.value as BackgroundId)}>{Object.entries(BACKGROUNDS).map(([id,b])=><option key={id} value={id}>{b.name}</option>)}</select></label>
             <div className="origin-detail"><strong>Dote: {originFeatName(bg.feat)}</strong><small>Competencias: {bg.skills.map(s=>SKILL_NAMES[s as Skill]).join(', ')}</small><small>Herramienta: {background==='soldier'?GAMING_SETS[soldierGamingSet]:bg.tool}</small></div>
             {background==='soldier'&&<label className="field"><span>Competencia con juego de azar</span><select value={soldierGamingSet} onChange={e=>setSoldierGamingSet(e.target.value as GamingSetId)}>{Object.entries(GAMING_SETS).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label>}
-            <label className="field"><span>Especie</span><select value={species} onChange={e=>setSpecies(e.target.value as SpeciesId)}><option value="human">Humano</option><option value="dwarf">Enano</option><option value="elf">Elfo</option></select></label>
+            <label className="field"><span>Especie</span><select value={species} onChange={e=>setSpecies(e.target.value as SpeciesId)}><option value="human">Humano</option><option value="dwarf">Enano</option><option value="elf">Elfo</option><option value="halfling">Mediano</option></select></label>
             {(background==='acolyte'||background==='sage')&&magicFields('Iniciado en la Magia del trasfondo',background==='acolyte'?'cleric':'wizard',bgMagicAbility,background==='acolyte'?bgClericCantrips:bgWizardCantrips,background==='acolyte'?bgClericSpell:bgWizardSpell,{setAbility:setBgMagicAbility,setCantrips:background==='acolyte'?setBgClericCantrips:setBgWizardCantrips,setSpell:background==='acolyte'?setBgClericSpell:setBgWizardSpell})}
             {species==='human'&&<>
               <label className="field"><span>Tamaño</span><select value={humanSize} onChange={e=>setHumanSize(e.target.value as 'small'|'medium')}><option value="medium">Mediano</option><option value="small">Pequeño</option></select></label>
@@ -381,6 +381,7 @@ export default function Home(){
             </>}
             {species==='elf'&&<><label className="field"><span>Linaje élfico</span><select value={lineage} onChange={e=>setLineage(e.target.value as ElfLineage)}><option value="drow">Drow</option><option value="high_elf">Alto elfo</option><option value="wood_elf">Elfo de los bosques</option></select></label><label className="field"><span>Característica para conjuros del linaje</span><select value={elfSpell} onChange={e=>setElfSpell(e.target.value as typeof elfSpell)}>{(['intelligence','wisdom','charisma'] as const).map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label></>}
             {species==='dwarf'&&<div className="info-line">Robustez enana: +1 PG máximo por nivel (automatizado).</div>}
+            {species==='halfling'&&<div className="info-line">Mediano: tamaño Pequeño y 30 pies de velocidad. En Rasgos encontrarás Suerte, Valentía, Agilidad de mediano y Sigilo natural; sus efectos situacionales se gestionan manualmente.</div>}
           </>}
           {step===2&&<>
             <div className="section-label"><h3>Matriz estándar</h3><span>15, 14, 13, 12, 10, 8</span></div>
@@ -496,7 +497,7 @@ export default function Home(){
           <div className="editor-footnote">Creación parcial con guardado manual local. Los precios se expresan en piezas de cobre y se venden objetos a mitad del valor de catálogo.</div>
         </aside>
         <section className="preview panel" aria-live="polite">
-          <div className="panel-heading"><div><span className="eyebrow">HOJA EN VIVO</span><h2>{name.trim()||'Sin nombre'}</h2><p>Guerrero {level}{level>=3?' · Campeón':''} · {bg.name} · {species==='human'?'Humano':species==='dwarf'?'Enano':'Elfo'}</p></div><span className="roundel">{level}</span></div>
+          <div className="panel-heading"><div><span className="eyebrow">HOJA EN VIVO</span><h2>{name.trim()||'Sin nombre'}</h2><p>Guerrero {level}{level>=3?' · Campeón':''} · {bg.name} · {SPECIES_NAMES[species]}</p></div><span className="roundel">{level}</span></div>
           {output.error&&<div className="error" role="alert"><strong>Revisa tus elecciones.</strong><p>{output.error}</p></div>}
           {sheet&&output.result&&<>
             <div className="stat-cards"><div className="stat-card"><span>PG MÁXIMOS</span><strong>{sheet.maximumHitPoints}</strong><small>Actuales: {!sessionCheck.outOfSync&&sessionCheck.state?sessionCheck.state.fighter.hitPoints.current:'pendiente'} · {sheet.hitDice.total}d{sheet.hitDice.die}</small></div><div className="stat-card"><span>CLASE DE ARMADURA</span><strong>{sheet.armorClass}</strong><small>{sheet.armorClassDetails.formula}</small></div><div className="stat-card"><span>INICIATIVA</span><strong>{signed(sheet.initiative)}</strong><small>{sheet.initiativeRollMode==='advantage'?'Ventaja':sheet.initiativeRollMode==='disadvantage'?'Desventaja':'Normal'}</small></div></div>
@@ -543,7 +544,7 @@ export default function Home(){
       </section>
       <section id="sheet-panel-personaje" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-personaje" hidden={activeTab!=='personaje'}>
         <CharacterProfilePanel key={profileLoadRevision} profile={profile} onChange={setProfile} name={name}
-          species={species==='human'?'Humano':species==='dwarf'?'Enano':'Elfo'}
+          species={SPECIES_NAMES[species]}
           background={bg.name} level={level} onEditIdentity={()=>openEditorAt(0)}/>
       </section>
       <section id="sheet-panel-combate" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-combate" hidden={activeTab!=='combate'}>

@@ -1,6 +1,6 @@
 /** Paso 20. Defensas frente al daño: fuentes declarativas y sin acumulación.
  * PHB 2024, capítulos 1 y 4. Solo el Enano concede una resistencia
- * automática entre las tres especies del MVP. Ninguna armadura común concede
+ * automática entre las especies incorporadas. Ninguna armadura común concede
  * resistencias por sí sola.
  */
 import type {SpeciesId} from './guided';
@@ -51,7 +51,7 @@ const DWARF_POISON:DeclaredDamageDefense={
 export function collectDamageDefenses(context:DefenseContext={}):readonly DeclaredDamageDefense[]{
   if(!isRecord(context))fail('Contexto defensivo inválido');
   if(Object.keys(context).some(k=>!['species','inventory','grants','magicWards'].includes(k)))fail('Contexto defensivo con campos desconocidos');
-  if(context.species!==undefined&&!['human','dwarf','elf'].includes(context.species))fail('Especie desconocida');
+  if(context.species!==undefined&&!['human','dwarf','elf','halfling'].includes(context.species))fail('Especie desconocida');
   if(context.grants!==undefined&&(!Array.isArray(context.grants)||context.grants.length>40))fail('Demasiadas defensas declaradas');
   const grants:DeclaredDamageDefense[]=[];
   if(context.species==='dwarf')grants.push(DWARF_POISON);

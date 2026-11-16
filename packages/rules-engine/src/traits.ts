@@ -3,7 +3,7 @@
  * dotes proceden del origen validado por calculateGuidedFighter.
  * Las descripciones son resúmenes originales de apoyo, no texto del manual.
  */
-import { BACKGROUNDS, type GuidedFighterInput, type GuidedFighterResult } from './guided';
+import { BACKGROUNDS, SPECIES_NAMES, type GuidedFighterInput, type GuidedFighterResult } from './guided';
 import { FIGHTING_STYLES, WEAPONS } from './martial';
 import { ORIGIN_FEATS, TOOL_NAMES, type ToolId } from './origin-feats';
 import { EPIC_BOONS } from './epic-boons';
@@ -148,7 +148,7 @@ function classTraits(input:GuidedFighterInput,result:GuidedFighterResult):Charac
 function speciesTraits(input:GuidedFighterInput,result:GuidedFighterResult):CharacterTrait[]{
   const traits:CharacterTrait[]=[];
   const add=(id:string,title:string,summary:string,automation:TraitAutomation,details:string[]=[])=>traits.push({
-    id:`species:${id}`,title,group:'species',source:input.species==='human'?'Humano':input.species==='dwarf'?'Enano':'Elfo',
+    id:`species:${id}`,title,group:'species',source:SPECIES_NAMES[input.species],
     summary,explanation:SPECIES_TRAIT_EXPLANATIONS[id],automation,details,
   });
   if(input.species==='human'){
@@ -160,6 +160,19 @@ function speciesTraits(input:GuidedFighterInput,result:GuidedFighterResult):Char
     add('darkvision','Visión en la oscuridad','Capacidad de visión especial concedida por la especie.','manual',['El uso de la visión y las condiciones de iluminación se resuelven con el director de juego.']);
     add('dwarven_resilience','Resiliencia enana','Ventaja en determinadas salvaciones relacionadas con el envenenamiento.','manual',['El motor no detecta automáticamente esta situación.']);
     add('stonecunning','Sentido de la piedra','Capacidad de percepción especial relacionada con la piedra.','manual',['Su activación y contexto se resuelven en la mesa.']);
+  } else if(input.species==='halfling'){
+    add('halfling_brave','Valentía','Ventaja situacional frente al estado Asustado.','manual',[
+      'Ventaja al salvarte para evitar o terminar Asustado. Activa la ventaja en Principal cuando corresponda.',
+    ]);
+    add('halfling_nimbleness','Agilidad de mediano','Puedes atravesar el espacio de una criatura de mayor tamaño.','manual',[
+      'No puedes terminar tu movimiento ocupando el mismo espacio que otra criatura.',
+    ]);
+    add('halfling_luck','Suerte de mediano','Puedes repetir un 1 natural en una prueba de d20.','manual',[
+      'Puedes repetir el d20 que muestre un 1 y debes aceptar el nuevo resultado. La decisión y repetición aún se gestionan manualmente.',
+    ]);
+    add('halfling_naturally_stealthy','Sigilo natural','Puedes intentar esconderte detrás de una criatura de mayor tamaño.','manual',[
+      'Permite usar la acción Esconderse cuando únicamente te oculta una criatura al menos un tamaño mayor.',
+    ]);
   } else {
     add('darkvision','Visión en la oscuridad','Capacidad de visión especial concedida por la especie.','manual');
     add('fey_ancestry','Ascendencia feérica','Resistencias o ventajas situacionales ligadas al linaje feérico.','manual',['Los efectos situacionales no se aplican automáticamente.']);
