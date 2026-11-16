@@ -8,6 +8,8 @@ import TraitsPanel from '../../components/TraitsPanel';
 import EquipmentPanel from '../../components/EquipmentPanel';
 import SpellSlotDiamonds from '../../components/SpellSlotDiamonds';
 import WizardLevelUpWizard from '../../components/WizardLevelUpWizard';
+import LevelDownDialog from '../../components/LevelDownDialog';
+import {previewWizardLevelDown} from '../../../../../packages/rules-engine/src/level-down';
 import WizardSpellLibrary from '../../components/WizardSpellLibrary';
 import BasicWeaponAttacks from '../../components/BasicWeaponAttacks';
 import SheetPlaceholder from '../../components/SheetPlaceholder';
@@ -48,6 +50,7 @@ export default function WizardPage(){
  const [tab,setTab]=useState<SheetTab>('principal');
  const [editing,setEditing]=useState(true);
  const [levelUpOpen,setLevelUpOpen]=useState(false);
+ const [levelDownOpen,setLevelDownOpen]=useState(false);
  const [mode,setMode]=useState<D20Mode>('normal');
  const [hpDraft,setHpDraft]=useState('');
  const [tempDraft,setTempDraft]=useState('');
@@ -62,6 +65,11 @@ export default function WizardPage(){
   if(!computed.sheet)return null;
   try{return makeWizardCharacterSnapshot(input,state);}catch{return null;}
  },[input,state,computed.sheet]);
+ const levelDownAssessment=useMemo(()=>{
+  if(!levelDownOpen)return {preview:null,error:''};
+  try{return {preview:previewWizardLevelDown(input,state),error:''};}
+  catch(e){return {preview:null,error:e instanceof Error?e.message:'No se pudo calcular el nivel inferior'};}
+ },[levelDownOpen,input,state]);
  const sheet=computed.sheet;
  const background=BACKGROUNDS[input.background];
  function patch(values:Partial<GuidedWizardInput>){setInput(previous=>({...previous,...values}));}
@@ -127,7 +135,7 @@ export default function WizardPage(){
  function undoInventory(){patch({inventoryActions:(input.inventoryActions??[]).slice(0,-1)});setError('');}
  function resetInventory(){patch({inventoryActions:[]});setError('');}
  function restore(snapshot:ReturnType<typeof validateWizardCharacterSnapshot>){
-  setInput(snapshot.input);setState(snapshot.wizardState);setProfileRevision(n=>n+1);setEditing(false);setLevelUpOpen(false);setTab('principal');setError('');
+  setInput(snapshot.input);setState(snapshot.wizardState);setProfileRevision(n=>n+1);setEditing(false);setLevelUpOpen(false);setLevelDownOpen(false);setTab('principal');setError('');
  }
  return <main className="app-shell wizard-page">
   <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Mago · D&D 2024</span></div></div><Link href="/" className="wizard-class-link" onNavigate={event=>{if(pendingSaveNavigation.current&&!window.confirm("Tienes cambios sin guardar. ¿Descartarlos y volver al menú?"))event.preventDefault();}}>Menú de personajes</Link></header>
@@ -136,8 +144,16 @@ export default function WizardPage(){
    <CharacterHeader name={input.name} portraitDataUrl={input.profile?.portraitDataUrl} level={input.level}
      background={background.name} species={SPECIES_NAMES[input.species]} className="Mago" subclass={input.level>=3?'Evocación':undefined} valid={Boolean(actualSnapshot)}
      onEdit={()=>setEditing(true)}
-     onLevelUp={input.level<3&&actualSnapshot?()=>{setLevelUpOpen(true);setEditing(false);}:undefined}/>
+     onLevelUp={input.level<3&&actualSnapshot?()=>{setLevelUpOpen(true);setEditing(false);}:undefined}
+     onLevelDown={input.level>1&&actualSnapshot?()=>setLevelDownOpen(true):undefined}/>
    <p className="wizard-progression-hint">{input.level>=3?'Próxima etapa: progresión a nivel 4.':`Próxima subida disponible: Mago de nivel ${input.level+1}.`}</p>
+  {levelDownOpen&&<LevelDownDialog preview={levelDownAssessment.preview} error={levelDownAssessment.error}
+     onClose={()=>setLevelDownOpen(false)} onConfirm={()=>{
+      const next=levelDownAssessment.preview;
+      if(!next)throw new RangeError('La bajada de nivel no es válida');
+      setInput(next.snapshot.input);setState(next.snapshot.wizardState);setLevelDownOpen(false);
+      setEditing(false);setTab('principal');setError('');
+     }}/>} 
   {levelUpOpen&&<WizardLevelUpWizard input={input} state={state} mode={mode} onCancel={()=>setLevelUpOpen(false)} onConfirm={next=>{setInput(next.input);setState(next.state);setLevelUpOpen(false);setEditing(false);setTab('principal');setError('');}}/>}
   <SaveLoadPanel characterClass="wizard" snapshot={actualSnapshot} validate={validateWizardCharacterSnapshot} onLoad={restore}
      normalize={saved=>makeWizardCharacterSnapshot(saved.input,saved.wizardState)}

@@ -948,3 +948,10 @@
 .level-wizard .wizard-spell-option>label small{margin-left:auto}
 .level-wizard .wizard-spell-details{margin-top:6px}
 @media(max-width:690px){.wizard-spell-filters{grid-template-columns:1fr}.wizard-spell-tabbar button{font-size:11px;padding:10px 4px}.wizard-spell-entry-top{flex-wrap:wrap}}
+
+/* 51.2: retroceso de nivel, mismo diálogo para todas las clases. */
+.level-down-content{display:grid;gap:1.15rem}
+.level-down-preserved{margin:.35rem 0 .9rem;padding-left:1.5rem;display:grid;gap:.4rem}
+.level-down-acknowledge{display:flex;align-items:flex-start;gap:.7rem;padding:1rem;border:1px solid var(--border-color,rgba(142,129,106,.35));border-radius:10px;cursor:pointer}
+.level-down-acknowledge input{width:1.1rem;height:1.1rem;flex:none;margin-top:.16rem;accent-color:#b48548}
+.level-down-acknowledge span{line-height:1.45}

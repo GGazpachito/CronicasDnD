@@ -13,9 +13,10 @@ type CharacterHeaderProps = {
   subclass?: string;
   onEdit: () => void;
   onLevelUp?: () => void;
+  onLevelDown?: () => void;
 };
 
-export default function CharacterHeader({ name, portraitDataUrl, level, background, species, valid, onEdit, onLevelUp, className="Guerrero", subclass }: CharacterHeaderProps) {
+export default function CharacterHeader({ name, portraitDataUrl, level, background, species, valid, onEdit, onLevelUp, onLevelDown, className="Guerrero", subclass }: CharacterHeaderProps) {
   const displayName = name.trim() || "Personaje sin nombre";
   return (
     <section className="character-header panel" aria-label="Identificación del personaje">
@@ -33,6 +34,7 @@ export default function CharacterHeader({ name, portraitDataUrl, level, backgrou
       </div>
       <div className="character-header-actions">
         <button type="button" onClick={onEdit}>Editar personaje</button>
+        <button type="button" onClick={onLevelDown} disabled={!onLevelDown} title={!onLevelDown?"No se puede bajar del nivel 1":undefined}>Bajar un nivel</button>
         <button type="button" className="primary" onClick={onLevelUp} disabled={!onLevelUp} title={!onLevelUp?"Subida de nivel del Mago pendiente de implementación":undefined}>{onLevelUp?"Gestionar nivel":"Progresión próximamente"}</button>
       </div>
     </section>

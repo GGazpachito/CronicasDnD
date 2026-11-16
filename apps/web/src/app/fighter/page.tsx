@@ -10,6 +10,8 @@ import PrincipalOverview from "../../components/PrincipalOverview";
 import TraitsPanel from "../../components/TraitsPanel";
 import SpellsPanel from "../../components/SpellsPanel";
 import LevelUpWizard from "../../components/LevelUpWizard";
+import LevelDownDialog from "../../components/LevelDownDialog";
+import {previewFighterLevelDown} from "../../../../../packages/rules-engine/src/level-down";
 import CharacterTabs, { type SheetTab } from "../../components/CharacterTabs";
 import SheetPlaceholder from "../../components/SheetPlaceholder";
 import PlayPanel from "../../components/PlayPanel";
@@ -96,6 +98,7 @@ export default function Home(){
   const [epicAbility,setEpicAbility]=useState<Ability>('strength');
   const [levelMessage,setLevelMessage]=useState('');
   const [levelWizardOpen,setLevelWizardOpen]=useState(false);
+  const [levelDownOpen,setLevelDownOpen]=useState(false);
   const [background,setBackground]=useState<BackgroundId>('soldier');
   const [species,setSpecies]=useState<SpeciesId>('human');
   const [scores,setScores]=useState<AbilityScores>({strength:15,dexterity:14,constitution:13,intelligence:10,wisdom:12,charisma:8});
@@ -234,15 +237,19 @@ export default function Home(){
     setLevelWizardOpen(false);
     setLevelMessage(`Nivel ${snapshot.input.level} alcanzado. ${freshSession?'Se inició una sesión de partida nueva. ':synchronized?'La sesión actual se sincronizó previamente. ':''}Pulsa «Actualizar guardado» para conservar los cambios en PostgreSQL.`);
   }
-  /** Bajar de nivel conserva el comportamiento anterior: solo con confirmación y reinicio de sesión. */
-  function lowerFighterLevel(){
-    const next=adjacentFighterLevel(level,-1);
-    if(next===null)return;
-    if(adventure!==null&&typeof window!=='undefined'&&!window.confirm(`¿Bajar a nivel ${next}? Se reiniciará la sesión de combate actual (PG, recursos gastados, historial y turnos). Guarda antes una copia del personaje si quieres conservarla.`))return;
-    setLevel(next);
-    setMasteries(prev=>prev.slice(0,next>=16?6:next>=10?5:next>=4?4:3));
-    setAdventure(null);
-    setLevelMessage(`Ahora estás en nivel ${next}. Se ha reiniciado el estado de combate. Guarda una copia si quieres conservar la partida anterior.`);
+  /** Retroceso seguro: vista previa pura y confirmación conjunta de ficha y sesión. */
+  const levelDownAssessment=useMemo(()=>{
+    if(!levelDownOpen)return {preview:null,error:''};
+    try{return {preview:previewFighterLevelDown(input,adventure),error:''};}
+    catch(e){return {preview:null,error:e instanceof Error?e.message:'No se puede calcular la bajada de nivel'};}
+  },[levelDownOpen,input,adventure]);
+  function confirmFighterLevelDown(){
+    const next=levelDownAssessment.preview;
+    if(!next)throw new RangeError('La bajada de nivel no es válida');
+    loadSavedInput(next.snapshot.input);
+    setAdventure(next.snapshot.adventure);
+    setLevelDownOpen(false);
+    setLevelMessage(`Has vuelto al nivel ${next.toLevel}. Se han ajustado los rasgos y recursos. Pulsa «Guardar cambios» para actualizar PostgreSQL.`);
   }
   function confirmWeaponAttack(profile:WeaponAttackProfile,resolution:AttackResolution,context:MasteryContext,usage:AttackTurnUsage,usePeerlessAim=false){
     if(!sheet||!sessionCheck.state||sessionCheck.outOfSync||!output.result?.inventory)throw new RangeError('Primero valida y sincroniza el personaje');
@@ -315,7 +322,9 @@ export default function Home(){
         valid={Boolean(output.result&&!sessionCheck.outOfSync)}
         onEdit={()=>openEditorAt(0)}
         onLevelUp={()=>level<20?setLevelWizardOpen(true):openEditorAt(0)}
+        onLevelDown={level>1?()=>setLevelDownOpen(true):undefined}
       />
+      {levelDownOpen&&<LevelDownDialog preview={levelDownAssessment.preview} error={levelDownAssessment.error} onClose={()=>setLevelDownOpen(false)} onConfirm={confirmFighterLevelDown}/>}
       {levelWizardOpen&&level<20&&<LevelUpWizard
         input={input} adventure={adventure} outOfSync={sessionCheck.outOfSync}
         onClose={()=>setLevelWizardOpen(false)} onConfirmed={confirmWizardLevelUp}/>}
@@ -355,7 +364,7 @@ export default function Home(){
             <div className="field"><span className="field-label">Nivel del personaje</span>
               <div id="fighter-level-stepper" className="level-stepper" role="group" aria-label="Cambiar nivel del Guerrero">
                 <button type="button" className="level-stepper-arrow" aria-label="Bajar un nivel" title="Bajar un nivel" disabled={adjacentFighterLevel(level,-1)===null}
-                  onClick={lowerFighterLevel}><span aria-hidden="true">←</span></button>
+                  onClick={()=>setLevelDownOpen(true)}><span aria-hidden="true">←</span></button>
                 <div className="level-stepper-display" role="status" aria-live="polite" aria-atomic="true">
                   <span className="level-stepper-eyebrow">NIVEL ACTUAL</span>
                   <strong className="level-stepper-number">{level}</strong>
@@ -364,7 +373,7 @@ export default function Home(){
                 <button type="button" className="level-stepper-arrow" aria-label="Subir un nivel" title="Subir un nivel" disabled={adjacentFighterLevel(level,1)===null}
                   onClick={()=>setLevelWizardOpen(true)}><span aria-hidden="true">→</span></button>
               </div>
-              <p className="muted-note">La flecha derecha abre el asistente de subida: revisa y confirma todas las elecciones antes de aplicar el nivel. La izquierda baja de nivel y, previa confirmación, reinicia la sesión.</p>
+              <p className="muted-note">La flecha derecha abre el asistente de subida: revisa y confirma todas las elecciones antes de aplicar el nivel. La izquierda abre un resumen de lo que pierdes y modifica el nivel únicamente al confirmar.</p>
             </div>
             {level>=3&&<div className="info-line">Subclase: Campeón. Próximo nivel: {level===20?'nivel máximo':level+1}.</div>}
             {output.error&&<p className="save-error" role="alert">La hoja actual de nivel {level} tiene un error que impide la progresión o el guardado: {output.error}</p>}
