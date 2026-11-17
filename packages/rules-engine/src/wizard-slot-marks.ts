@@ -42,7 +42,7 @@ function actualWizardLevel(state:WizardLevelOneState,explicitLevel?:number):numb
   if(!same(explicitLevel))throw new RangeError('Nivel de Mago y ranuras desincronizados');
   return explicitLevel;
  }
- for(let level=1;level<=9;level++)if(same(level))return level;
+ for(let level=1;level<=11;level++)if(same(level))return level;
  throw new RangeError('Indica explícitamente el nivel de Mago');
 }
 /** Combinaciones válidas y actualmente recuperables con un descanso corto.

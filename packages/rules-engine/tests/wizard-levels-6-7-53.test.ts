@@ -27,8 +27,8 @@ describe('Actualización 53: Mago Evocación de niveles 6 y 7',()=>{
  it('lista las 29 opciones de nivel 4 del Manual 2024, todas con ficha, dados cuando proceda y página',()=>{
   expect(WIZARD_LEVEL_FOUR_SPELLS).toHaveLength(29);
   expect(WIZARD_SPELL_CATALOG.filter(s=>s.level===4)).toHaveLength(29);
-  expect(WIZARD_SPELL_RULES).toHaveLength(180);
-  expect(new Set(WIZARD_SPELL_RULES.map(s=>s.id)).size).toBe(180);
+  expect(WIZARD_SPELL_RULES).toHaveLength(202);
+  expect(new Set(WIZARD_SPELL_RULES.map(s=>s.id)).size).toBe(202);
   for(const spell of WIZARD_LEVEL_FOUR_SPELLS){
    const rule=wizardSpellRule(spell.id)!;
    expect(spell.description.length>70).toBe(true);

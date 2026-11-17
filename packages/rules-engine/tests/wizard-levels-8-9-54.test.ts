@@ -28,8 +28,8 @@ describe('Actualización 54: Mago Evocación niveles 8 y 9',()=>{
  it('catálogo oficial de 29 conjuros de nivel 5, con fichas y referencias al manual',()=>{
   expect(WIZARD_LEVEL_FIVE_SPELLS).toHaveLength(29);
   expect(WIZARD_SPELL_CATALOG.filter(spell=>spell.level===5)).toHaveLength(29);
-  expect(WIZARD_SPELL_RULES).toHaveLength(180);
-  expect(new Set(WIZARD_SPELL_RULES.map(spell=>spell.id)).size).toBe(180);
+  expect(WIZARD_SPELL_RULES).toHaveLength(202);
+  expect(new Set(WIZARD_SPELL_RULES.map(spell=>spell.id)).size).toBe(202);
   for(const spell of WIZARD_LEVEL_FIVE_SPELLS){
    const rule=wizardSpellRule(spell.id)!;
    expect(spell.description.length>90).toBe(true);
@@ -60,7 +60,7 @@ describe('Actualización 54: Mago Evocación niveles 8 y 9',()=>{
   expect(nine.input.preparedIds).toHaveLength(14);
   expect(sheet.spells.spellbook).toHaveLength(27);
   expect(wizardProgression(9,'evoker').proficiencyBonus).toBe(4);
-  expect(wizardLevelUpChoicesPreview(nine.input)).toBe(null);
+  expect(wizardLevelUpChoicesPreview(nine.input)?.nextLevel).toBe(10);
  });
  it('nivel 8 rechaza mejora ausente, superior al límite o una Evocación prematura',()=>{
   const seven=to7();const ch={newSpellIds:['arcane_eye','wall_of_fire'] as [string,string],preparedIds:[...seven.input.preparedIds,'arcane_eye']};
