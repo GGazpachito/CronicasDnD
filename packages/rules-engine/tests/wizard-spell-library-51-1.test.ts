@@ -22,9 +22,9 @@ describe('Actualización 51.1: catálogo, reglas y selección manual de Mago',()
   const counts=[0,1,2].map(level=>WIZARD_SPELL_RULES.filter(spell=>spell.level===level).length);
   expect(counts).toEqual([20,31,39]);
   expect(WIZARD_SPELL_RULES.filter(spell=>spell.level<=2)).toHaveLength(90);
-  expect(WIZARD_SPELL_RULES).toHaveLength(202);
+  expect(WIZARD_SPELL_RULES).toHaveLength(217);
   expect(WIZARD_SPELL_RULES.every(spell=>spell.description.length>70)).toBe(true);
-  expect(new Set(WIZARD_SPELL_RULES.map(spell=>spell.id)).size).toBe(202);
+  expect(new Set(WIZARD_SPELL_RULES.map(spell=>spell.id)).size).toBe(217);
  });
  it('marcar como aprendido desde Catálogo no altera la progresión reglamentaria',()=>{
   const selection=setWizardSpellLearned(wizardSpellSelection(base),'burning_hands',true);
@@ -95,7 +95,9 @@ describe('Actualización 51.1: catálogo, reglas y selección manual de Mago',()
   expect(spellDiceForCharacter('3d6',false,20)).toBe('3d6');
  });
  it('los metadatos de lanzamiento identifican los 90 conjuros en el manual',()=>{
-  expect(WIZARD_SPELL_RULES.every(spell=>typeof spell.sourcePage==='number'&&spell.sourcePage>=239&&spell.sourcePage<=343)).toBe(true);
+  expect(WIZARD_SPELL_RULES.filter(spell=>spell.level<=6).every(spell=>typeof spell.sourcePage==='number'&&spell.sourcePage>=239&&spell.sourcePage<=343)).toBe(true);
+  // Las fichas nuevas de nivel 7 remiten a la referencia oficial; la paginación PHB se cotejará por separado.
+  expect(WIZARD_SPELL_RULES.filter(spell=>spell.level===7).every(spell=>spell.description.length>70&&spell.castingTime&&spell.range&&spell.components&&spell.duration)).toBe(true);
   expect(wizardSpellRule('ray_of_enfeeblement')?.attack).toBe(false);
   expect(wizardSpellRule('ray_of_enfeeblement')?.rolls[0].formula).toBe('1d8');
  });

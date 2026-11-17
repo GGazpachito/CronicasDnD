@@ -16,6 +16,7 @@ import {WIZARD_LEVEL_THREE_SPELLS} from './wizard-third-level';
 import {WIZARD_LEVEL_FOUR_SPELLS} from './wizard-fourth-level';
 import {WIZARD_LEVEL_FIVE_SPELLS} from './wizard-fifth-level';
 import {WIZARD_LEVEL_SIX_SPELLS} from './wizard-sixth-level';
+import {WIZARD_LEVEL_SEVEN_SPELLS} from './wizard-seventh-level';
 import type {BackgroundEquipmentChoice} from './background-equipment';
 import {validateWizardSpellSelection,type WizardSpellSelection} from './wizard-spell-library';
 
@@ -82,7 +83,7 @@ const rawLevelTwo=[
  ['web','Telaraña','conjuration']
 ] as const;
 export const WIZARD_LEVEL_TWO_SPELLS=rawLevelTwo.map(([id,name,school,ritual])=>({id,name,level:2 as const,school,ritual}));
-export const WIZARD_SPELL_CATALOG=[...WIZARD_LEVEL_ONE_SPELLS,...WIZARD_LEVEL_TWO_SPELLS,...WIZARD_LEVEL_THREE_SPELLS,...WIZARD_LEVEL_FOUR_SPELLS,...WIZARD_LEVEL_FIVE_SPELLS,...WIZARD_LEVEL_SIX_SPELLS] as const;
+export const WIZARD_SPELL_CATALOG=[...WIZARD_LEVEL_ONE_SPELLS,...WIZARD_LEVEL_TWO_SPELLS,...WIZARD_LEVEL_THREE_SPELLS,...WIZARD_LEVEL_FOUR_SPELLS,...WIZARD_LEVEL_FIVE_SPELLS,...WIZARD_LEVEL_SIX_SPELLS,...WIZARD_LEVEL_SEVEN_SPELLS] as const;
 /** Misma dote de mejora de características utilizada por otras clases. */
 export type WizardLevel4Improvement=FighterAbilityImprovement;
 export const WIZARD_SCHOLAR_OPTIONS=['arcana','history','investigation','medicine','nature','religion'] as const satisfies readonly Skill[];
@@ -90,7 +91,7 @@ export type WizardScholarSkill=(typeof WIZARD_SCHOLAR_OPTIONS)[number];
 export const WIZARD_LEVEL_ONE_DEFAULTS={cantrips:['light','mage_hand','ray_of_frost'],spellbook:['detect_magic','feather_fall','mage_armor','magic_missile','sleep','thunderwave'],prepared:['feather_fall','mage_armor','magic_missile','thunderwave']} as const;
 
 export type GuidedWizardInput=Readonly<{
- classId:'wizard';level:1|2|3|4|5|6|7|8|9|10|11|12;name:string;profile?:CharacterProfile;
+ classId:'wizard';level:1|2|3|4|5|6|7|8|9|10|11|12|13;name:string;profile?:CharacterProfile;
  background:BackgroundId;species:SpeciesId;
  assignedAbilities:AbilityScores;
  increaseMode:'two_plus_one'|'three_ones';plusTwoAbility:Ability;plusOneAbility:Ability;
@@ -120,6 +121,8 @@ export type GuidedWizardInput=Readonly<{
   evokerLevelFiveSpellId?:string;
   /** Nivel 11: nueva Evocación gratuita al acceder a ranuras de nivel 6. */
   evokerLevelSixSpellId?:string;
+  /** Nivel 13: Evocación gratuita al obtener la primera ranura de nivel 7. */
+  evokerLevelSevenSpellId?:string;
 }>;
 /**
  * Proyección visual de un Mago todavía sin nombre. La validación estricta de
@@ -134,7 +137,7 @@ export function wizardInputForPreview(input:GuidedWizardInput):GuidedWizardInput
  return input.name.trim()?input:{...input,name:'Mago provisional'};
 }
 export type WizardLevelOneView=Readonly<{
- classId:'wizard';level:1|2|3|4|5|6|7|8|9|10|11|12;name:string;abilityScores:AbilityScores;
+ classId:'wizard';level:1|2|3|4|5|6|7|8|9|10|11|12|13;name:string;abilityScores:AbilityScores;
  abilityModifiers:ReturnType<typeof abilityModifiers>;
  skillBonuses:ReturnType<typeof calculateSkillBonuses>;
  savingThrowBonuses:ReturnType<typeof calculateSavingThrows>;
@@ -154,7 +157,7 @@ function selectSpells(ids:readonly string[],items:readonly {id:string;level:numb
  });
 }
 export function calculateGuidedWizard(input:GuidedWizardInput):WizardLevelOneView{
- if(!input||input.classId!=='wizard'||![1,2,3,4,5,6,7,8,9,10,11,12].includes(input.level))throw new RangeError('La creación guiada admite Magos de niveles 1 a 12');
+ if(!input||input.classId!=='wizard'||![1,2,3,4,5,6,7,8,9,10,11,12,13].includes(input.level))throw new RangeError('La creación guiada admite Magos de niveles 1 a 13');
  if(typeof input.name!=='string'||!input.name.trim()||input.name.length>120)throw new RangeError('Nombre de Mago inválido');
  const bg=BACKGROUNDS[input.background];if(!bg)throw new RangeError('Trasfondo desconocido');
  if(!Object.prototype.hasOwnProperty.call(SPECIES_NAMES,input.species))throw new RangeError('Especie desconocida');
@@ -231,7 +234,13 @@ export function calculateGuidedWizard(input:GuidedWizardInput):WizardLevelOneVie
   throw new RangeError('En nivel 11, Evocación concede un conjuro gratuito de nivel 1 a 6');
  if(new Set([...main,...bonus,...bonus5,...bonus7,...bonus9,...bonus11].map(sp=>sp.id)).size!==main.length+bonus.length+bonus5.length+bonus7.length+bonus9.length+bonus11.length)
   throw new RangeError('El conjuro gratuito de Evocación del nivel 11 debe ser nuevo');
- const spells=validateWizardSpellChoices(input.level,{...choices,spellbook:[...main,...bonus,...bonus5,...bonus7,...bonus9,...bonus11]},input.level>=3?'evoker':undefined);
+ if(input.level<13&&input.evokerLevelSevenSpellId!==undefined)throw new RangeError('El conjuro gratuito del nivel 13 todavía no está disponible');
+ const bonus13=input.level>=13?fromCatalog([input.evokerLevelSevenSpellId!]):[];
+ if(input.level>=13&&(typeof input.evokerLevelSevenSpellId!=='string'||bonus13[0]?.school!=='evocation'||bonus13[0].level>7))
+  throw new RangeError('En nivel 13, Evocación concede un conjuro gratuito de nivel 1 a 7');
+ if(new Set([...main,...bonus,...bonus5,...bonus7,...bonus9,...bonus11,...bonus13].map(sp=>sp.id)).size!==main.length+bonus.length+bonus5.length+bonus7.length+bonus9.length+bonus11.length+bonus13.length)
+  throw new RangeError('El conjuro gratuito de Evocación del nivel 13 debe ser nuevo');
+ const spells=validateWizardSpellChoices(input.level,{...choices,spellbook:[...main,...bonus,...bonus5,...bonus7,...bonus9,...bonus11,...bonus13]},input.level>=3?'evoker':undefined);
  if(input.spellSelection!==undefined)validateWizardSpellSelection(input.spellSelection);
  const bonuses=abilityModifiers(finalScores);
  const proficiency=[...new Set<Skill>([...bg.skills as readonly Skill[],...input.wizardSkills,...(input.species==='human'?[input.humanSkill!]:[])])];
@@ -299,7 +308,7 @@ export function validateWizardCharacterSnapshot(raw:unknown):WizardCharacterSnap
  if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new RangeError('Guardado de Mago inválido');
  const value=raw as Record<string,unknown>;
  if(value.schemaVersion!==3||value.ruleset!=='dnd-2024'||Object.keys(value).some(k=>!['schemaVersion','ruleset','input','wizardState'].includes(k)))throw new RangeError('Versión o estructura de Mago incorrectas');
- const permitted=['spellSelection','scholarSkill','subclass','evokerBonusSpellIds','level4Improvement','evokerLevelThreeSpellId','evokerLevelFourSpellId','level8Improvement','level12Improvement','evokerLevelFiveSpellId','evokerLevelSixSpellId','classId','level','name','profile','background','species','assignedAbilities','increaseMode','plusTwoAbility','plusOneAbility','wizardSkills','humanSkill','humanFeat','humanSize','elfLineage','equipmentChoice','backgroundEquipment','inventoryActions','cantripIds','spellbookIds','preparedIds'];
+ const permitted=['spellSelection','scholarSkill','subclass','evokerBonusSpellIds','level4Improvement','evokerLevelThreeSpellId','evokerLevelFourSpellId','level8Improvement','level12Improvement','evokerLevelFiveSpellId','evokerLevelSixSpellId','evokerLevelSevenSpellId','classId','level','name','profile','background','species','assignedAbilities','increaseMode','plusTwoAbility','plusOneAbility','wizardSkills','humanSkill','humanFeat','humanSize','elfLineage','equipmentChoice','backgroundEquipment','inventoryActions','cantripIds','spellbookIds','preparedIds'];
  if(!value.input||typeof value.input!=='object'||Array.isArray(value.input)||Object.keys(value.input as Record<string,unknown>).some(key=>!permitted.includes(key)))throw new RangeError('La creación de Mago incluye campos desconocidos');
  let clean:GuidedWizardInput;
  try{const json=JSON.stringify(value.input);if(json.length>120_000)throw new Error();clean=JSON.parse(json) as GuidedWizardInput;}catch{throw new RangeError('Datos de Mago demasiado grandes o no serializables');}

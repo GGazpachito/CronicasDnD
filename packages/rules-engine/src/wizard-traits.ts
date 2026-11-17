@@ -27,7 +27,7 @@ export function collectWizardTraits(input:GuidedWizardInput,view:WizardLevelOneV
     for(const feature of EVOKER_FEATURES.filter(f=>f.level<=input.level)){
       add(`evoker:${feature.id}`,feature.title,'Evocación','subclass',feature.description,feature.description,
         feature.id==='evocation_savant'?'calculated':'manual',
-        feature.id==='evocation_savant'?[`Conjuros gratuitos: ${[...(input.evokerBonusSpellIds??[]),...(input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[]),...(input.evokerLevelFourSpellId?[input.evokerLevelFourSpellId]:[]),...(input.evokerLevelFiveSpellId?[input.evokerLevelFiveSpellId]:[]),...(input.evokerLevelSixSpellId?[input.evokerLevelSixSpellId]:[])].join(', ')}.`]:feature.level===10?[`Bonificador de daño opcional: ${view.abilityModifiers.intelligence>=0?'+':''}${view.abilityModifiers.intelligence} a una tirada de daño del conjuro de Evocación, no a todas.`]:[]);
+        feature.id==='evocation_savant'?[`Conjuros gratuitos: ${[...(input.evokerBonusSpellIds??[]),...(input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[]),...(input.evokerLevelFourSpellId?[input.evokerLevelFourSpellId]:[]),...(input.evokerLevelFiveSpellId?[input.evokerLevelFiveSpellId]:[]),...(input.evokerLevelSixSpellId?[input.evokerLevelSixSpellId]:[]),...(input.evokerLevelSevenSpellId?[input.evokerLevelSevenSpellId]:[])].join(', ')}.`]:feature.level===10?[`Bonificador de daño opcional: ${view.abilityModifiers.intelligence>=0?'+':''}${view.abilityModifiers.intelligence} a una tirada de daño del conjuro de Evocación, no a todas.`]:[]);
     }
   }
   const origin=SPECIES_NAMES[input.species];

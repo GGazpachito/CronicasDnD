@@ -38,7 +38,7 @@ describe('Actualización 56: Mago nivel 12',()=>{
   expect(result.state.magic.slots.maximum.slice(0,6)).toEqual([4,3,3,3,2,1]);
   expect(wizardSlotMarks(result.state,6)[0]).toBe(true);
   expect(calculateGuidedWizard(result.input).abilityScores.wisdom).toBe(calculateGuidedWizard(eleven.input).abilityScores.wisdom+2);
-  expect(wizardLevelUpChoicesPreview(result.input)).toBe(null);
+  expect(wizardLevelUpChoicesPreview(result.input)?.nextLevel).toBe(13);
   expect(validateWizardCharacterSnapshot(makeWizardCharacterSnapshot(result.input,result.state)).input.level).toBe(12);
  });
  it('rechaza mejoras ausentes, anticipadas y superiores a 20',()=>{

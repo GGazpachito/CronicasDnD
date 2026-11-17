@@ -115,29 +115,30 @@ export function previewFighterLevelDown(input:GuidedFighterInput,adventure:Adven
 }
 
 const spellName=(id:string)=>[...WIZARD_LEVEL_ONE_CANTRIPS,...WIZARD_SPELL_CATALOG].find(s=>s.id===id)?.name??id;
-/** Retroceso 12→11→10→…→1, conservando las elecciones adquiridas antes
+/** Retroceso 13→12→11→…→1, conservando las elecciones adquiridas antes
  * del nivel retirado, las ranuras válidas y el estado persistido de la partida.
  */
 export function previewWizardLevelDown(input:GuidedWizardInput,state:WizardLevelOneState):WizardLevelDownPreview{
- if(input.level<=1||input.level>12)throw new RangeError('Mago: no se puede bajar del nivel 1');
+ if(input.level<=1||input.level>13)throw new RangeError('Mago: no se puede bajar del nivel 1');
  const before=calculateGuidedWizard(input);
  const valid=validateWizardOneState(state,before);
- const target=(input.level-1) as 1|2|3|4|5|6|7|8|9|10|11;
+ const target=(input.level-1) as 1|2|3|4|5|6|7|8|9|10|11|12;
  const gainedSpells=input.spellbookIds.slice(-2);
  const lostBonus=input.level===3?[...(input.evokerBonusSpellIds??[])]:[];
  const lostFree5=input.level===5&&input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[];
  const lostFree7=input.level===7&&input.evokerLevelFourSpellId?[input.evokerLevelFourSpellId]:[];
   const lostFree9=input.level===9&&input.evokerLevelFiveSpellId?[input.evokerLevelFiveSpellId]:[];
  const lostFree11=input.level===11&&input.evokerLevelSixSpellId?[input.evokerLevelSixSpellId]:[];
+ const lostFree13=input.level===13&&input.evokerLevelSevenSpellId?[input.evokerLevelSevenSpellId]:[];
  const lostCantrip=input.level===4||input.level===10?[input.cantripIds[input.cantripIds.length-1]]:[];
- const lostSpellIds=[...gainedSpells,...lostBonus,...lostFree5,...lostFree7,...lostFree9,...lostFree11,...lostCantrip];
+ const lostSpellIds=[...gainedSpells,...lostBonus,...lostFree5,...lostFree7,...lostFree9,...lostFree11,...lostFree13,...lostCantrip];
  const trimmedBook=input.spellbookIds.slice(0,-2);
- const keptExtras=[...(target>=3?input.evokerBonusSpellIds??[]:[]),...(target>=5&&input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[]),...(target>=7&&input.evokerLevelFourSpellId?[input.evokerLevelFourSpellId]:[]),...(target>=9&&input.evokerLevelFiveSpellId?[input.evokerLevelFiveSpellId]:[]),...(target>=11&&input.evokerLevelSixSpellId?[input.evokerLevelSixSpellId]:[])];
+ const keptExtras=[...(target>=3?input.evokerBonusSpellIds??[]:[]),...(target>=5&&input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[]),...(target>=7&&input.evokerLevelFourSpellId?[input.evokerLevelFourSpellId]:[]),...(target>=9&&input.evokerLevelFiveSpellId?[input.evokerLevelFiveSpellId]:[]),...(target>=11&&input.evokerLevelSixSpellId?[input.evokerLevelSixSpellId]:[]),...(target>=13&&input.evokerLevelSevenSpellId?[input.evokerLevelSevenSpellId]:[])];
  const permitted=new Set([...trimmedBook,...keptExtras]);
  const wanted=wizardProgression(target,target>=3?'evoker':undefined).preparedSpellCount;
  const filtered=input.preparedIds.filter(id=>permitted.has(id));
  const prepared=[...new Set([...filtered,...trimmedBook,...keptExtras])].slice(0,wanted);
- const {scholarSkill,subclass,evokerBonusSpellIds,evokerLevelThreeSpellId,evokerLevelFourSpellId,evokerLevelFiveSpellId,evokerLevelSixSpellId,level4Improvement,level8Improvement,level12Improvement,spellSelection,...other}=input;
+ const {scholarSkill,subclass,evokerBonusSpellIds,evokerLevelThreeSpellId,evokerLevelFourSpellId,evokerLevelFiveSpellId,evokerLevelSixSpellId,evokerLevelSevenSpellId,level4Improvement,level8Improvement,level12Improvement,spellSelection,...other}=input;
  const selection=spellSelection===undefined?undefined:validateWizardSpellSelection({
   learnedIds:spellSelection.learnedIds.filter(id=>!lostSpellIds.includes(id)),
   preparedIds:spellSelection.preparedIds.filter(id=>!lostSpellIds.includes(id)),
@@ -153,6 +154,7 @@ export function previewWizardLevelDown(input:GuidedWizardInput,state:WizardLevel
   ...(target>=7?{evokerLevelFourSpellId}:{}),
    ...(target>=9?{evokerLevelFiveSpellId}:{}),
   ...(target>=11?{evokerLevelSixSpellId}:{}),
+   ...(target>=13?{evokerLevelSevenSpellId}:{}),
   ...(selection?{spellSelection:selection}:{})};
  const after=calculateGuidedWizard(nextInput);
  const maximum=wizardProgression(target,target>=3?'evoker':undefined).spellSlots;
@@ -186,6 +188,7 @@ export function previewWizardLevelDown(input:GuidedWizardInput,state:WizardLevel
  if(input.level===4||input.level===10)changes.push({title:'Trucos conocidos',description:`De ${input.cantripIds.length} a ${nextInput.cantripIds.length}. Se retira el truco adicional del nivel ${input.level}.`});
  if(input.level===10)changes.push({title:'Evocación Potenciada',description:'Se pierde el derecho a sumar el modificador de Inteligencia a una tirada de daño de cada conjuro de Evocación lanzado.'});
  if(input.level===11&&input.evokerLevelSixSpellId)changes.push({title:'Experto en Evocación',description:'Se retira el conjuro gratuito obtenido al desbloquear ranuras de nivel 6.'});
+ if(input.level===13&&input.evokerLevelSevenSpellId)changes.push({title:'Experto en Evocación',description:'Se retira el conjuro gratuito obtenido al desbloquear ranuras de nivel 7.'});
  if(input.level===9&&input.evokerLevelFiveSpellId)changes.push({title:'Experto en Evocación',description:'Se retira el conjuro gratuito obtenido al desbloquear ranuras de nivel 5.'});
   if(input.level===7&&input.evokerLevelFourSpellId)changes.push({title:'Experto en Evocación',description:'Se retira el conjuro gratuito que se obtuvo al acceder a ranuras de nivel 4.'});
  if(input.level===5&&input.evokerLevelThreeSpellId)changes.push({title:'Experto en Evocación',description:'Se retira el conjuro gratuito que se obtuvo al acceder a ranuras de nivel 3.'});
