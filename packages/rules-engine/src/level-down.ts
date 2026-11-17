@@ -115,14 +115,14 @@ export function previewFighterLevelDown(input:GuidedFighterInput,adventure:Adven
 }
 
 const spellName=(id:string)=>[...WIZARD_LEVEL_ONE_CANTRIPS,...WIZARD_SPELL_CATALOG].find(s=>s.id===id)?.name??id;
-/** Retroceso 11→10→9→…→1, conservando las elecciones adquiridas antes
+/** Retroceso 12→11→10→…→1, conservando las elecciones adquiridas antes
  * del nivel retirado, las ranuras válidas y el estado persistido de la partida.
  */
 export function previewWizardLevelDown(input:GuidedWizardInput,state:WizardLevelOneState):WizardLevelDownPreview{
- if(input.level<=1||input.level>11)throw new RangeError('Mago: no se puede bajar del nivel 1');
+ if(input.level<=1||input.level>12)throw new RangeError('Mago: no se puede bajar del nivel 1');
  const before=calculateGuidedWizard(input);
  const valid=validateWizardOneState(state,before);
- const target=(input.level-1) as 1|2|3|4|5|6|7|8|9|10;
+ const target=(input.level-1) as 1|2|3|4|5|6|7|8|9|10|11;
  const gainedSpells=input.spellbookIds.slice(-2);
  const lostBonus=input.level===3?[...(input.evokerBonusSpellIds??[])]:[];
  const lostFree5=input.level===5&&input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[];
@@ -137,7 +137,7 @@ export function previewWizardLevelDown(input:GuidedWizardInput,state:WizardLevel
  const wanted=wizardProgression(target,target>=3?'evoker':undefined).preparedSpellCount;
  const filtered=input.preparedIds.filter(id=>permitted.has(id));
  const prepared=[...new Set([...filtered,...trimmedBook,...keptExtras])].slice(0,wanted);
- const {scholarSkill,subclass,evokerBonusSpellIds,evokerLevelThreeSpellId,evokerLevelFourSpellId,evokerLevelFiveSpellId,evokerLevelSixSpellId,level4Improvement,level8Improvement,spellSelection,...other}=input;
+ const {scholarSkill,subclass,evokerBonusSpellIds,evokerLevelThreeSpellId,evokerLevelFourSpellId,evokerLevelFiveSpellId,evokerLevelSixSpellId,level4Improvement,level8Improvement,level12Improvement,spellSelection,...other}=input;
  const selection=spellSelection===undefined?undefined:validateWizardSpellSelection({
   learnedIds:spellSelection.learnedIds.filter(id=>!lostSpellIds.includes(id)),
   preparedIds:spellSelection.preparedIds.filter(id=>!lostSpellIds.includes(id)),
@@ -148,6 +148,7 @@ export function previewWizardLevelDown(input:GuidedWizardInput,state:WizardLevel
   ...(target>=3?{subclass,evokerBonusSpellIds}:{}),
   ...(target>=4?{level4Improvement}:{}),
    ...(target>=8?{level8Improvement}:{}),
+   ...(target>=12?{level12Improvement}:{}),
   ...(target>=5?{evokerLevelThreeSpellId}:{}),
   ...(target>=7?{evokerLevelFourSpellId}:{}),
    ...(target>=9?{evokerLevelFiveSpellId}:{}),

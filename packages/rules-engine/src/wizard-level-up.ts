@@ -1,4 +1,4 @@
-/** Progresión atómica de Mago niveles 1→11, PHB 2024 pp. 165–170 y 174.
+/** Progresión atómica de Mago niveles 1→12, PHB 2024 pp. 165–170 y 174.
  * Conserva ranuras gastadas, inventario, perfil y selección manual de biblioteca.
  */
 import {wizardAdvanceMagicState,wizardProgression,WIZARD_FEATURES,EVOKER_FEATURES} from './wizard';
@@ -17,6 +17,7 @@ export type WizardLevelUpChoices=Readonly<{
  /** Nivel 4: dote Mejora de característica (+2 o +1/+1). */
   level4Improvement?:WizardLevel4Improvement;
   level8Improvement?:WizardLevel4Improvement;
+  level12Improvement?:WizardLevel4Improvement;
  /** Nivel 5: Experto en Evocación regala otro conjuro de nivel 1, 2 o 3. */
  evokerLevelThreeSpellId?:string;
  /** Nivel 7: nueva ranura de nivel 4, Evocación gratuita. */
@@ -32,10 +33,10 @@ export type WizardLevelUpResult=Readonly<{
  hitPointsIncrease:number;
 }>;
 export function prepareWizardLevelUp(input:GuidedWizardInput,state:WizardLevelOneState,choices:WizardLevelUpChoices):WizardLevelUpResult{
- if(input.level<1||input.level>=11)throw new RangeError('La progresión guiada de Mago llega actualmente a nivel 11');
+ if(input.level<1||input.level>=12)throw new RangeError('La progresión guiada de Mago llega actualmente a nivel 12');
  const prior=calculateGuidedWizard(input);
  validateWizardOneState(state,prior);
- const nextLevel=(input.level+1) as 2|3|4|5|6|7|8|9|10|11;
+ const nextLevel=(input.level+1) as 2|3|4|5|6|7|8|9|10|11|12;
  const newIds=choices.newSpellIds;
  if(!Array.isArray(newIds)||newIds.length!==2||new Set(newIds).size!==2||newIds.some(id=>input.spellbookIds.includes(id)))
   throw new RangeError('Debes añadir dos conjuros nuevos y diferentes al libro');
@@ -61,6 +62,9 @@ export function prepareWizardLevelUp(input:GuidedWizardInput,state:WizardLevelOn
  if(nextLevel===8){
   if(!choices.level8Improvement)throw new RangeError('Elige la mejora de característica del nivel 8');
  }else if(choices.level8Improvement!==undefined)throw new RangeError('La mejora de nivel 8 solo corresponde al nivel 8');
+ if(nextLevel===12){
+  if(!choices.level12Improvement)throw new RangeError('Elige la mejora de característica del nivel 12');
+ }else if(choices.level12Improvement!==undefined)throw new RangeError('La mejora de nivel 12 solo corresponde al nivel 12');
  if(nextLevel===5){
   const spell=choices.evokerLevelThreeSpellId&&catalog.get(choices.evokerLevelThreeSpellId);
   if(!spell||spell.school!=='evocation'||spell.level>highest||newIds.includes(spell.id)||input.spellbookIds.includes(spell.id)||(input.evokerBonusSpellIds??[]).includes(spell.id))
@@ -100,6 +104,7 @@ export function prepareWizardLevelUp(input:GuidedWizardInput,state:WizardLevelOn
   ...(nextLevel===3?{subclass:'evoker' as const,evokerBonusSpellIds:choices.evokerBonusSpellIds}:{}),
   ...(nextLevel===4?{level4Improvement:choices.level4Improvement}:{}),
   ...(nextLevel===8?{level8Improvement:choices.level8Improvement}:{}),
+  ...(nextLevel===12?{level12Improvement:choices.level12Improvement}:{}),
   ...(nextLevel===5?{evokerLevelThreeSpellId:choices.evokerLevelThreeSpellId}:{}),
   ...(nextLevel===7?{evokerLevelFourSpellId:choices.evokerLevelFourSpellId}:{}),
   ...(nextLevel===9?{evokerLevelFiveSpellId:choices.evokerLevelFiveSpellId}:{}),
@@ -123,7 +128,7 @@ export function prepareWizardLevelUp(input:GuidedWizardInput,state:WizardLevelOn
   hitPointsIncrease:hpGain};
 }
 export function wizardLevelUpChoicesPreview(input:GuidedWizardInput){
- if(input.level<1||input.level>=11)return null;
+ if(input.level<1||input.level>=12)return null;
  const nextLevel=input.level+1;
  const progression=wizardProgression(nextLevel,nextLevel>=3?'evoker':undefined);
  return {nextLevel,progression,features:[...WIZARD_FEATURES,...EVOKER_FEATURES].filter(f=>f.level===nextLevel)};

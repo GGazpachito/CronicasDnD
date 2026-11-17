@@ -153,9 +153,9 @@ export default function WizardPage(){
    <CharacterHeader name={input.name} portraitDataUrl={input.profile?.portraitDataUrl} level={input.level}
      background={background.name} species={SPECIES_NAMES[input.species]} className="Mago" subclass={input.level>=3?'Evocación':undefined} valid={Boolean(actualSnapshot)}
      onEdit={()=>setEditing(true)}
-     onLevelUp={input.level<11&&actualSnapshot?()=>{setLevelUpOpen(true);setEditing(false);}:undefined}
+      onLevelUp={input.level<12&&actualSnapshot?()=>{setLevelUpOpen(true);setEditing(false);}:undefined}
      onLevelDown={input.level>1&&actualSnapshot?()=>setLevelDownOpen(true):undefined}/>
-   <p className="wizard-progression-hint">{input.level>=11?'Próxima etapa: progresión al nivel 12.':`Próxima subida disponible: Mago de nivel ${input.level+1}.`}</p>
+   <p className="wizard-progression-hint">{input.level>=12?'Próxima etapa: progresión al nivel 13.':`Próxima subida disponible: Mago de nivel ${input.level+1}.`}</p>
   {levelDownOpen&&<LevelDownDialog preview={levelDownAssessment.preview} error={levelDownAssessment.error}
      onClose={()=>setLevelDownOpen(false)} onConfirm={()=>{
       const next=levelDownAssessment.preview;

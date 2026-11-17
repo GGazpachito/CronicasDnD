@@ -71,7 +71,7 @@ describe('Actualización 55: Mago Evocación niveles 10 y 11',()=>{
   expect(eleven.input.spellbookIds).toHaveLength(26);
   expect(eleven.state.magic.slots.maximum.slice(0,6)).toEqual([4,3,3,3,2,1]);
   expect(eleven.input.cantripIds).toHaveLength(5);
-  expect(wizardLevelUpChoicesPreview(eleven.input)).toBe(null);
+  expect(wizardLevelUpChoicesPreview(eleven.input)?.nextLevel).toBe(12);
   expect(calculateGuidedWizard(eleven.input).spells.spellbook.some(s=>s.id==='sunbeam')).toBe(true);
  });
  it('10→11 rechaza regalo omitido, repetido, de otra escuela o conjuros prematuros',()=>{
