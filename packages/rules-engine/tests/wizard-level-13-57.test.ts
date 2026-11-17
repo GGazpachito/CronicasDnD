@@ -77,7 +77,7 @@ describe('Actualización 57: Mago Evocación nivel 13',()=>{
   expect(sheet.spells.spellbook.some(s=>s.id==='delayed_blast_fireball')).toBe(true);
   expect(wizardProgression(13,'evoker').proficiencyBonus).toBe(5);
   expect(result.hitPointsIncrease).toBe(sheet.maximumHitPoints-calculateGuidedWizard(twelve.input).maximumHitPoints);
-  expect(wizardLevelUpChoicesPreview(result.input)).toBe(null);
+  expect(wizardLevelUpChoicesPreview(result.input)?.nextLevel).toBe(14);
  });
  it('rechaza regalos anticipados, duplicados, escuelas incorrectas y falta de regalo',()=>{
   const twelve=to12();

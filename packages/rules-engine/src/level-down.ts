@@ -115,14 +115,14 @@ export function previewFighterLevelDown(input:GuidedFighterInput,adventure:Adven
 }
 
 const spellName=(id:string)=>[...WIZARD_LEVEL_ONE_CANTRIPS,...WIZARD_SPELL_CATALOG].find(s=>s.id===id)?.name??id;
-/** Retroceso 13→12→11→…→1, conservando las elecciones adquiridas antes
+/** Retroceso 14→13→12→…→1, conservando las elecciones adquiridas antes
  * del nivel retirado, las ranuras válidas y el estado persistido de la partida.
  */
 export function previewWizardLevelDown(input:GuidedWizardInput,state:WizardLevelOneState):WizardLevelDownPreview{
- if(input.level<=1||input.level>13)throw new RangeError('Mago: no se puede bajar del nivel 1');
+ if(input.level<=1||input.level>14)throw new RangeError('Mago: no se puede bajar del nivel 1');
  const before=calculateGuidedWizard(input);
  const valid=validateWizardOneState(state,before);
- const target=(input.level-1) as 1|2|3|4|5|6|7|8|9|10|11|12;
+ const target=(input.level-1) as 1|2|3|4|5|6|7|8|9|10|11|12|13;
  const gainedSpells=input.spellbookIds.slice(-2);
  const lostBonus=input.level===3?[...(input.evokerBonusSpellIds??[])]:[];
  const lostFree5=input.level===5&&input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[];
@@ -173,7 +173,7 @@ export function previewWizardLevelDown(input:GuidedWizardInput,state:WizardLevel
  const lossOfMaximum=before.maximumHitPoints-after.maximumHitPoints;
  const hp=Math.max(0,Math.min(after.maximumHitPoints,valid.hitPointsCurrent-lossOfMaximum));
  const nextState:WizardLevelOneState={...valid,hitPointsCurrent:hp,slotMarks:marks,
-  magic:{...valid.magic,slots:createSlotPool(maximum,remaining)}};
+  magic:{...valid.magic,slots:createSlotPool(maximum,remaining),overchannelUses:0}};
  const snapshot=makeWizardCharacterSnapshot(nextInput,validateWizardOneState(nextState,after));
  const lostFeatures:LevelDownNotice[]=[...WIZARD_FEATURES,...EVOKER_FEATURES].filter(f=>f.level===input.level).map(f=>({title:f.title,description:f.description}));
  if(input.level===2&&scholarSkill)lostFeatures.push({title:'Pericia de Erudito',description:`Dejas de duplicar la competencia de ${SKILL_LABELS[scholarSkill]}.`});
@@ -189,6 +189,7 @@ export function previewWizardLevelDown(input:GuidedWizardInput,state:WizardLevel
  if(input.level===10)changes.push({title:'Evocación Potenciada',description:'Se pierde el derecho a sumar el modificador de Inteligencia a una tirada de daño de cada conjuro de Evocación lanzado.'});
  if(input.level===11&&input.evokerLevelSixSpellId)changes.push({title:'Experto en Evocación',description:'Se retira el conjuro gratuito obtenido al desbloquear ranuras de nivel 6.'});
  if(input.level===13&&input.evokerLevelSevenSpellId)changes.push({title:'Experto en Evocación',description:'Se retira el conjuro gratuito obtenido al desbloquear ranuras de nivel 7.'});
+ if(input.level===14)changes.push({title:'Sobrecarga',description:`Se pierde el rasgo y se borra el contador de ${valid.magic.overchannelUses} usos desde el último descanso largo.`});
  if(input.level===9&&input.evokerLevelFiveSpellId)changes.push({title:'Experto en Evocación',description:'Se retira el conjuro gratuito obtenido al desbloquear ranuras de nivel 5.'});
   if(input.level===7&&input.evokerLevelFourSpellId)changes.push({title:'Experto en Evocación',description:'Se retira el conjuro gratuito que se obtuvo al acceder a ranuras de nivel 4.'});
  if(input.level===5&&input.evokerLevelThreeSpellId)changes.push({title:'Experto en Evocación',description:'Se retira el conjuro gratuito que se obtuvo al acceder a ranuras de nivel 3.'});

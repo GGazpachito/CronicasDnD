@@ -25,7 +25,8 @@ import {ABILITIES,type Ability} from '../../../../../packages/rules-engine/src/a
 import {SKILLS,type Skill} from '../../../../../packages/rules-engine/src/proficiencies';
 import {BACKGROUNDS,SPECIES_NAMES,STANDARD_ARRAY,type BackgroundId,type SpeciesId} from '../../../../../packages/rules-engine/src/guided';
 import {EMPTY_CHARACTER_PROFILE} from '../../../../../packages/rules-engine/src/character-profile';
-import {wizardProgression} from '../../../../../packages/rules-engine/src/wizard';
+import {evokerOverchannel,wizardProgression} from '../../../../../packages/rules-engine/src/wizard';
+import {rollSpellDice} from '../../../../../packages/rules-engine/src/spell-dice';
 import {rollD20,type D20Mode} from '../../../../../packages/rules-engine/src/d20';
 import {type WizardSpellSelection} from '../../../../../packages/rules-engine/src/wizard-spell-library';
 import {
@@ -61,6 +62,9 @@ export default function WizardPage(){
  const [magicAttackResult,setMagicAttackResult]=useState('');
  const [memorizeOld,setMemorizeOld]=useState('');
  const [memorizeNew,setMemorizeNew]=useState('');
+ const [overchannelSlot,setOverchannelSlot]=useState(3);
+ const [overchannelConfirmed,setOverchannelConfirmed]=useState(false);
+ const [overchannelResult,setOverchannelResult]=useState('');
  const computed=useMemo(()=>{
   try{return {sheet:calculateGuidedWizard(wizardInputForPreview(input)),error:''};}
   catch(e){return {sheet:null,error:e instanceof Error?e.message:'Elecciones inválidas'};}
@@ -129,7 +133,19 @@ export default function WizardPage(){
   });
  }
  function recoverArcane(slotLevels:readonly number[]=[1]){try{setState(previous=>recoverWizardArcaneSlots(previous,slotLevels,input.level));setError('');}catch(e){setError(e instanceof Error?e.message:'Recuperación no disponible');}}
- function rest(){setState(previous=>({...resetWizardSlots(previous,input.level),hitPointsCurrent:sheet?.maximumHitPoints??previous.hitPointsCurrent,temporaryHitPoints:0,heroicInspiration:input.species==='human'?true:previous.heroicInspiration}));setError('');}
+ function rest(){setState(previous=>({...resetWizardSlots(previous,input.level),hitPointsCurrent:sheet?.maximumHitPoints??previous.hitPointsCurrent,temporaryHitPoints:0,heroicInspiration:input.species==='human'?true:previous.heroicInspiration}));setOverchannelResult('');setOverchannelConfirmed(false);setError('');}
+ function activateOverchannel(){
+  if(!overchannelConfirmed){setError('Confirma que vas a activar Sobrecarga sobre un conjuro de Mago válido.');return;}
+  try{
+   const activation=evokerOverchannel(state.magic,input.level,overchannelSlot);
+   const dice:number[]=[];
+   for(let remaining=activation.necroticDice;remaining>0;remaining-=80){dice.push(...rollSpellDice(`${Math.min(remaining,80)}d12`).dice);}
+   const total=dice.reduce((sum,die)=>sum+die,0);
+   setState(previous=>({...previous,magic:{...previous.magic,overchannelUses:activation.state.overchannelUses}}));
+   setOverchannelResult(dice.length?`Uso ${activation.state.overchannelUses}: ${dice.length}d12 necróticos [${dice.join(', ')}] = ${total}. Este daño ignora resistencia e inmunidad; descuéntalo de tus PG manualmente.`:'Primer uso: puedes maximizar el daño del conjuro este turno sin recibir daño necrótico.');
+   setOverchannelConfirmed(false);setError('');
+  }catch(e){setError(e instanceof Error?e.message:'No se pudo activar Sobrecarga');}
+ }
  function memorize(){try{const next=wizardMemorizePreparedSpell(input,memorizeOld,memorizeNew);setInput(next);setMemorizeOld('');setMemorizeNew('');setError('');}catch(e){setError(e instanceof Error?e.message:'No se ha podido memorizar el conjuro');}}
  function toggleSlot(index:number,slotLevel=1){try{setState(previous=>toggleWizardSlotMark(previous,index,slotLevel));setError('');}catch(e){setError(e instanceof Error?e.message:'Ranura no válida');}}
  function transact(action:InventoryAction):string|null{
@@ -144,7 +160,7 @@ export default function WizardPage(){
  function undoInventory(){patch({inventoryActions:(input.inventoryActions??[]).slice(0,-1)});setError('');}
  function resetInventory(){patch({inventoryActions:[]});setError('');}
  function restore(snapshot:ReturnType<typeof validateWizardCharacterSnapshot>){
-  setInput(snapshot.input);setState(snapshot.wizardState);setProfileRevision(n=>n+1);setEditing(false);setLevelUpOpen(false);setLevelDownOpen(false);setTab('principal');setError('');
+  setInput(snapshot.input);setState(snapshot.wizardState);setProfileRevision(n=>n+1);setEditing(false);setLevelUpOpen(false);setLevelDownOpen(false);setOverchannelResult('');setOverchannelConfirmed(false);setTab('principal');setError('');
  }
  return <main className="app-shell wizard-page">
   <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Mago · D&D 2024</span></div></div><Link href="/" className="wizard-class-link" onNavigate={(event:{preventDefault:()=>void})=>{if(pendingSaveNavigation.current&&!window.confirm("Tienes cambios sin guardar. ¿Descartarlos y volver al menú?"))event.preventDefault();}}>Menú de personajes</Link></header>
@@ -153,17 +169,17 @@ export default function WizardPage(){
    <CharacterHeader name={input.name} portraitDataUrl={input.profile?.portraitDataUrl} level={input.level}
      background={background.name} species={SPECIES_NAMES[input.species]} className="Mago" subclass={input.level>=3?'Evocación':undefined} valid={Boolean(actualSnapshot)}
      onEdit={()=>setEditing(true)}
-      onLevelUp={input.level<13&&actualSnapshot?()=>{setLevelUpOpen(true);setEditing(false);}:undefined}
+      onLevelUp={input.level<14&&actualSnapshot?()=>{setLevelUpOpen(true);setEditing(false);}:undefined}
      onLevelDown={input.level>1&&actualSnapshot?()=>setLevelDownOpen(true):undefined}/>
-   <p className="wizard-progression-hint">{input.level>=13?'Próxima etapa: progresión al nivel 14.':`Próxima subida disponible: Mago de nivel ${input.level+1}.`}</p>
+   <p className="wizard-progression-hint">{input.level>=14?'Próxima etapa: progresión al nivel 15.':`Próxima subida disponible: Mago de nivel ${input.level+1}.`}</p>
   {levelDownOpen&&<LevelDownDialog preview={levelDownAssessment.preview} error={levelDownAssessment.error}
      onClose={()=>setLevelDownOpen(false)} onConfirm={()=>{
       const next=levelDownAssessment.preview;
       if(!next)throw new RangeError('La bajada de nivel no es válida');
-      setInput(next.snapshot.input);setState(next.snapshot.wizardState);setLevelDownOpen(false);
+      setInput(next.snapshot.input);setState(next.snapshot.wizardState);setLevelDownOpen(false);setOverchannelResult('');setOverchannelConfirmed(false);
       setEditing(false);setTab('principal');setError('');
      }}/>} 
-  {levelUpOpen&&<WizardLevelUpWizard input={input} state={state} mode={mode} onCancel={()=>setLevelUpOpen(false)} onConfirm={next=>{setInput(next.input);setState(next.state);setLevelUpOpen(false);setEditing(false);setTab('principal');setError('');}}/>}
+  {levelUpOpen&&<WizardLevelUpWizard input={input} state={state} mode={mode} onCancel={()=>setLevelUpOpen(false)} onConfirm={next=>{setInput(next.input);setState(next.state);setLevelUpOpen(false);setOverchannelResult('');setOverchannelConfirmed(false);setEditing(false);setTab('principal');setError('');}}/>}
   <SaveLoadPanel characterClass="wizard" snapshot={actualSnapshot} validate={validateWizardCharacterSnapshot} onLoad={restore}
      normalize={saved=>makeWizardCharacterSnapshot(saved.input,saved.wizardState)}
      onPendingChange={pending=>{pendingSaveNavigation.current=pending;}}/>
@@ -221,7 +237,7 @@ export default function WizardPage(){
         </div>)}
        </div><p className="overview-health-hint">Escribe +5 o -5 y pulsa Intro. El daño consume primero PG temporales.</p></div>}
       attacksContent={<BasicWeaponAttacks inventory={sheet.inventory} scores={sheet.abilityScores} proficiency={wizardProgression(input.level,input.level>=3?'evoker':undefined).proficiencyBonus} mode={mode}/>}
-      resourcesContent={<section className="overview-panel panel"><div className="overview-panel-heading"><h3>Recursos</h3><span>Clase</span></div><div className="overview-record"><span>Recuperación arcana</span><strong>{state.magic.arcaneRecoveryUsed?'Gastada':'Disponible'}</strong></div><button className="overview-link" type="button" disabled={state.magic.arcaneRecoveryUsed||state.magic.slots.remaining.every((n,i)=>n===state.magic.slots.maximum[i])} onClick={()=>setTab('hechizos')}>Ver opciones de Recuperación arcana</button><p className="overview-panel-note">Después de un descanso corto, recupera ranuras gastadas hasta el límite de Recuperación arcana. Elige cuántas ranuras recuperar desde Hechizos.</p></section>}
+      resourcesContent={<section className="overview-panel panel"><div className="overview-panel-heading"><h3>Recursos</h3><span>Clase</span></div><div className="overview-record"><span>Recuperación arcana</span><strong>{state.magic.arcaneRecoveryUsed?'Gastada':'Disponible'}</strong></div><button className="overview-link" type="button" disabled={state.magic.arcaneRecoveryUsed||state.magic.slots.remaining.every((n,i)=>n===state.magic.slots.maximum[i])} onClick={()=>setTab('hechizos')}>Ver opciones de Recuperación arcana</button><p className="overview-panel-note">Después de un descanso corto, recupera ranuras gastadas hasta el límite de Recuperación arcana. Elige cuántas ranuras recuperar desde Hechizos.</p>{input.level>=14&&<><div className="overview-record"><span>Sobrecarga</span><strong>{state.magic.overchannelUses} usos</strong></div><button type="button" className="overview-link" onClick={()=>setTab('hechizos')}>Gestionar Sobrecarga en Hechizos</button></>}</section>}
       spellSlotsContent={<section className="overview-panel panel" aria-label="Espacios de conjuro"><div className="overview-panel-heading"><h3>Espacios de conjuro</h3><span>Rasgo de lanzador</span></div>{[1,2,3,4,5,6,7].filter(l=>state.magic.slots.maximum[l-1]>0).map(l=><SpellSlotDiamonds key={l} level={l} spent={wizardSlotMarks(state,l)} onToggle={index=>toggleSlot(index,l)}/>)}<div className="overview-quick-actions"><button type="button" onClick={rest}>Descanso largo</button></div><p className="overview-panel-note">Gastar una ranura no lanza el conjuro automáticamente.</p></section>}
       warningContent={error&&<div className="overview-action-message is-error" role="alert">{error}</div>}
       footerContent={<>
@@ -244,6 +260,15 @@ export default function WizardPage(){
    <section id="sheet-panel-hechizos" role="tabpanel" aria-labelledby="sheet-tab-hechizos" hidden={tab!=='hechizos'} className="sheet-tab-panel"><div className="wizard-module panel"><h2>Hechizos del Mago</h2>
     <div className="wizard-attack-actions"><span>Bonificador de ataque mágico: <strong>{sheet?signed(sheet.spellAttackBonus):'—'}</strong></span><button type="button" disabled={!sheet} onClick={()=>{if(!sheet)return;try{const result=rollD20(sheet.spellAttackBonus,mode);setMagicAttackResult(`${result.dice.join(' / ')} ${signed(sheet.spellAttackBonus)} = ${result.total}`);}catch(e){setMagicAttackResult(e instanceof Error?e.message:'No se pudo tirar el dado');}}}>Tirar ataque mágico · d20</button>{magicAttackResult&&<output aria-live="polite">{magicAttackResult}</output>}</div>
     {input.level>=10&&sheet&&<p className="muted-note"><strong>Evocación Potenciada:</strong> puedes sumar {signed(sheet.abilityModifiers.intelligence)} a una tirada de daño de cada conjuro de Mago de la escuela de Evocación. La elección de qué tirada potenciar es tuya; no se suma a cada dado.</p>}
+    {input.level>=14&&sheet&&<fieldset className="level-wizard-fieldset wizard-overchannel-panel"><legend>Sobrecarga · Evocación nivel 14</legend>
+     <p className="muted-note">Al lanzar un conjuro de Mago que haga daño usando una ranura de nivel 1 a 5, puedes causar el daño máximo de ese conjuro en el turno del lanzamiento. No afecta a trucos ni a ranuras de nivel 6 o 7. La primera activación por descanso largo no te hiere; después recibes daño necrótico igual a 2d12, 3d12, 4d12… por cada nivel de la ranura utilizada. Este daño ignora resistencias e inmunidades.</p>
+     <p><strong>Usos desde el último descanso largo:</strong> {state.magic.overchannelUses}. <strong>Próxima consecuencia:</strong> {state.magic.overchannelUses===0?'Sin daño necrótico':`${state.magic.overchannelUses+1}d12 por nivel de ranura`}.</p>
+     <label className="field"><span>Nivel de la ranura del conjuro que vas a potenciar</span><select value={overchannelSlot} onChange={event=>{setOverchannelSlot(Number(event.target.value));setOverchannelConfirmed(false);}}>{[1,2,3,4,5].map(level=><option key={level} value={level}>Nivel {level}</option>)}</select></label>
+     <p className="muted-note">Esta activación no lanza el conjuro, no gasta la ranura y no modifica tus PG. Gestiona el lanzamiento y el daño recibido manualmente.</p>
+     <label><input type="checkbox" checked={overchannelConfirmed} onChange={event=>setOverchannelConfirmed(event.target.checked)}/> Confirmo que he lanzado un conjuro válido y quiero registrar esta Sobrecarga.</label>
+     <button type="button" disabled={!overchannelConfirmed} onClick={activateOverchannel}>Registrar Sobrecarga y tirar daño propio si procede</button>
+     {overchannelResult&&<output aria-live="polite">{overchannelResult}</output>}
+    </fieldset>}
     {[1,2,3,4,5,6,7].filter(l=>state.magic.slots.maximum[l-1]>0).map(l=><SpellSlotDiamonds key={l} level={l} spent={wizardSlotMarks(state,l)} onToggle={index=>toggleSlot(index,l)}/>)}
     <div className="wizard-delta" aria-label="Recuperación arcana">
      <p className="muted-note">Recuperación arcana: una vez por descanso largo, tras un descanso corto. Puedes recuperar ranuras cuyo total de niveles no supere {Math.ceil(input.level/2)}, siempre que sean de nivel 5 o inferior.</p>

@@ -91,7 +91,7 @@ export type WizardScholarSkill=(typeof WIZARD_SCHOLAR_OPTIONS)[number];
 export const WIZARD_LEVEL_ONE_DEFAULTS={cantrips:['light','mage_hand','ray_of_frost'],spellbook:['detect_magic','feather_fall','mage_armor','magic_missile','sleep','thunderwave'],prepared:['feather_fall','mage_armor','magic_missile','thunderwave']} as const;
 
 export type GuidedWizardInput=Readonly<{
- classId:'wizard';level:1|2|3|4|5|6|7|8|9|10|11|12|13;name:string;profile?:CharacterProfile;
+ classId:'wizard';level:1|2|3|4|5|6|7|8|9|10|11|12|13|14;name:string;profile?:CharacterProfile;
  background:BackgroundId;species:SpeciesId;
  assignedAbilities:AbilityScores;
  increaseMode:'two_plus_one'|'three_ones';plusTwoAbility:Ability;plusOneAbility:Ability;
@@ -137,7 +137,7 @@ export function wizardInputForPreview(input:GuidedWizardInput):GuidedWizardInput
  return input.name.trim()?input:{...input,name:'Mago provisional'};
 }
 export type WizardLevelOneView=Readonly<{
- classId:'wizard';level:1|2|3|4|5|6|7|8|9|10|11|12|13;name:string;abilityScores:AbilityScores;
+ classId:'wizard';level:1|2|3|4|5|6|7|8|9|10|11|12|13|14;name:string;abilityScores:AbilityScores;
  abilityModifiers:ReturnType<typeof abilityModifiers>;
  skillBonuses:ReturnType<typeof calculateSkillBonuses>;
  savingThrowBonuses:ReturnType<typeof calculateSavingThrows>;
@@ -157,7 +157,7 @@ function selectSpells(ids:readonly string[],items:readonly {id:string;level:numb
  });
 }
 export function calculateGuidedWizard(input:GuidedWizardInput):WizardLevelOneView{
- if(!input||input.classId!=='wizard'||![1,2,3,4,5,6,7,8,9,10,11,12,13].includes(input.level))throw new RangeError('La creación guiada admite Magos de niveles 1 a 13');
+ if(!input||input.classId!=='wizard'||![1,2,3,4,5,6,7,8,9,10,11,12,13,14].includes(input.level))throw new RangeError('La creación guiada admite Magos de niveles 1 a 14');
  if(typeof input.name!=='string'||!input.name.trim()||input.name.length>120)throw new RangeError('Nombre de Mago inválido');
  const bg=BACKGROUNDS[input.background];if(!bg)throw new RangeError('Trasfondo desconocido');
  if(!Object.prototype.hasOwnProperty.call(SPECIES_NAMES,input.species))throw new RangeError('Especie desconocida');
@@ -284,7 +284,7 @@ export function validateWizardOneState(raw:unknown,sheet:WizardLevelOneView):Wiz
  const hp=state.hitPointsCurrent,tp=state.temporaryHitPoints;
  if(!Number.isInteger(hp)||(hp as number)<0||(hp as number)>sheet.maximumHitPoints||!Number.isInteger(tp)||(tp as number)<0||(tp as number)>10000||typeof state.heroicInspiration!=='boolean')throw new RangeError('PG o inspiración del Mago inválidos');
  const magic=state.magic as WizardMagicState;
- if(!magic||typeof magic!=='object'||!magic.slots||typeof magic.arcaneRecoveryUsed!=='boolean'||magic.overchannelUses!==0||!Array.isArray(magic.signatureUsed)||magic.signatureUsed.length!==0)
+ if(!magic||typeof magic!=='object'||!magic.slots||typeof magic.arcaneRecoveryUsed!=='boolean'||!Number.isSafeInteger(magic.overchannelUses)||magic.overchannelUses<0||(sheet.level<14&&magic.overchannelUses!==0)||!Array.isArray(magic.signatureUsed)||magic.signatureUsed.length!==0)
   throw new RangeError('Recursos de magia de Mago inválidos');
  const slots=createSlotPool(magic.slots.maximum,magic.slots.remaining);
  if(slots.maximum.join(',')!==wizardProgression(sheet.level,sheet.level>=3?'evoker':undefined).spellSlots.join(','))throw new RangeError('Ranuras de nivel distinto a la ficha');
@@ -299,7 +299,7 @@ export function validateWizardOneState(raw:unknown,sheet:WizardLevelOneView):Wiz
  const marks=state.slotMarks;
  if(marks!==undefined&&(!Array.isArray(marks)||marks.length!==slots.maximum.reduce((a,b)=>a+b,0)||marks.some(value=>typeof value!=='boolean')||slots.maximum.some((maximum,i)=>{const offset=slots.maximum.slice(0,i).reduce((a,b)=>a+b,0);return marks.slice(offset,offset+maximum).filter(Boolean).length!==maximum-slots.remaining[i]})))
   throw new RangeError('Las marcas de espacios de conjuro no coinciden con las ranuras disponibles');
- return {hitPointsCurrent:hp as number,temporaryHitPoints:tp as number,heroicInspiration:state.heroicInspiration,magic:{slots,arcaneRecoveryUsed:magic.arcaneRecoveryUsed,overchannelUses:0,signatureUsed:[]},...(manualDeathMarks?{manualDeathMarks}:{}),...(marks!==undefined?{slotMarks:[...(marks as boolean[])]}:{})};
+ return {hitPointsCurrent:hp as number,temporaryHitPoints:tp as number,heroicInspiration:state.heroicInspiration,magic:{slots,arcaneRecoveryUsed:magic.arcaneRecoveryUsed,overchannelUses:magic.overchannelUses,signatureUsed:[]},...(manualDeathMarks?{manualDeathMarks}:{}),...(marks!==undefined?{slotMarks:[...(marks as boolean[])]}:{})};
 }
 export type WizardCharacterSnapshot=Readonly<{
  schemaVersion:3;ruleset:'dnd-2024';input:GuidedWizardInput;wizardState:WizardLevelOneState;

@@ -1,4 +1,4 @@
-/** Progresión atómica de Mago niveles 1→13, PHB 2024 pp. 165–170 y 174.
+/** Progresión atómica de Mago niveles 1→14, PHB 2024 pp. 165–170 y 174.
  * Conserva ranuras gastadas, inventario, perfil y selección manual de biblioteca.
  */
 import {wizardAdvanceMagicState,wizardProgression,WIZARD_FEATURES,EVOKER_FEATURES} from './wizard';
@@ -35,10 +35,10 @@ export type WizardLevelUpResult=Readonly<{
  hitPointsIncrease:number;
 }>;
 export function prepareWizardLevelUp(input:GuidedWizardInput,state:WizardLevelOneState,choices:WizardLevelUpChoices):WizardLevelUpResult{
- if(input.level<1||input.level>=13)throw new RangeError('La progresión guiada de Mago llega actualmente a nivel 13');
+ if(input.level<1||input.level>=14)throw new RangeError('La progresión guiada de Mago llega actualmente a nivel 14');
  const prior=calculateGuidedWizard(input);
  validateWizardOneState(state,prior);
- const nextLevel=(input.level+1) as 2|3|4|5|6|7|8|9|10|11|12|13;
+ const nextLevel=(input.level+1) as 2|3|4|5|6|7|8|9|10|11|12|13|14;
  const newIds=choices.newSpellIds;
  if(!Array.isArray(newIds)||newIds.length!==2||new Set(newIds).size!==2||newIds.some(id=>input.spellbookIds.includes(id)))
   throw new RangeError('Debes añadir dos conjuros nuevos y diferentes al libro');
@@ -139,7 +139,7 @@ export function prepareWizardLevelUp(input:GuidedWizardInput,state:WizardLevelOn
   hitPointsIncrease:hpGain};
 }
 export function wizardLevelUpChoicesPreview(input:GuidedWizardInput){
- if(input.level<1||input.level>=13)return null;
+ if(input.level<1||input.level>=14)return null;
  const nextLevel=input.level+1;
  const progression=wizardProgression(nextLevel,nextLevel>=3?'evoker':undefined);
  return {nextLevel,progression,features:[...WIZARD_FEATURES,...EVOKER_FEATURES].filter(f=>f.level===nextLevel)};
