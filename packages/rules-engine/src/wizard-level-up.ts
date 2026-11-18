@@ -1,4 +1,4 @@
-/** Progresión atómica de Mago niveles 1→16, PHB 2024 pp. 165–170 y 174.
+/** Progresión atómica de Mago niveles 1→17, PHB 2024 pp. 165–170 y 174.
  * Conserva ranuras gastadas, inventario, perfil y selección manual de biblioteca.
  */
 import {wizardAdvanceMagicState,wizardProgression,WIZARD_FEATURES,EVOKER_FEATURES} from './wizard';
@@ -31,6 +31,8 @@ export type WizardLevelUpChoices=Readonly<{
   evokerLevelSevenSpellId?:string;
   /** Nivel 15: nuevo conjuro gratuito de Evocación al desbloquear nivel 8. */
   evokerLevelEightSpellId?:string;
+  /** Nivel 17: nuevo conjuro gratuito de Evocación al desbloquear nivel 9. */
+  evokerLevelNineSpellId?:string;
 }>;
 export type WizardLevelUpResult=Readonly<{
  input:GuidedWizardInput;state:WizardLevelOneState;
@@ -38,10 +40,10 @@ export type WizardLevelUpResult=Readonly<{
  hitPointsIncrease:number;
 }>;
 export function prepareWizardLevelUp(input:GuidedWizardInput,state:WizardLevelOneState,choices:WizardLevelUpChoices):WizardLevelUpResult{
- if(input.level<1||input.level>=16)throw new RangeError('La progresión guiada de Mago llega actualmente a nivel 16');
+ if(input.level<1||input.level>=17)throw new RangeError('La progresión guiada de Mago llega actualmente a nivel 17');
  const prior=calculateGuidedWizard(input);
  validateWizardOneState(state,prior);
- const nextLevel=(input.level+1) as 2|3|4|5|6|7|8|9|10|11|12|13|14|15|16;
+ const nextLevel=(input.level+1) as 2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17;
  const newIds=choices.newSpellIds;
  if(!Array.isArray(newIds)||newIds.length!==2||new Set(newIds).size!==2||newIds.some(id=>input.spellbookIds.includes(id)))
   throw new RangeError('Debes añadir dos conjuros nuevos y diferentes al libro');
@@ -116,9 +118,16 @@ export function prepareWizardLevelUp(input:GuidedWizardInput,state:WizardLevelOn
    throw new RangeError('Elige una Evocación gratuita nueva de nivel 1–8 para el nivel 15');
  }else if(choices.evokerLevelEightSpellId!==undefined)
   throw new RangeError('El conjuro gratuito adicional de Evocación corresponde al nivel 15');
+ if(nextLevel===17){
+  const spell=choices.evokerLevelNineSpellId&&catalog.get(choices.evokerLevelNineSpellId);
+  const otherFree=[...(input.evokerBonusSpellIds??[]),input.evokerLevelThreeSpellId,input.evokerLevelFourSpellId,input.evokerLevelFiveSpellId,input.evokerLevelSixSpellId,input.evokerLevelSevenSpellId,input.evokerLevelEightSpellId];
+  if(!spell||spell.school!=='evocation'||spell.level>9||newIds.includes(spell.id)||input.spellbookIds.includes(spell.id)||otherFree.includes(spell.id))
+   throw new RangeError('Elige una Evocación gratuita nueva de nivel 1–9 para el nivel 17');
+ }else if(choices.evokerLevelNineSpellId!==undefined)
+  throw new RangeError('El conjuro gratuito adicional de Evocación corresponde al nivel 17');
  if(input.preparedIds.some(id=>!choices.preparedIds.includes(id)))
   throw new RangeError('Los conjuros preparados anteriores se conservan hasta completar un descanso largo');
- const gained=[...newIds,...(choices.evokerBonusSpellIds??[]),...(choices.evokerLevelThreeSpellId?[choices.evokerLevelThreeSpellId]:[]),...(choices.evokerLevelFourSpellId?[choices.evokerLevelFourSpellId]:[]),...(choices.evokerLevelFiveSpellId?[choices.evokerLevelFiveSpellId]:[]),...(choices.evokerLevelSixSpellId?[choices.evokerLevelSixSpellId]:[]),...(choices.evokerLevelSevenSpellId?[choices.evokerLevelSevenSpellId]:[]),...(choices.evokerLevelEightSpellId?[choices.evokerLevelEightSpellId]:[]),...(choices.newCantripId?[choices.newCantripId]:[])];
+ const gained=[...newIds,...(choices.evokerBonusSpellIds??[]),...(choices.evokerLevelThreeSpellId?[choices.evokerLevelThreeSpellId]:[]),...(choices.evokerLevelFourSpellId?[choices.evokerLevelFourSpellId]:[]),...(choices.evokerLevelFiveSpellId?[choices.evokerLevelFiveSpellId]:[]),...(choices.evokerLevelSixSpellId?[choices.evokerLevelSixSpellId]:[]),...(choices.evokerLevelSevenSpellId?[choices.evokerLevelSevenSpellId]:[]),...(choices.evokerLevelEightSpellId?[choices.evokerLevelEightSpellId]:[]),...(choices.evokerLevelNineSpellId?[choices.evokerLevelNineSpellId]:[]),...(choices.newCantripId?[choices.newCantripId]:[])];
  const nextInput:GuidedWizardInput={...input,level:nextLevel,
   spellbookIds:[...input.spellbookIds,...newIds],
   cantripIds:[...input.cantripIds,...(choices.newCantripId?[choices.newCantripId]:[])],
@@ -135,6 +144,7 @@ export function prepareWizardLevelUp(input:GuidedWizardInput,state:WizardLevelOn
   ...(nextLevel===11?{evokerLevelSixSpellId:choices.evokerLevelSixSpellId}:{}),
    ...(nextLevel===13?{evokerLevelSevenSpellId:choices.evokerLevelSevenSpellId}:{}),
    ...(nextLevel===15?{evokerLevelEightSpellId:choices.evokerLevelEightSpellId}:{}),
+   ...(nextLevel===17?{evokerLevelNineSpellId:choices.evokerLevelNineSpellId}:{}),
   ...(input.spellSelection?{spellSelection:mergeWizardLevelSpells(input,gained,choices.preparedIds)}:{})};
  const next=calculateGuidedWizard(nextInput);
  const magic=wizardAdvanceMagicState(state.magic,input.level,nextLevel>=3?'evoker':undefined);
@@ -154,7 +164,7 @@ export function prepareWizardLevelUp(input:GuidedWizardInput,state:WizardLevelOn
   hitPointsIncrease:hpGain};
 }
 export function wizardLevelUpChoicesPreview(input:GuidedWizardInput){
- if(input.level<1||input.level>=16)return null;
+ if(input.level<1||input.level>=17)return null;
  const nextLevel=input.level+1;
  const progression=wizardProgression(nextLevel,nextLevel>=3?'evoker':undefined);
  return {nextLevel,progression,features:[...WIZARD_FEATURES,...EVOKER_FEATURES].filter(f=>f.level===nextLevel)};
@@ -170,7 +180,7 @@ export function wizardMemorizePreparedSpell(input:GuidedWizardInput,oldId:string
  calculateGuidedWizard(input);
  if(!input.preparedIds.includes(oldId)||oldId===newId||input.preparedIds.includes(newId))
   throw new RangeError('Elige un conjuro preparado que sustituir y uno distinto todavía no preparado');
- const known=new Set([...input.spellbookIds,...(input.evokerBonusSpellIds??[]),...(input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[]),...(input.evokerLevelFourSpellId?[input.evokerLevelFourSpellId]:[]),...(input.evokerLevelFiveSpellId?[input.evokerLevelFiveSpellId]:[]),...(input.evokerLevelSixSpellId?[input.evokerLevelSixSpellId]:[]),...(input.evokerLevelSevenSpellId?[input.evokerLevelSevenSpellId]:[]),...(input.evokerLevelEightSpellId?[input.evokerLevelEightSpellId]:[])]);
+ const known=new Set([...input.spellbookIds,...(input.evokerBonusSpellIds??[]),...(input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[]),...(input.evokerLevelFourSpellId?[input.evokerLevelFourSpellId]:[]),...(input.evokerLevelFiveSpellId?[input.evokerLevelFiveSpellId]:[]),...(input.evokerLevelSixSpellId?[input.evokerLevelSixSpellId]:[]),...(input.evokerLevelSevenSpellId?[input.evokerLevelSevenSpellId]:[]),...(input.evokerLevelEightSpellId?[input.evokerLevelEightSpellId]:[]),...(input.evokerLevelNineSpellId?[input.evokerLevelNineSpellId]:[])]);
  if(!known.has(newId))throw new RangeError('El nuevo conjuro debe estar en tu libro de Mago');
  const manual=input.spellSelection;
  const next:GuidedWizardInput={...input,preparedIds:input.preparedIds.map(id=>id===oldId?newId:id),

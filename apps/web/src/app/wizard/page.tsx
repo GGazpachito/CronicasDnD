@@ -80,7 +80,7 @@ export default function WizardPage(){
  },[levelDownOpen,input,state]);
  const sheet=computed.sheet;
  const recoveryOptions=wizardArcaneRecoveryOptions(state,input.level);
- const memorizedKnown=new Set([...input.spellbookIds,...(input.evokerBonusSpellIds??[]),...(input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[]),...(input.evokerLevelFourSpellId?[input.evokerLevelFourSpellId]:[]),...(input.evokerLevelFiveSpellId?[input.evokerLevelFiveSpellId]:[]),...(input.evokerLevelSixSpellId?[input.evokerLevelSixSpellId]:[]),...(input.evokerLevelSevenSpellId?[input.evokerLevelSevenSpellId]:[]),...(input.evokerLevelEightSpellId?[input.evokerLevelEightSpellId]:[])]);
+ const memorizedKnown=new Set([...input.spellbookIds,...(input.evokerBonusSpellIds??[]),...(input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[]),...(input.evokerLevelFourSpellId?[input.evokerLevelFourSpellId]:[]),...(input.evokerLevelFiveSpellId?[input.evokerLevelFiveSpellId]:[]),...(input.evokerLevelSixSpellId?[input.evokerLevelSixSpellId]:[]),...(input.evokerLevelSevenSpellId?[input.evokerLevelSevenSpellId]:[]),...(input.evokerLevelEightSpellId?[input.evokerLevelEightSpellId]:[]),...(input.evokerLevelNineSpellId?[input.evokerLevelNineSpellId]:[])]);
  const spellLabel=(id:string)=>WIZARD_SPELL_CATALOG.find(spell=>spell.id===id)?.name??id;
  function recoveryLabel(slots:readonly number[]):string{const counts=new Map<number,number>();for(const n of slots)counts.set(n,(counts.get(n)??0)+1);return [...counts].map(([level,n])=>`${n} ${n===1?'ranura':'ranuras'} de nivel ${level}`).join(' + ');}
  const background=BACKGROUNDS[input.background];
@@ -169,7 +169,7 @@ export default function WizardPage(){
    <CharacterHeader name={input.name} portraitDataUrl={input.profile?.portraitDataUrl} level={input.level}
      background={background.name} species={SPECIES_NAMES[input.species]} className="Mago" subclass={input.level>=3?'Evocación':undefined} valid={Boolean(actualSnapshot)}
      onEdit={()=>setEditing(true)}
-      onLevelUp={input.level<16&&actualSnapshot?()=>{setLevelUpOpen(true);setEditing(false);}:undefined}
+      onLevelUp={input.level<17&&actualSnapshot?()=>{setLevelUpOpen(true);setEditing(false);}:undefined}
      onLevelDown={input.level>1&&actualSnapshot?()=>setLevelDownOpen(true):undefined}/>
    <p className="wizard-progression-hint">{input.level>=16?'Próxima etapa: progresión al nivel 17.':`Próxima subida disponible: Mago de nivel ${input.level+1}.`}</p>
   {levelDownOpen&&<LevelDownDialog preview={levelDownAssessment.preview} error={levelDownAssessment.error}
@@ -238,7 +238,7 @@ export default function WizardPage(){
        </div><p className="overview-health-hint">Escribe +5 o -5 y pulsa Intro. El daño consume primero PG temporales.</p></div>}
       attacksContent={<BasicWeaponAttacks inventory={sheet.inventory} scores={sheet.abilityScores} proficiency={wizardProgression(input.level,input.level>=3?'evoker':undefined).proficiencyBonus} mode={mode}/>}
       resourcesContent={<section className="overview-panel panel"><div className="overview-panel-heading"><h3>Recursos</h3><span>Clase</span></div><div className="overview-record"><span>Recuperación arcana</span><strong>{state.magic.arcaneRecoveryUsed?'Gastada':'Disponible'}</strong></div><button className="overview-link" type="button" disabled={state.magic.arcaneRecoveryUsed||state.magic.slots.remaining.every((n,i)=>n===state.magic.slots.maximum[i])} onClick={()=>setTab('hechizos')}>Ver opciones de Recuperación arcana</button><p className="overview-panel-note">Después de un descanso corto, recupera ranuras gastadas hasta el límite de Recuperación arcana. Elige cuántas ranuras recuperar desde Hechizos.</p>{input.level>=14&&<><div className="overview-record"><span>Sobrecarga</span><strong>{state.magic.overchannelUses} usos</strong></div><button type="button" className="overview-link" onClick={()=>setTab('hechizos')}>Gestionar Sobrecarga en Hechizos</button></>}</section>}
-      spellSlotsContent={<section className="overview-panel panel" aria-label="Espacios de conjuro"><div className="overview-panel-heading"><h3>Espacios de conjuro</h3><span>Rasgo de lanzador</span></div>{[1,2,3,4,5,6,7,8].filter(l=>state.magic.slots.maximum[l-1]>0).map(l=><SpellSlotDiamonds key={l} level={l} spent={wizardSlotMarks(state,l)} onToggle={index=>toggleSlot(index,l)}/>)}<div className="overview-quick-actions"><button type="button" onClick={rest}>Descanso largo</button></div><p className="overview-panel-note">Gastar una ranura no lanza el conjuro automáticamente.</p></section>}
+      spellSlotsContent={<section className="overview-panel panel" aria-label="Espacios de conjuro"><div className="overview-panel-heading"><h3>Espacios de conjuro</h3><span>Rasgo de lanzador</span></div>{[1,2,3,4,5,6,7,8,9].filter(l=>state.magic.slots.maximum[l-1]>0).map(l=><SpellSlotDiamonds key={l} level={l} spent={wizardSlotMarks(state,l)} onToggle={index=>toggleSlot(index,l)}/>)}<div className="overview-quick-actions"><button type="button" onClick={rest}>Descanso largo</button></div><p className="overview-panel-note">Gastar una ranura no lanza el conjuro automáticamente.</p></section>}
       warningContent={error&&<div className="overview-action-message is-error" role="alert">{error}</div>}
       footerContent={<>
        <section className="overview-panel panel"><h3>Percepción pasiva</h3><strong className="overview-spotlight">{10+sheet.skillBonuses.perception}</strong><p className="overview-panel-note">10 + Percepción {signed(sheet.skillBonuses.perception)}</p></section>
@@ -269,7 +269,7 @@ export default function WizardPage(){
      <button type="button" disabled={!overchannelConfirmed} onClick={activateOverchannel}>Registrar Sobrecarga y tirar daño propio si procede</button>
      {overchannelResult&&<output aria-live="polite">{overchannelResult}</output>}
     </fieldset>}
-    {[1,2,3,4,5,6,7,8].filter(l=>state.magic.slots.maximum[l-1]>0).map(l=><SpellSlotDiamonds key={l} level={l} spent={wizardSlotMarks(state,l)} onToggle={index=>toggleSlot(index,l)}/>)}
+    {[1,2,3,4,5,6,7,8,9].filter(l=>state.magic.slots.maximum[l-1]>0).map(l=><SpellSlotDiamonds key={l} level={l} spent={wizardSlotMarks(state,l)} onToggle={index=>toggleSlot(index,l)}/>)}
     <div className="wizard-delta" aria-label="Recuperación arcana">
      <p className="muted-note">Recuperación arcana: una vez por descanso largo, tras un descanso corto. Puedes recuperar ranuras cuyo total de niveles no supere {Math.ceil(input.level/2)}, siempre que sean de nivel 5 o inferior.</p>
      {recoveryOptions.map(slots=><button type="button" key={slots.join('-')} onClick={()=>recoverArcane(slots)}>Recuperar {recoveryLabel(slots)}</button>)}

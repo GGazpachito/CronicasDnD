@@ -70,8 +70,8 @@ describe('Actualización 59: Mago Evocación niveles 15 y 16',()=>{
  it('integra 13 conjuros de nivel 8, sin duplicados, con datos para consultar y tirar',()=>{
   expect(WIZARD_LEVEL_EIGHT_SPELLS).toHaveLength(13);
   expect(WIZARD_SPELL_CATALOG.filter(spell=>spell.level===8)).toHaveLength(13);
-  expect(WIZARD_SPELL_RULES).toHaveLength(230);
-  expect(new Set(WIZARD_SPELL_RULES.map(rule=>rule.id)).size).toBe(230);
+  expect(WIZARD_SPELL_RULES.length).toBeGreaterThanOrEqual(230);
+  expect(new Set(WIZARD_SPELL_RULES.map(rule=>rule.id)).size).toBe(WIZARD_SPELL_RULES.length);
   for(const spell of WIZARD_LEVEL_EIGHT_SPELLS){
    const details=wizardSpellRule(spell.id);
    expect(details?.level).toBe(8);
@@ -123,7 +123,7 @@ describe('Actualización 59: Mago Evocación niveles 15 y 16',()=>{
   expect(sixteen.hitPointsIncrease).toBe(next.maximumHitPoints-old.maximumHitPoints);
   expect(sixteen.hitPointsIncrease).toBeGreaterThan(10);
   expect(sixteen.state.magic.slots.maximum).toEqual(fifteen.state.magic.slots.maximum);
-  expect(wizardLevelUpChoicesPreview(sixteen.input)).toBe(null);
+  expect(wizardLevelUpChoicesPreview(sixteen.input)?.nextLevel).toBe(17);
  });
  it('rechaza regalo ausente, duplicado, nivel 9 prematuro y mejora del 16 antes de tiempo',()=>{
   const fourteen=to14(),fifteen=to15();
