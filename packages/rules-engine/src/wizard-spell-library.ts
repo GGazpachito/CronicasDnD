@@ -11,11 +11,17 @@ export type WizardSpellSelection=Readonly<{
   preparedIds:readonly string[];
 }>;
 function validIds(){return new Set<string>([...WIZARD_LEVEL_ONE_CANTRIPS,...WIZARD_SPELL_CATALOG].map(spell=>spell.id));}
-export function wizardSpellSelection(input:GuidedWizardInput):WizardSpellSelection{
- const base=input.spellSelection??{
+/** Selección editable SIN las preparaciones obligatorias concedidas por rasgos.
+ * Es la fuente de datos que se guarda al marcar voluntariamente la biblioteca.
+ */
+export function wizardEditableSpellSelection(input:GuidedWizardInput):WizardSpellSelection{
+ return input.spellSelection??{
   learnedIds:[...input.cantripIds,...input.spellbookIds,...(input.evokerBonusSpellIds??[]),...(input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[]),...(input.evokerLevelFourSpellId?[input.evokerLevelFourSpellId]:[]),...(input.evokerLevelFiveSpellId?[input.evokerLevelFiveSpellId]:[]),...(input.evokerLevelSixSpellId?[input.evokerLevelSixSpellId]:[]),...(input.evokerLevelSevenSpellId?[input.evokerLevelSevenSpellId]:[]),...(input.evokerLevelEightSpellId?[input.evokerLevelEightSpellId]:[]),...(input.evokerLevelNineSpellId?[input.evokerLevelNineSpellId]:[])],
   preparedIds:[...input.cantripIds,...input.preparedIds],
  };
+}
+export function wizardSpellSelection(input:GuidedWizardInput):WizardSpellSelection{
+ const base=wizardEditableSpellSelection(input);
  // La biblioteca editable no puede ocultar Maestría ni Conjuros de firma:
  // ambos rasgos conceden preparación permanente adicional.
  const alwaysPrepared=[...(input.level>=18?input.spellMasteryIds??[]:[]),...(input.level>=20?input.signatureSpellIds??[]:[])];
@@ -51,7 +57,7 @@ export function setWizardSpellPrepared(selection:WizardSpellSelection,id:string,
 /** Se añaden las nuevas elecciones reglamentarias sin borrar la biblioteca manual. */
 export function mergeWizardLevelSpells(previous:GuidedWizardInput,learned:readonly string[],prepared:readonly string[]):WizardSpellSelection|undefined{
  if(previous.spellSelection===undefined)return undefined;
- const selection=wizardSpellSelection(previous);
+ const selection=wizardEditableSpellSelection(previous);
  const gainedCantrips=learned.filter(id=>WIZARD_LEVEL_ONE_CANTRIPS.some(spell=>spell.id===id));
  return validateWizardSpellSelection({
   learnedIds:[...new Set([...selection.learnedIds,...learned])],
