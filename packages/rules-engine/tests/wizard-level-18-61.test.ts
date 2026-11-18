@@ -61,7 +61,7 @@ describe('Actualización 61: Mago Evocación nivel 18 y Maestría de conjuros',(
   expect(wizardProgression(18,'evoker').proficiencyBonus).toBe(6);
   expect(eighteen.input.evokerLevelNineSpellId).toBe('meteor_swarm');
   expect(eighteen.hitPointsIncrease).toBe(sheet.maximumHitPoints-calculateGuidedWizard(seventeen.input).maximumHitPoints);
-  expect(wizardLevelUpChoicesPreview(eighteen.input)).toBe(null);
+  expect(wizardLevelUpChoicesPreview(eighteen.input)?.nextLevel).toBe(19);
  });
  it('rechaza Maestría omitida, niveles intercambiados o hechizos que no son de una acción',()=>{
   const seventeen=to17();

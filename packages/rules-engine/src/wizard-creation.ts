@@ -20,6 +20,7 @@ import {WIZARD_LEVEL_SEVEN_SPELLS} from './wizard-seventh-level';
 import {WIZARD_LEVEL_EIGHT_SPELLS} from './wizard-eighth-level';
 import {WIZARD_LEVEL_NINE_SPELLS} from './wizard-ninth-level';
 import {wizardMasteryCastingTime} from './wizard-mastery';
+import {applyWizardEpicBoon,type WizardEpicBoonChoice} from './wizard-epic-boons';
 import type {BackgroundEquipmentChoice} from './background-equipment';
 import {validateWizardSpellSelection,type WizardSpellSelection} from './wizard-spell-library';
 
@@ -94,7 +95,7 @@ export type WizardScholarSkill=(typeof WIZARD_SCHOLAR_OPTIONS)[number];
 export const WIZARD_LEVEL_ONE_DEFAULTS={cantrips:['light','mage_hand','ray_of_frost'],spellbook:['detect_magic','feather_fall','mage_armor','magic_missile','sleep','thunderwave'],prepared:['feather_fall','mage_armor','magic_missile','thunderwave']} as const;
 
 export type GuidedWizardInput=Readonly<{
- classId:'wizard';level:1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18;name:string;profile?:CharacterProfile;
+ classId:'wizard';level:1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19;name:string;profile?:CharacterProfile;
  background:BackgroundId;species:SpeciesId;
  assignedAbilities:AbilityScores;
  increaseMode:'two_plus_one'|'three_ones';plusTwoAbility:Ability;plusOneAbility:Ability;
@@ -134,6 +135,8 @@ export type GuidedWizardInput=Readonly<{
   evokerLevelNineSpellId?:string;
   /** Nivel 18: conjuros dominados del libro, niveles 1 y 2, lanzables con una acción. */
   spellMasteryIds?:readonly [string,string];
+  /** Nivel 19: selección explícita de dote épica y característica que aumenta. */
+  epicBoon?:WizardEpicBoonChoice;
 }>;
 /**
  * Proyección visual de un Mago todavía sin nombre. La validación estricta de
@@ -148,12 +151,12 @@ export function wizardInputForPreview(input:GuidedWizardInput):GuidedWizardInput
  return input.name.trim()?input:{...input,name:'Mago provisional'};
 }
 export type WizardLevelOneView=Readonly<{
- classId:'wizard';level:1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18;name:string;abilityScores:AbilityScores;
+ classId:'wizard';level:1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19;name:string;abilityScores:AbilityScores;
  abilityModifiers:ReturnType<typeof abilityModifiers>;
  skillBonuses:ReturnType<typeof calculateSkillBonuses>;
  savingThrowBonuses:ReturnType<typeof calculateSavingThrows>;
  skillProficiencies:readonly Skill[];
- maximumHitPoints:number;armorClass:number;initiative:number;speedFeet:number;
+ maximumHitPoints:number;armorClass:number;initiative:number;speedFeet:number;truesightFeet:number;
  size:'small'|'medium';spellAttackBonus:number;spellSaveDC:number;
  equipment:typeof WIZARD_LEVEL_ONE_EQUIPMENT[WizardEquipmentChoice]; inventory:InventoryState;
  spells:ReturnType<typeof validateWizardSpellChoices>;
@@ -169,7 +172,7 @@ function selectSpells(ids:readonly string[],items:readonly {id:string;level:numb
  });
 }
 export function calculateGuidedWizard(input:GuidedWizardInput):WizardLevelOneView{
- if(!input||input.classId!=='wizard'||![1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18].includes(input.level))throw new RangeError('La creación guiada admite Magos de niveles 1 a 18');
+ if(!input||input.classId!=='wizard'||![1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19].includes(input.level))throw new RangeError('La creación guiada admite Magos de niveles 1 a 19');
  if(typeof input.name!=='string'||!input.name.trim()||input.name.length>120)throw new RangeError('Nombre de Mago inválido');
  const bg=BACKGROUNDS[input.background];if(!bg)throw new RangeError('Trasfondo desconocido');
  if(!Object.prototype.hasOwnProperty.call(SPECIES_NAMES,input.species))throw new RangeError('Especie desconocida');
@@ -187,7 +190,9 @@ export function calculateGuidedWizard(input:GuidedWizardInput):WizardLevelOneVie
  const level4Scores=input.level>=4?applyFighterAbilityImprovement(scores,input.level4Improvement!,4):scores;
  const level8Scores=input.level>=8?applyFighterAbilityImprovement(level4Scores,input.level8Improvement!,8):level4Scores;
  const level12Scores=input.level>=12?applyFighterAbilityImprovement(level8Scores,input.level12Improvement!,12):level8Scores;
- const finalScores=input.level>=16?applyFighterAbilityImprovement(level12Scores,input.level16Improvement!,16):level12Scores;
+ const level16Scores=input.level>=16?applyFighterAbilityImprovement(level12Scores,input.level16Improvement!,16):level12Scores;
+ if(input.level<19&&input.epicBoon!==undefined)throw new RangeError('El beneficio épico solo está disponible desde nivel 19');
+ const finalScores=input.level>=19?applyWizardEpicBoon(level16Scores,input.epicBoon!):level16Scores;
  if(input.level<4&&input.level4Improvement!==undefined)throw new RangeError('Mejora de nivel 4 no disponible todavía');
  if(input.level<8&&input.level8Improvement!==undefined)throw new RangeError('Mejora de nivel 8 no disponible todavía');
  if(input.level<12&&input.level12Improvement!==undefined)throw new RangeError('Mejora de nivel 12 no disponible todavía');
@@ -278,10 +283,11 @@ export function calculateGuidedWizard(input:GuidedWizardInput):WizardLevelOneVie
  return {classId:'wizard',level:input.level,name:input.name.trim(),abilityScores:finalScores,abilityModifiers:bonuses,
   skillBonuses:calculateSkillBonuses(finalScores,input.level,{skills:proficiency,expertiseSkills:input.scholarSkill?[input.scholarSkill]:[]}),skillProficiencies:proficiency,
   savingThrowBonuses:calculateSavingThrows(finalScores,input.level,{savingThrows:['intelligence','wisdom']}),
-  maximumHitPoints:core.maximumHitPoints+hpBonus*input.level,
+  maximumHitPoints:core.maximumHitPoints+hpBonus*input.level+(input.epicBoon?.id==='fortitude'?40:0),
   armorClass,
   initiative:bonuses.dexterity+((bg.feat==='alert'||input.humanFeat==='alert')?core.proficiencyBonus:0),
-  speedFeet:input.species==='elf'&&input.elfLineage==='wood_elf'?35:30,
+  speedFeet:(input.species==='elf'&&input.elfLineage==='wood_elf'?35:30)+(input.epicBoon?.id==='speed'?30:0),
+  truesightFeet:input.epicBoon?.id==='truesight'?60:0,
   size:input.species==='halfling'||(input.species==='human'&&input.humanSize==='small')?'small':'medium',
   spellAttackBonus:core.spellAttackBonus,spellSaveDC:core.spellSaveDC,
   equipment:WIZARD_LEVEL_ONE_EQUIPMENT[input.equipmentChoice],inventory,spells,backgroundFeat:bg.feat};
@@ -334,7 +340,7 @@ export function validateWizardCharacterSnapshot(raw:unknown):WizardCharacterSnap
  if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new RangeError('Guardado de Mago inválido');
  const value=raw as Record<string,unknown>;
  if(value.schemaVersion!==3||value.ruleset!=='dnd-2024'||Object.keys(value).some(k=>!['schemaVersion','ruleset','input','wizardState'].includes(k)))throw new RangeError('Versión o estructura de Mago incorrectas');
- const permitted=['spellSelection','scholarSkill','subclass','evokerBonusSpellIds','level4Improvement','evokerLevelThreeSpellId','evokerLevelFourSpellId','level8Improvement','level12Improvement','level16Improvement','evokerLevelFiveSpellId','evokerLevelSixSpellId','evokerLevelSevenSpellId','evokerLevelEightSpellId','evokerLevelNineSpellId','spellMasteryIds','classId','level','name','profile','background','species','assignedAbilities','increaseMode','plusTwoAbility','plusOneAbility','wizardSkills','humanSkill','humanFeat','humanSize','elfLineage','equipmentChoice','backgroundEquipment','inventoryActions','cantripIds','spellbookIds','preparedIds'];
+ const permitted=['spellSelection','scholarSkill','subclass','evokerBonusSpellIds','level4Improvement','evokerLevelThreeSpellId','evokerLevelFourSpellId','level8Improvement','level12Improvement','level16Improvement','evokerLevelFiveSpellId','evokerLevelSixSpellId','evokerLevelSevenSpellId','evokerLevelEightSpellId','evokerLevelNineSpellId','spellMasteryIds','epicBoon','classId','level','name','profile','background','species','assignedAbilities','increaseMode','plusTwoAbility','plusOneAbility','wizardSkills','humanSkill','humanFeat','humanSize','elfLineage','equipmentChoice','backgroundEquipment','inventoryActions','cantripIds','spellbookIds','preparedIds'];
  if(!value.input||typeof value.input!=='object'||Array.isArray(value.input)||Object.keys(value.input as Record<string,unknown>).some(key=>!permitted.includes(key)))throw new RangeError('La creación de Mago incluye campos desconocidos');
  let clean:GuidedWizardInput;
  try{const json=JSON.stringify(value.input);if(json.length>120_000)throw new Error();clean=JSON.parse(json) as GuidedWizardInput;}catch{throw new RangeError('Datos de Mago demasiado grandes o no serializables');}

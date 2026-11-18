@@ -1,4 +1,4 @@
-/** Progresión atómica de Mago niveles 1→18, PHB 2024 pp. 165–170 y 174.
+/** Progresión atómica de Mago niveles 1→19, PHB 2024 pp. 165–170 y 174.
  * Conserva ranuras gastadas, inventario, perfil y selección manual de biblioteca.
  */
 import {wizardAdvanceMagicState,wizardProgression,WIZARD_FEATURES,EVOKER_FEATURES} from './wizard';
@@ -7,6 +7,7 @@ import {calculateGuidedWizard,validateWizardOneState,WIZARD_SPELL_CATALOG,WIZARD
 import {wizardAllSlotMarks} from './wizard-slot-marks';
 import {mergeWizardLevelSpells} from './wizard-spell-library';
 import {wizardMasteryCastingTime} from './wizard-mastery';
+import {applyWizardEpicBoon,type WizardEpicBoonChoice} from './wizard-epic-boons';
 
 export type WizardLevelUpChoices=Readonly<{
  newSpellIds:readonly [string,string];
@@ -36,6 +37,8 @@ export type WizardLevelUpChoices=Readonly<{
   evokerLevelNineSpellId?:string;
   /** Nivel 18: Maestría de conjuros, respectivamente uno de nivel 1 y otro de 2. */
   spellMasteryIds?:readonly [string,string];
+  /** Nivel 19: beneficio épico y característica aumentada. */
+  epicBoon?:WizardEpicBoonChoice;
 }>;
 export type WizardLevelUpResult=Readonly<{
  input:GuidedWizardInput;state:WizardLevelOneState;
@@ -43,10 +46,10 @@ export type WizardLevelUpResult=Readonly<{
  hitPointsIncrease:number;
 }>;
 export function prepareWizardLevelUp(input:GuidedWizardInput,state:WizardLevelOneState,choices:WizardLevelUpChoices):WizardLevelUpResult{
- if(input.level<1||input.level>=18)throw new RangeError('La progresión guiada de Mago llega actualmente a nivel 18');
+ if(input.level<1||input.level>=19)throw new RangeError('La progresión guiada de Mago llega actualmente a nivel 19');
  const prior=calculateGuidedWizard(input);
  validateWizardOneState(state,prior);
- const nextLevel=(input.level+1) as 2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18;
+ const nextLevel=(input.level+1) as 2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19;
  const newIds=choices.newSpellIds;
  if(!Array.isArray(newIds)||newIds.length!==2||new Set(newIds).size!==2||newIds.some(id=>input.spellbookIds.includes(id)))
   throw new RangeError('Debes añadir dos conjuros nuevos y diferentes al libro');
@@ -136,6 +139,10 @@ export function prepareWizardLevelUp(input:GuidedWizardInput,state:WizardLevelOn
    throw new RangeError('Maestría exige un conjuro del libro de nivel 1 y otro de nivel 2, ambos de una acción');
  }else if(choices.spellMasteryIds!==undefined)
   throw new RangeError('Maestría de conjuros se elige únicamente al nivel 18');
+ if(nextLevel===19){
+  if(!choices.epicBoon)throw new RangeError('Elige un beneficio épico para nivel 19');
+  applyWizardEpicBoon(prior.abilityScores,choices.epicBoon);
+ }else if(choices.epicBoon!==undefined)throw new RangeError('El beneficio épico corresponde al nivel 19');
  if(input.preparedIds.some(id=>!choices.preparedIds.includes(id)))
   throw new RangeError('Los conjuros preparados anteriores se conservan hasta completar un descanso largo');
  const gained=[...newIds,...(choices.evokerBonusSpellIds??[]),...(choices.evokerLevelThreeSpellId?[choices.evokerLevelThreeSpellId]:[]),...(choices.evokerLevelFourSpellId?[choices.evokerLevelFourSpellId]:[]),...(choices.evokerLevelFiveSpellId?[choices.evokerLevelFiveSpellId]:[]),...(choices.evokerLevelSixSpellId?[choices.evokerLevelSixSpellId]:[]),...(choices.evokerLevelSevenSpellId?[choices.evokerLevelSevenSpellId]:[]),...(choices.evokerLevelEightSpellId?[choices.evokerLevelEightSpellId]:[]),...(choices.evokerLevelNineSpellId?[choices.evokerLevelNineSpellId]:[]),...(choices.newCantripId?[choices.newCantripId]:[])];
@@ -157,6 +164,7 @@ export function prepareWizardLevelUp(input:GuidedWizardInput,state:WizardLevelOn
    ...(nextLevel===15?{evokerLevelEightSpellId:choices.evokerLevelEightSpellId}:{}),
    ...(nextLevel===17?{evokerLevelNineSpellId:choices.evokerLevelNineSpellId}:{}),
    ...(nextLevel===18?{spellMasteryIds:choices.spellMasteryIds}:{}),
+   ...(nextLevel===19?{epicBoon:choices.epicBoon}:{}),
   ...(input.spellSelection?{spellSelection:mergeWizardLevelSpells(input,gained,choices.preparedIds)}:{})};
  const next=calculateGuidedWizard(nextInput);
  const magic=wizardAdvanceMagicState(state.magic,input.level,nextLevel>=3?'evoker':undefined);
@@ -176,7 +184,7 @@ export function prepareWizardLevelUp(input:GuidedWizardInput,state:WizardLevelOn
   hitPointsIncrease:hpGain};
 }
 export function wizardLevelUpChoicesPreview(input:GuidedWizardInput){
- if(input.level<1||input.level>=18)return null;
+ if(input.level<1||input.level>=19)return null;
  const nextLevel=input.level+1;
  const progression=wizardProgression(nextLevel,nextLevel>=3?'evoker':undefined);
  return {nextLevel,progression,features:[...WIZARD_FEATURES,...EVOKER_FEATURES].filter(f=>f.level===nextLevel)};

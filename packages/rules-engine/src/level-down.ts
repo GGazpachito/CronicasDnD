@@ -115,14 +115,14 @@ export function previewFighterLevelDown(input:GuidedFighterInput,adventure:Adven
 }
 
 const spellName=(id:string)=>[...WIZARD_LEVEL_ONE_CANTRIPS,...WIZARD_SPELL_CATALOG].find(s=>s.id===id)?.name??id;
-/** Retroceso 18→17→16→…→1, conservando las elecciones adquiridas antes
+/** Retroceso 19→18→17→…→1, conservando las elecciones adquiridas antes
  * del nivel retirado, las ranuras válidas y el estado persistido de la partida.
  */
 export function previewWizardLevelDown(input:GuidedWizardInput,state:WizardLevelOneState):WizardLevelDownPreview{
- if(input.level<=1||input.level>18)throw new RangeError('Mago: no se puede bajar del nivel 1');
+ if(input.level<=1||input.level>19)throw new RangeError('Mago: no se puede bajar del nivel 1');
  const before=calculateGuidedWizard(input);
  const valid=validateWizardOneState(state,before);
- const target=(input.level-1) as 1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17;
+ const target=(input.level-1) as 1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18;
  const gainedSpells=input.spellbookIds.slice(-2);
  const lostBonus=input.level===3?[...(input.evokerBonusSpellIds??[])]:[];
  const lostFree5=input.level===5&&input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[];
@@ -140,8 +140,8 @@ export function previewWizardLevelDown(input:GuidedWizardInput,state:WizardLevel
  const wanted=wizardProgression(target,target>=3?'evoker':undefined).preparedSpellCount;
  const filtered=input.preparedIds.filter(id=>permitted.has(id));
  const prepared=[...new Set([...filtered,...trimmedBook,...keptExtras])].slice(0,wanted);
- const {scholarSkill,subclass,evokerBonusSpellIds,evokerLevelThreeSpellId,evokerLevelFourSpellId,evokerLevelFiveSpellId,evokerLevelSixSpellId,evokerLevelSevenSpellId,evokerLevelEightSpellId,evokerLevelNineSpellId,spellMasteryIds,level4Improvement,level8Improvement,level12Improvement,level16Improvement,spellSelection,...other}=input;
- void spellMasteryIds; // Al retroceder a 17 o menos se pierde la Maestría.
+ const {scholarSkill,subclass,evokerBonusSpellIds,evokerLevelThreeSpellId,evokerLevelFourSpellId,evokerLevelFiveSpellId,evokerLevelSixSpellId,evokerLevelSevenSpellId,evokerLevelEightSpellId,evokerLevelNineSpellId,spellMasteryIds,epicBoon,level4Improvement,level8Improvement,level12Improvement,level16Improvement,spellSelection,...other}=input;
+ void epicBoon; // Al retroceder a 18 o menos se pierde el Beneficio épico.
  const selection=spellSelection===undefined?undefined:validateWizardSpellSelection({
   learnedIds:spellSelection.learnedIds.filter(id=>!lostSpellIds.includes(id)),
   preparedIds:spellSelection.preparedIds.filter(id=>!lostSpellIds.includes(id)),
@@ -161,6 +161,7 @@ export function previewWizardLevelDown(input:GuidedWizardInput,state:WizardLevel
    ...(target>=13?{evokerLevelSevenSpellId}:{}),
    ...(target>=15?{evokerLevelEightSpellId}:{}),
    ...(target>=17?{evokerLevelNineSpellId}:{}),
+   ...(target>=18?{spellMasteryIds}:{}),
   ...(selection?{spellSelection:selection}:{})};
  const after=calculateGuidedWizard(nextInput);
  const maximum=wizardProgression(target,target>=3?'evoker':undefined).spellSlots;
@@ -198,6 +199,7 @@ export function previewWizardLevelDown(input:GuidedWizardInput,state:WizardLevel
  if(input.level===15&&input.evokerLevelEightSpellId)changes.push({title:'Experto en Evocación',description:'Se retira el conjuro gratuito obtenido al desbloquear ranuras de nivel 8.'});
  if(input.level===17&&input.evokerLevelNineSpellId)changes.push({title:'Experto en Evocación',description:'Se retira el conjuro gratuito obtenido al desbloquear ranuras de nivel 9.'});
  if(input.level===18)changes.push({title:'Maestría de conjuros',description:'Se pierden los dos conjuros siempre preparados y la posibilidad de lanzarlos gratuitamente; los conjuros siguen en el libro si se aprendieron en niveles anteriores.'});
+ if(input.level===19)changes.push({title:'Beneficio épico',description:'Se retira el beneficio elegido y su +1 de característica; se recalculan los PG, la velocidad y los sentidos especiales que concedía.'});
  if(input.level===16)changes.push({title:'Mejora de característica',description:'Se deshace exclusivamente la mejora elegida en nivel 16; se recalculan características, modificadores y PG.'});
  if(input.level===14)changes.push({title:'Sobrecarga',description:`Se pierde el rasgo y se borra el contador de ${valid.magic.overchannelUses} usos desde el último descanso largo.`});
  if(input.level===9&&input.evokerLevelFiveSpellId)changes.push({title:'Experto en Evocación',description:'Se retira el conjuro gratuito obtenido al desbloquear ranuras de nivel 5.'});
@@ -205,6 +207,8 @@ export function previewWizardLevelDown(input:GuidedWizardInput,state:WizardLevel
  if(input.level===5&&input.evokerLevelThreeSpellId)changes.push({title:'Experto en Evocación',description:'Se retira el conjuro gratuito que se obtuvo al acceder a ranuras de nivel 3.'});
  if(before.spellAttackBonus!==after.spellAttackBonus)changes.push({title:'Ataque mágico',description:`Bonificador ${signed(before.spellAttackBonus)} → ${signed(after.spellAttackBonus)}.`});
  if(before.spellSaveDC!==after.spellSaveDC)changes.push({title:'CD de conjuros',description:`CD ${before.spellSaveDC} → ${after.spellSaveDC}.`});
+ if(before.speedFeet!==after.speedFeet)changes.push({title:'Velocidad',description:`${before.speedFeet} → ${after.speedFeet} pies.`});
+ if(before.truesightFeet!==after.truesightFeet)changes.push({title:'Visión verdadera',description:`Alcance ${before.truesightFeet} → ${after.truesightFeet} pies.`});
  for(let i=0;i<9;i++)if(oldMaximum[i]!==maximum[i])changes.push({title:`Ranuras de nivel ${i+1}`,description:`Total: ${oldMaximum[i]} → ${maximum[i]}; disponibles: ${valid.magic.slots.remaining[i]} → ${remaining[i]}. Los rombos que desaparecen se eliminan con su estado.`});
  return {className:'Mago',fromLevel:input.level,toLevel:target,lost,changes,
   preserved:['Nombre, perfil, retrato, trasfondo y especie','Inventario, objetos equipados y monedas','PG temporales, inspiración y marcas manuales de muerte','Estado de Recuperación arcana y ranuras que siguen existiendo','Conjuros marcados manualmente que no se obtuvieron en el nivel perdido'],snapshot};

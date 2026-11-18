@@ -6,6 +6,7 @@ import {calculateGuidedWizard,WIZARD_SCHOLAR_OPTIONS,WIZARD_SPELL_CATALOG,WIZARD
 import {wizardCoreStatistics} from '../../../../packages/rules-engine/src/wizard';
 import {prepareWizardLevelUp,wizardLevelUpChoicesPreview,wizardMasteryAlternatives,type WizardLevelUpResult} from '../../../../packages/rules-engine/src/wizard-level-up';
 import {wizardSpellRule} from '../../../../packages/rules-engine/src/wizard-spell-details';
+import {WIZARD_EPIC_BOONS,WIZARD_EPIC_BOON_DESCRIPTIONS,type WizardEpicBoonId} from '../../../../packages/rules-engine/src/wizard-epic-boons';
 import type {Skill} from '../../../../packages/rules-engine/src/proficiencies';
 import type {D20Mode} from '../../../../packages/rules-engine/src/d20';
 import LevelUpDialogFrame from './LevelUpDialogFrame';
@@ -31,6 +32,8 @@ export default function WizardLevelUpWizard({input,state,mode,onConfirm,onCancel
  const [bonusSeventeen,setBonusSeventeen]=useState('');
  const [masteryOne,setMasteryOne]=useState('');
  const [masteryTwo,setMasteryTwo]=useState('');
+ const [epicBoonId,setEpicBoonId]=useState<WizardEpicBoonId>('spell_recall');
+ const [epicAbility,setEpicAbility]=useState<Ability>('intelligence');
  const [newCantrip,setNewCantrip]=useState('');
  const [improvement,setImprovement]=useState<WizardLevel4Improvement>({mode:'plus_two',first:current.abilityScores.intelligence<=18?'intelligence':'constitution'});
  const [prepared,setPrepared]=useState<string[]>([...input.preparedIds]);
@@ -45,9 +48,9 @@ export default function WizardLevelUpWizard({input,state,mode,onConfirm,onCancel
    ...(next===4?{newCantripId:newCantrip,level4Improvement:improvement}:{}),
    ...(next===10?{newCantripId:newCantrip}:{}),
      ...(next===8?{level8Improvement:improvement}:{}),...(next===12?{level12Improvement:improvement}:{}),...(next===16?{level16Improvement:improvement}:{}),
-   ...(next===5?{evokerLevelThreeSpellId:bonusFive}:{}),...(next===7?{evokerLevelFourSpellId:bonusSeven}:{}),...(next===9?{evokerLevelFiveSpellId:bonusNine}:{}),...(next===11?{evokerLevelSixSpellId:bonusEleven}:{}),...(next===13?{evokerLevelSevenSpellId:bonusThirteen}:{}),...(next===15?{evokerLevelEightSpellId:bonusFifteen}:{}),...(next===17?{evokerLevelNineSpellId:bonusSeventeen}:{}),...(next===18?{spellMasteryIds:[masteryOne,masteryTwo] as [string,string]}:{})}),error:''};}
+   ...(next===5?{evokerLevelThreeSpellId:bonusFive}:{}),...(next===7?{evokerLevelFourSpellId:bonusSeven}:{}),...(next===9?{evokerLevelFiveSpellId:bonusNine}:{}),...(next===11?{evokerLevelSixSpellId:bonusEleven}:{}),...(next===13?{evokerLevelSevenSpellId:bonusThirteen}:{}),...(next===15?{evokerLevelEightSpellId:bonusFifteen}:{}),...(next===17?{evokerLevelNineSpellId:bonusSeventeen}:{}),...(next===18?{spellMasteryIds:[masteryOne,masteryTwo] as [string,string]}:{}),...(next===19?{epicBoon:{id:epicBoonId,ability:epicAbility}}:{})}),error:''};}
   catch(e){return {result:null,error:e instanceof Error?e.message:'Elecciones incompletas'};}
- },[input,state,newSpells,prepared,next,scholarSkill,bonusSpells,newCantrip,improvement,bonusFive,bonusSeven,bonusNine,bonusEleven,bonusThirteen,bonusFifteen,bonusSeventeen,masteryOne,masteryTwo]);
+ },[input,state,newSpells,prepared,next,scholarSkill,bonusSpells,newCantrip,improvement,bonusFive,bonusSeven,bonusNine,bonusEleven,bonusThirteen,bonusFifteen,bonusSeventeen,masteryOne,masteryTwo,epicBoonId,epicAbility]);
  if(!plan)return null;
  const alreadyKnown=new Set([...input.spellbookIds,...input.evokerBonusSpellIds??[],...(input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[]),...(input.evokerLevelFourSpellId?[input.evokerLevelFourSpellId]:[]),...(input.evokerLevelFiveSpellId?[input.evokerLevelFiveSpellId]:[]),...(input.evokerLevelSixSpellId?[input.evokerLevelSixSpellId]:[]),...(input.evokerLevelSevenSpellId?[input.evokerLevelSevenSpellId]:[]),...(input.evokerLevelEightSpellId?[input.evokerLevelEightSpellId]:[]),...(input.evokerLevelNineSpellId?[input.evokerLevelNineSpellId]:[])]);
  const search=spellFilter.trim().toLocaleLowerCase('es');
@@ -104,6 +107,8 @@ export default function WizardLevelUpWizard({input,state,mode,onConfirm,onCancel
     {next===16&&<li><strong>Mejora de característica de nivel 16</strong><p className="level-wizard-explanation">Elige +2 en una característica o +1 en dos distintas, sin superar 20. Se recalculan las estadísticas pasivas y los PG afectados por Constitución.</p></li>}
     {next===17&&<li><strong>Ranura de nivel 9 y Evocación gratuita</strong><p className="level-wizard-explanation">Obtienes tu primera ranura de nivel 9 y doce conjuros nuevos en el catálogo. Experto en Evocación te concede un conjuro de esa escuela de nivel 1–9, además de las dos incorporaciones normales al libro.</p></li>}
     {next===18&&<li><strong>Maestría de conjuros</strong><p className="level-wizard-explanation">Elige un conjuro de nivel 1 y otro de nivel 2 de tu libro que puedan lanzarse con una acción. Estarán siempre preparados y podrás lanzarlos gratis a nivel básico. Si quieres potenciarlos, consumirás la ranura correspondiente. Al terminar un descanso largo podrás sustituir uno de ellos por otro válido del mismo nivel.</p></li>}
+    {next===19&&<li><strong>Beneficio épico · elección obligatoria</strong><p className="level-wizard-explanation">Elige una de las cinco dotes épicas implementadas. Todas conceden +1 a una característica hasta un máximo de 30; Recuperación de conjuros limita la elección a Inteligencia, Sabiduría o Carisma. Si eliges Recuperación, tendrás un botón de tirada 1d4 en Hechizos, sin automatizar el consumo de ranuras.</p></li>}
+    {next===19&&<li><strong>Mayor poder mágico</strong><p className="level-wizard-explanation">Obtienes una segunda ranura de nivel 6, pasas de 23 a 24 conjuros preparados reglamentarios y añades dos nuevos al libro, sin perder los dos de Maestría.</p></li>}
     {next===12&&<li><strong>Mejora de característica</strong><p className="level-wizard-explanation">Elige +2 a una característica o +1 a dos distintas, sin superar 20. La mejora se aplicará también a las estadísticas derivadas y, si afecta a Constitución, a los PG de los niveles anteriores.</p></li>}
     {next===9&&<li><strong>Experto en Evocación: conjuro gratuito</strong><p className="level-wizard-explanation">Al desbloquear ranuras de nivel 5, obtienes otra Evocación de nivel 1–5 gratuitamente, distinta de las de tu libro.</p></li>}
      {next===7&&<li><strong>Experto en Evocación: conjuro gratuito</strong><p className="level-wizard-explanation">Al adquirir ranuras de nivel 4 añades un conjuro gratuito de Evocación de nivel 1 a 4, distinto de los ya conocidos.</p></li>}
@@ -143,6 +148,12 @@ export default function WizardLevelUpWizard({input,state,mode,onConfirm,onCancel
     {masteryTwo&&masteryTwoOptions.filter(spell=>spell.id===masteryTwo).map(spell=>{const details=wizardSpellRule(spell.id);return details&&<WizardSpellDetails key={spell.id} spell={details} characterLevel={next} spellAttackBonus={projected?.spellAttackBonus??current.spellAttackBonus} mode={mode}/>;})}
     <p className="muted-note">La Maestría no consume ranuras al nivel original y no marca impactos, objetivos ni efectos: los gestionas en mesa. Los lanzamientos con ranuras superiores sí las gastan manualmente.</p>
    </fieldset>}
+   {next===19&&<fieldset className="level-wizard-fieldset"><legend>Beneficio épico · Nivel 19</legend>
+    <label className="field"><span>Dote épica</span><select value={epicBoonId} onChange={e=>{const selected=e.target.value as WizardEpicBoonId;setEpicBoonId(selected);if(selected==='spell_recall'&&!(['intelligence','wisdom','charisma'] as Ability[]).includes(epicAbility))setEpicAbility('intelligence');}}>{(Object.keys(WIZARD_EPIC_BOONS) as WizardEpicBoonId[]).map(id=><option key={id} value={id}>{WIZARD_EPIC_BOONS[id]}</option>)}</select></label>
+    <p className="level-wizard-explanation">{WIZARD_EPIC_BOON_DESCRIPTIONS[epicBoonId]}</p>
+    <label className="field"><span>Característica que aumenta en +1 (máximo 30)</span><select value={epicAbility} onChange={e=>setEpicAbility(e.target.value as Ability)}>{ABILITIES.filter(id=>epicBoonId!=='spell_recall'||(['intelligence','wisdom','charisma'] as Ability[]).includes(id)).map(id=><option key={id} value={id}>{ABILITY_NAMES[id]}: {current.abilityScores[id]} → {current.abilityScores[id]+1}</option>)}</select></label>
+    <p className="muted-note">Este catálogo de cinco beneficios es una primera integración: otras dotes y beneficios épicos se incorporarán en futuras actualizaciones.</p>
+   </fieldset>}
    <fieldset className="level-wizard-fieldset"><legend>Preparación de progresión ({prepared.length}/{plan.progression.preparedSpellCount})</legend><p className="muted-note">Se conserva la preparación anterior. En la pestaña Hechizos puedes marcar libremente conjuros adicionales, sin bloqueo numérico.</p>{displaySpellChoices(spellOptions,prepared,id=>setPrepared(v=>toggle(v,id,plan.progression.preparedSpellCount)),input.preparedIds)}</fieldset>
    {choices.result?<p className="level-wizard-ok">Todas las elecciones de progresión son válidas. Puedes revisar los cambios.</p>:<p className="level-wizard-error" role="status">Pendiente: {choices.error}</p>}
   </div>}
@@ -160,6 +171,7 @@ export default function WizardLevelUpWizard({input,state,mode,onConfirm,onCancel
      {name:'Preparados reglamentarios',old:input.preparedIds.length,value:choices.result.input.preparedIds.length},
     ].map(s=><div key={s.name} className="level-wizard-stat"><span>{s.name}</span><strong>{s.old} → {s.value}</strong></div>)}</div>
     {(next===4||next===8||next===12||next===16)&&<p className="level-wizard-choice-info"><strong>Mejora de característica</strong>{ABILITIES.filter(id=>current.abilityScores[id]!==projected.abilityScores[id]).map(id=>`${ABILITY_NAMES[id]} ${current.abilityScores[id]} → ${projected.abilityScores[id]}`).join(' · ')}</p>}
+    {next===19&&<p className="level-wizard-choice-info"><strong>{WIZARD_EPIC_BOONS[epicBoonId]}</strong>{WIZARD_EPIC_BOON_DESCRIPTIONS[epicBoonId]}<span> · {ABILITY_NAMES[epicAbility]}: {current.abilityScores[epicAbility]} → {projected.abilityScores[epicAbility]}</span>{projected.speedFeet!==current.speedFeet&&<span> · Movimiento: {current.speedFeet} → {projected.speedFeet} pies</span>}{projected.truesightFeet>0&&<span> · Visión verdadera: {projected.truesightFeet} pies</span>}</p>}
     <div><h4>Capacidades obtenidas</h4><ul className="level-wizard-small-list">{choices.result.gainedFeatures.map(feature=><li key={feature.title}><strong>{feature.title}</strong><p className="level-wizard-explanation">{feature.description}</p></li>)}</ul></div>
     {next===2&&<p className="level-wizard-choice-info"><strong>Pericia obtenida</strong>{SKILL_NAMES[scholarSkill]}: se duplica la competencia.</p>}
     <div><h4>Nuevos conjuros y explicación</h4>{[...newSpells,...bonusSpells,...(bonusFive?[bonusFive]:[]),...(bonusSeven?[bonusSeven]:[]),...(bonusNine?[bonusNine]:[]),...(bonusEleven?[bonusEleven]:[]),...(bonusThirteen?[bonusThirteen]:[]),...(bonusFifteen?[bonusFifteen]:[]),...(bonusSeventeen?[bonusSeventeen]:[]),...(newCantrip?[newCantrip]:[])].map(id=>{const spell=wizardSpellRule(id);return spell&&<div key={id} className="level-wizard-choice-info"><strong>{spell.name} · Nivel {spell.level}</strong><p>{spell.description}</p></div>;})}</div>
