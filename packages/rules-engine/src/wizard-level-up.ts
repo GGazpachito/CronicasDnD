@@ -1,4 +1,4 @@
-/** Progresión atómica de Mago niveles 1→17, PHB 2024 pp. 165–170 y 174.
+/** Progresión atómica de Mago niveles 1→18, PHB 2024 pp. 165–170 y 174.
  * Conserva ranuras gastadas, inventario, perfil y selección manual de biblioteca.
  */
 import {wizardAdvanceMagicState,wizardProgression,WIZARD_FEATURES,EVOKER_FEATURES} from './wizard';
@@ -6,6 +6,7 @@ import {calculateGuidedWizard,validateWizardOneState,WIZARD_SPELL_CATALOG,WIZARD
  type GuidedWizardInput,type WizardLevelOneState,type WizardScholarSkill,type WizardLevel4Improvement} from './wizard-creation';
 import {wizardAllSlotMarks} from './wizard-slot-marks';
 import {mergeWizardLevelSpells} from './wizard-spell-library';
+import {wizardMasteryCastingTime} from './wizard-mastery';
 
 export type WizardLevelUpChoices=Readonly<{
  newSpellIds:readonly [string,string];
@@ -33,6 +34,8 @@ export type WizardLevelUpChoices=Readonly<{
   evokerLevelEightSpellId?:string;
   /** Nivel 17: nuevo conjuro gratuito de Evocación al desbloquear nivel 9. */
   evokerLevelNineSpellId?:string;
+  /** Nivel 18: Maestría de conjuros, respectivamente uno de nivel 1 y otro de 2. */
+  spellMasteryIds?:readonly [string,string];
 }>;
 export type WizardLevelUpResult=Readonly<{
  input:GuidedWizardInput;state:WizardLevelOneState;
@@ -40,10 +43,10 @@ export type WizardLevelUpResult=Readonly<{
  hitPointsIncrease:number;
 }>;
 export function prepareWizardLevelUp(input:GuidedWizardInput,state:WizardLevelOneState,choices:WizardLevelUpChoices):WizardLevelUpResult{
- if(input.level<1||input.level>=17)throw new RangeError('La progresión guiada de Mago llega actualmente a nivel 17');
+ if(input.level<1||input.level>=18)throw new RangeError('La progresión guiada de Mago llega actualmente a nivel 18');
  const prior=calculateGuidedWizard(input);
  validateWizardOneState(state,prior);
- const nextLevel=(input.level+1) as 2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17;
+ const nextLevel=(input.level+1) as 2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18;
  const newIds=choices.newSpellIds;
  if(!Array.isArray(newIds)||newIds.length!==2||new Set(newIds).size!==2||newIds.some(id=>input.spellbookIds.includes(id)))
   throw new RangeError('Debes añadir dos conjuros nuevos y diferentes al libro');
@@ -125,6 +128,14 @@ export function prepareWizardLevelUp(input:GuidedWizardInput,state:WizardLevelOn
    throw new RangeError('Elige una Evocación gratuita nueva de nivel 1–9 para el nivel 17');
  }else if(choices.evokerLevelNineSpellId!==undefined)
   throw new RangeError('El conjuro gratuito adicional de Evocación corresponde al nivel 17');
+ if(nextLevel===18){
+  const mastery=choices.spellMasteryIds;
+  const known=new Set([...input.spellbookIds,...newIds]);
+  if(!Array.isArray(mastery)||mastery.length!==2||mastery.some(id=>!known.has(id))||
+    mastery.some((id,i)=>{const spell=catalog.get(id);return !spell||spell.level!==i+1||wizardMasteryCastingTime(id,spell.level)!=='action';}))
+   throw new RangeError('Maestría exige un conjuro del libro de nivel 1 y otro de nivel 2, ambos de una acción');
+ }else if(choices.spellMasteryIds!==undefined)
+  throw new RangeError('Maestría de conjuros se elige únicamente al nivel 18');
  if(input.preparedIds.some(id=>!choices.preparedIds.includes(id)))
   throw new RangeError('Los conjuros preparados anteriores se conservan hasta completar un descanso largo');
  const gained=[...newIds,...(choices.evokerBonusSpellIds??[]),...(choices.evokerLevelThreeSpellId?[choices.evokerLevelThreeSpellId]:[]),...(choices.evokerLevelFourSpellId?[choices.evokerLevelFourSpellId]:[]),...(choices.evokerLevelFiveSpellId?[choices.evokerLevelFiveSpellId]:[]),...(choices.evokerLevelSixSpellId?[choices.evokerLevelSixSpellId]:[]),...(choices.evokerLevelSevenSpellId?[choices.evokerLevelSevenSpellId]:[]),...(choices.evokerLevelEightSpellId?[choices.evokerLevelEightSpellId]:[]),...(choices.evokerLevelNineSpellId?[choices.evokerLevelNineSpellId]:[]),...(choices.newCantripId?[choices.newCantripId]:[])];
@@ -145,6 +156,7 @@ export function prepareWizardLevelUp(input:GuidedWizardInput,state:WizardLevelOn
    ...(nextLevel===13?{evokerLevelSevenSpellId:choices.evokerLevelSevenSpellId}:{}),
    ...(nextLevel===15?{evokerLevelEightSpellId:choices.evokerLevelEightSpellId}:{}),
    ...(nextLevel===17?{evokerLevelNineSpellId:choices.evokerLevelNineSpellId}:{}),
+   ...(nextLevel===18?{spellMasteryIds:choices.spellMasteryIds}:{}),
   ...(input.spellSelection?{spellSelection:mergeWizardLevelSpells(input,gained,choices.preparedIds)}:{})};
  const next=calculateGuidedWizard(nextInput);
  const magic=wizardAdvanceMagicState(state.magic,input.level,nextLevel>=3?'evoker':undefined);
@@ -164,10 +176,31 @@ export function prepareWizardLevelUp(input:GuidedWizardInput,state:WizardLevelOn
   hitPointsIncrease:hpGain};
 }
 export function wizardLevelUpChoicesPreview(input:GuidedWizardInput){
- if(input.level<1||input.level>=17)return null;
+ if(input.level<1||input.level>=18)return null;
  const nextLevel=input.level+1;
  const progression=wizardProgression(nextLevel,nextLevel>=3?'evoker':undefined);
  return {nextLevel,progression,features:[...WIZARD_FEATURES,...EVOKER_FEATURES].filter(f=>f.level===nextLevel)};
+}
+
+/** Candidatos legales para Maestría. «Acción o Ritual» también cuenta como acción. */
+export function wizardMasteryAlternatives(input:GuidedWizardInput,level:1|2,extraKnown:readonly string[]=[]){
+ const known=new Set([...input.spellbookIds,...extraKnown]);
+ return WIZARD_SPELL_CATALOG.filter(spell=>spell.level===level&&known.has(spell.id)&&wizardMasteryCastingTime(spell.id,level)==='action');
+}
+
+/** Sustituye como máximo una de las dos Maestrías después de un descanso largo
+ * declarado en la interfaz; no modifica conjuros ordinarios ni gasta ranuras.
+ */
+export function wizardReplaceMasteryAfterLongRest(input:GuidedWizardInput,level:1|2,newId:string):GuidedWizardInput{
+ if(input.level<18)throw new RangeError('Maestría de conjuros requiere nivel 18');
+ calculateGuidedWizard(input);
+ const previous=input.spellMasteryIds!;
+ if(previous[level-1]===newId||!wizardMasteryAlternatives(input,level).some(spell=>spell.id===newId))
+  throw new RangeError('Elige otro conjuro de nivel correspondiente que puedas lanzar con una acción');
+ const mastery:[string,string]=[...previous];mastery[level-1]=newId;
+ const next:GuidedWizardInput={...input,spellMasteryIds:mastery};
+ calculateGuidedWizard(next);
+ return next;
 }
 
 /** Nivel 5: Memorizar conjuro, tras un descanso corto declarado por el jugador.

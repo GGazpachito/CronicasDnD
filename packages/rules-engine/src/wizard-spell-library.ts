@@ -12,10 +12,17 @@ export type WizardSpellSelection=Readonly<{
 }>;
 function validIds(){return new Set<string>([...WIZARD_LEVEL_ONE_CANTRIPS,...WIZARD_SPELL_CATALOG].map(spell=>spell.id));}
 export function wizardSpellSelection(input:GuidedWizardInput):WizardSpellSelection{
- return input.spellSelection??{
+ const base=input.spellSelection??{
   learnedIds:[...input.cantripIds,...input.spellbookIds,...(input.evokerBonusSpellIds??[]),...(input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[]),...(input.evokerLevelFourSpellId?[input.evokerLevelFourSpellId]:[]),...(input.evokerLevelFiveSpellId?[input.evokerLevelFiveSpellId]:[]),...(input.evokerLevelSixSpellId?[input.evokerLevelSixSpellId]:[]),...(input.evokerLevelSevenSpellId?[input.evokerLevelSevenSpellId]:[]),...(input.evokerLevelEightSpellId?[input.evokerLevelEightSpellId]:[]),...(input.evokerLevelNineSpellId?[input.evokerLevelNineSpellId]:[])],
   preparedIds:[...input.cantripIds,...input.preparedIds],
  };
+ // La biblioteca editable es independiente, pero no puede ocultar un conjuro
+ // de Maestría: ambos están siempre preparados aunque se desmarque su casilla.
+ const mastered=input.level>=18?(input.spellMasteryIds??[]):[];
+ return mastered.length?{
+  learnedIds:[...new Set([...base.learnedIds,...mastered])],
+  preparedIds:[...new Set([...base.preparedIds,...mastered])],
+ }:base;
 }
 export function validateWizardSpellSelection(raw:unknown):WizardSpellSelection{
  if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new RangeError('Biblioteca manual inválida');

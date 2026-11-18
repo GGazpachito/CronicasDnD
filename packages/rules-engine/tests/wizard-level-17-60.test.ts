@@ -78,7 +78,7 @@ describe('Actualización 60: Mago Evocación nivel 17',()=>{
   expect(wizardProgression(17,'evoker').proficiencyBonus).toBe(6);
   expect(seventeen.input.level16Improvement).toEqual(sixteen.input.level16Improvement);
   expect(seventeen.hitPointsIncrease).toBe(sheet.maximumHitPoints-calculateGuidedWizard(sixteen.input).maximumHitPoints);
-  expect(wizardLevelUpChoicesPreview(seventeen.input)).toBe(null);
+  expect(wizardLevelUpChoicesPreview(seventeen.input)?.nextLevel).toBe(18);
  });
  it('rechaza regalo de Evocación ausente, duplicado, de otra escuela o prematuro',()=>{
   const sixteen=to16();

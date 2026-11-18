@@ -11,13 +11,14 @@ type Props=Readonly<{input:GuidedWizardInput;spellAttackBonus:number;spellSaveDC
 export default function WizardSpellLibrary({input,spellAttackBonus,spellSaveDC,mode,onChange}:Props){
  const selection=wizardSpellSelection(input);
  const recommended=wizardProgression(input.level,input.level>=3?'evoker':undefined);
+ const mastered=new Set(input.level>=18?(input.spellMasteryIds??[]):[]);
  return <SpellLibraryPanel
   rules={WIZARD_SPELL_RULES}
   classLists={[{id:'wizard',label:'Mago',spellIds:WIZARD_SPELL_RULES.map(spell=>spell.id)}]}
   selection={selection}
   limits={{cantrips:recommended.cantripsKnown,learnedMinimum:recommended.minimumSpellbookCount,prepared:recommended.preparedSpellCount}}
-  characterLevel={input.level}spellAttackBonus={spellAttackBonus}spellSaveDC={spellSaveDC}mode={mode}
-  onLearned={(id,checked)=>onChange(setWizardSpellLearned(selection,id,checked))}
-  onPrepared={(id,checked)=>onChange(setWizardSpellPrepared(selection,id,checked))}
+  characterLevel={input.level} spellAttackBonus={spellAttackBonus} spellSaveDC={spellSaveDC} mode={mode}
+  onLearned={(id,checked)=>{if(!mastered.has(id))onChange(setWizardSpellLearned(selection,id,checked));}}
+  onPrepared={(id,checked)=>{if(!mastered.has(id))onChange(setWizardSpellPrepared(selection,id,checked));}}
  />;
 }

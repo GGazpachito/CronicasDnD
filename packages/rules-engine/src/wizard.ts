@@ -55,7 +55,7 @@ export const WIZARD_FEATURES= [
   {id:'ability_score_improvement_8',level:8,title:'Mejora de característica',description:'Obtienes otra oportunidad de mejorar características o elegir una dote válida.'},
   {id:'ability_score_improvement_12',level:12,title:'Mejora de característica',description:'Obtienes otra oportunidad de mejorar características o elegir una dote válida.'},
   {id:'ability_score_improvement_16',level:16,title:'Mejora de característica',description:'Obtienes otra oportunidad de mejorar características o elegir una dote válida.'},
-  {id:'spell_mastery',level:18,title:'Maestría de conjuros',description:'Elige un conjuro de nivel 1 y otro de nivel 2 de tu libro con tiempo de lanzamiento de una acción. Los tienes siempre preparados y puedes lanzarlos a su nivel mínimo sin gastar ranuras.'},
+  {id:'spell_mastery',level:18,title:'Maestría de conjuros',description:'Elige del libro un conjuro de nivel 1 y otro de nivel 2 que se lancen con una acción. Ambos están siempre preparados y se lanzan a su nivel mínimo sin gastar ranuras. Tras un descanso largo puedes sustituir uno por otro elegible del mismo nivel.'},
   {id:'epic_boon',level:19,title:'Beneficio épico',description:'Puedes elegir un beneficio épico válido u otra dote para la que cumplas los requisitos.'},
   {id:'signature_spells',level:20,title:'Conjuros distintivos',description:'Elige dos conjuros de nivel 3 de tu libro. Están siempre preparados y puedes lanzar cada uno sin ranura una vez por descanso corto o largo.'},
 ] as const;
