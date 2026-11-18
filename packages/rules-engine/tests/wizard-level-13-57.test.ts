@@ -46,11 +46,11 @@ function to13(){
 }
 
 describe('Actualización 57: Mago Evocación nivel 13',()=>{
- it('añade 15 conjuros de nivel 7, todos con fichas completas, e integra 217 registros únicos',()=>{
+ it('añade 15 conjuros de nivel 7 con ficha completa y mantiene el catálogo ampliable',()=>{
   expect(WIZARD_LEVEL_SEVEN_SPELLS).toHaveLength(15);
   expect(WIZARD_SPELL_CATALOG.filter(s=>s.level===7)).toHaveLength(15);
-  expect(WIZARD_SPELL_RULES).toHaveLength(217);
-  expect(new Set(WIZARD_SPELL_RULES.map(s=>s.id)).size).toBe(217);
+  expect(WIZARD_SPELL_RULES.length).toBeGreaterThanOrEqual(217);
+  expect(new Set(WIZARD_SPELL_RULES.map(s=>s.id)).size).toBe(WIZARD_SPELL_RULES.length);
   for(const entry of WIZARD_LEVEL_SEVEN_SPELLS){
    const detail=wizardSpellRule(entry.id)!;
    expect(detail.level).toBe(7);

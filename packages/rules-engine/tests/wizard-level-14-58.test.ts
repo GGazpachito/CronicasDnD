@@ -63,7 +63,7 @@ describe('Actualización 58: Mago Evocación nivel 14 y Sobrecarga',()=>{
   expect(advanced.hitPointsIncrease).toBe(sheet.maximumHitPoints-calculateGuidedWizard(thirteen.input).maximumHitPoints);
   expect(wizardProgression(14,'evoker').proficiencyBonus).toBe(5);
   expect(EVOKER_FEATURES.filter(feature=>feature.level===14).map(feature=>feature.id)).toEqual(['overchannel']);
-  expect(wizardLevelUpChoicesPreview(advanced.input)).toBe(null);
+  expect(wizardLevelUpChoicesPreview(advanced.input)?.nextLevel).toBe(15);
  });
  it('no concede una ranura adicional ni reinicia las gastadas al subir',()=>{
   const thirteen=to13();

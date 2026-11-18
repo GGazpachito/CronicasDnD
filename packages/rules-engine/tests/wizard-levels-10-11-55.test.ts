@@ -30,8 +30,8 @@ describe('Actualización 55: Mago Evocación niveles 10 y 11',()=>{
  it('incorpora las 22 opciones de conjuros de nivel 6 y fichas legibles con dados cuando corresponden',()=>{
   expect(WIZARD_LEVEL_SIX_SPELLS).toHaveLength(22);
   expect(WIZARD_SPELL_CATALOG.filter(s=>s.level===6)).toHaveLength(22);
-  expect(WIZARD_SPELL_RULES).toHaveLength(217);
-  expect(new Set(WIZARD_SPELL_RULES.map(s=>s.id)).size).toBe(217);
+  expect(WIZARD_SPELL_RULES.length).toBeGreaterThanOrEqual(217);
+  expect(new Set(WIZARD_SPELL_RULES.map(s=>s.id)).size).toBe(WIZARD_SPELL_RULES.length);
   for(const s of WIZARD_LEVEL_SIX_SPELLS){
    const detail=wizardSpellRule(s.id)!;
    expect(detail.level).toBe(6);
