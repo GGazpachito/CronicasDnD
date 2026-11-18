@@ -72,6 +72,7 @@ export default function WizardPage(){
  const [overchannelResult,setOverchannelResult]=useState('');
  const [recallSlotLevel,setRecallSlotLevel]=useState(1);
  const [spellRecallResult,setSpellRecallResult]=useState('');
+ const [shortRestNotice,setShortRestNotice]=useState('');
  const computed=useMemo(()=>{
   try{return {sheet:calculateGuidedWizard(wizardInputForPreview(input)),error:''};}
   catch(e){return {sheet:null,error:e instanceof Error?e.message:'Elecciones inválidas'};}
@@ -143,10 +144,14 @@ export default function WizardPage(){
  function finishLongRest(nextInput:GuidedWizardInput){
   setInput(nextInput);
   setState(previous=>({...resetWizardSlots(previous,input.level),hitPointsCurrent:sheet?.maximumHitPoints??previous.hitPointsCurrent,temporaryHitPoints:0,heroicInspiration:input.species==='human'?true:previous.heroicInspiration}));
-  setMasteryRestOpen(false);setOverchannelResult('');setOverchannelConfirmed(false);setError('');
+  setMasteryRestOpen(false);setOverchannelResult('');setOverchannelConfirmed(false);setShortRestNotice('');setSpellRecallResult('');setError('');
  }
  function rest(){if(input.level>=18){setMasteryRestOpen(true);return;}finishLongRest(input);}
- function shortRest(){setState(previous=>({...previous,magic:wizardShortRest(previous.magic)}));setError('');}
+ function shortRest(){
+  setState(previous=>({...previous,magic:wizardShortRest(previous.magic)}));
+  setShortRestNotice(input.level>=20?'Descanso corto registrado. Se han recuperado los dos usos gratuitos de Conjuros de firma.':'Descanso corto registrado. Puedes gestionar Recuperación arcana y, desde nivel 5, Memorizar conjuro.');
+  setSpellRecallResult('');setError('');
+ }
  function castSignature(spellId:string){
   try{
    const magic=wizardUseSignatureSpell(state.magic,input.level,spellId,input.signatureSpellIds??[]);
@@ -181,7 +186,7 @@ export default function WizardPage(){
  function undoInventory(){patch({inventoryActions:(input.inventoryActions??[]).slice(0,-1)});setError('');}
  function resetInventory(){patch({inventoryActions:[]});setError('');}
  function restore(snapshot:ReturnType<typeof validateWizardCharacterSnapshot>){
-  setInput(snapshot.input);setState(snapshot.wizardState);setProfileRevision(n=>n+1);setEditing(false);setLevelUpOpen(false);setLevelDownOpen(false);setMasteryRestOpen(false);setOverchannelResult('');setOverchannelConfirmed(false);setSpellRecallResult('');setTab('principal');setError('');
+  setInput(snapshot.input);setState(snapshot.wizardState);setProfileRevision(n=>n+1);setEditing(false);setLevelUpOpen(false);setLevelDownOpen(false);setMasteryRestOpen(false);setOverchannelResult('');setOverchannelConfirmed(false);setSpellRecallResult('');setShortRestNotice('');setTab('principal');setError('');
  }
  return <main className="app-shell wizard-page">
   <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Mago · D&D 2024</span></div></div><Link href="/" className="wizard-class-link" onNavigate={(event:{preventDefault:()=>void})=>{if(pendingSaveNavigation.current&&!window.confirm("Tienes cambios sin guardar. ¿Descartarlos y volver al menú?"))event.preventDefault();}}>Menú de personajes</Link></header>
@@ -197,10 +202,10 @@ export default function WizardPage(){
      onClose={()=>setLevelDownOpen(false)} onConfirm={()=>{
       const next=levelDownAssessment.preview;
       if(!next)throw new RangeError('La bajada de nivel no es válida');
-      setInput(next.snapshot.input);setState(next.snapshot.wizardState);setLevelDownOpen(false);setMasteryRestOpen(false);setOverchannelResult('');setOverchannelConfirmed(false);setSpellRecallResult('');
+      setInput(next.snapshot.input);setState(next.snapshot.wizardState);setLevelDownOpen(false);setMasteryRestOpen(false);setOverchannelResult('');setOverchannelConfirmed(false);setSpellRecallResult('');setShortRestNotice('');
       setEditing(false);setTab('principal');setError('');
      }}/>} 
-  {levelUpOpen&&<WizardLevelUpWizard input={input} state={state} mode={mode} onCancel={()=>setLevelUpOpen(false)} onConfirm={next=>{setInput(next.input);setState(next.state);setLevelUpOpen(false);setOverchannelResult('');setOverchannelConfirmed(false);setSpellRecallResult('');setEditing(false);setTab('principal');setError('');}}/>}
+  {levelUpOpen&&<WizardLevelUpWizard input={input} state={state} mode={mode} onCancel={()=>setLevelUpOpen(false)} onConfirm={next=>{setInput(next.input);setState(next.state);setLevelUpOpen(false);setOverchannelResult('');setOverchannelConfirmed(false);setSpellRecallResult('');setShortRestNotice('');setEditing(false);setTab('principal');setError('');}}/>}
   {masteryRestOpen&&sheet&&<WizardMasteryRestDialog input={input} spellAttackBonus={sheet.spellAttackBonus} mode={mode} onCancel={()=>setMasteryRestOpen(false)} onConfirm={finishLongRest}/>}
   <SaveLoadPanel characterClass="wizard" snapshot={actualSnapshot} validate={validateWizardCharacterSnapshot} onLoad={restore}
      normalize={saved=>makeWizardCharacterSnapshot(saved.input,saved.wizardState)}
@@ -304,8 +309,7 @@ export default function WizardPage(){
       {detail&&<WizardSpellDetails spell={detail} characterLevel={input.level} spellAttackBonus={sheet.spellAttackBonus} mode={mode}/>}
       <button type="button" disabled={used} onClick={()=>castSignature(id)}>{used?'Uso gratuito gastado':'Registrar lanzamiento gratuito · nivel 3'}</button>
      </div>;})}
-     <button type="button" disabled={state.magic.signatureUsed.length===0} onClick={shortRest}>Confirmar descanso corto · recuperar usos gratuitos</button>
-     <p className="muted-note">El descanso corto restablece ambos usos, pero no recupera PG ni ranuras por sí solo. Recuperación arcana se gestiona más abajo. El descanso largo también los restaura y ofrece mantener o cambiar una Maestría de nivel 18. Registrar un conjuro de firma no consume ranuras, no calcula sus efectos y no efectúa ningún lanzamiento real.</p>
+     <p className="muted-note">El descanso corto restablece ambos usos mediante el botón general de descansos, pero no recupera PG ni ranuras por sí solo. Recuperación arcana se gestiona más abajo. El descanso largo también los restaura y ofrece mantener o cambiar una Maestría de nivel 18. Registrar un conjuro de firma no consume ranuras, no calcula sus efectos y no efectúa ningún lanzamiento real.</p>
     </fieldset>}
     {input.level>=19&&input.epicBoon?.id==='spell_recall'&&<fieldset className="level-wizard-fieldset wizard-recall-panel"><legend>Beneficio épico · Recuperación de conjuros</legend>
      <p className="muted-note">Al lanzar un conjuro gastando una ranura de nivel 1, 2, 3 o 4, tira 1d4. Si el resultado coincide con el nivel de la ranura, conservas esa ranura. No se aplica a conjuros gratuitos de Maestría ni a ranuras de nivel 5–9.</p>
@@ -315,11 +319,19 @@ export default function WizardPage(){
      <p className="muted-note">La tirada no lanza el conjuro ni marca o recupera ranuras. Comprueba el resultado y actualiza los rombos manualmente.</p>
     </fieldset>}
     {[1,2,3,4,5,6,7,8,9].filter(l=>state.magic.slots.maximum[l-1]>0).map(l=><SpellSlotDiamonds key={l} level={l} spent={wizardSlotMarks(state,l)} onToggle={index=>toggleSlot(index,l)}/>)}
+    <div className="wizard-rest-panel" aria-label="Descansos del Mago">
+     <h3>Descansos</h3>
+     <div className="wizard-delta">
+      <button type="button" onClick={shortRest}>Confirmar descanso corto</button>
+      <button type="button" onClick={rest}>Confirmar descanso largo</button>
+     </div>
+     {shortRestNotice&&<p role="status" aria-live="polite">{shortRestNotice}</p>}
+     <p className="muted-note">El descanso corto no restaura automáticamente PG ni ranuras. Desde nivel 20 recupera los usos gratuitos de los Conjuros de firma. La recuperación de ranuras y la memorización se gestionan a continuación, cuando correspondan.</p>
+    </div>
     <div className="wizard-delta" aria-label="Recuperación arcana">
      <p className="muted-note">Recuperación arcana: una vez por descanso largo, tras un descanso corto. Puedes recuperar ranuras cuyo total de niveles no supere {Math.ceil(input.level/2)}, siempre que sean de nivel 5 o inferior.</p>
      {recoveryOptions.map(slots=><button type="button" key={slots.join('-')} onClick={()=>recoverArcane(slots)}>Recuperar {recoveryLabel(slots)}</button>)}
      {recoveryOptions.length===0&&<p className="muted-note">Sin opciones de recuperación (todas las ranuras disponibles o recuperación ya utilizada).</p>}
-     <button type="button" onClick={rest}>Descanso largo</button>
     </div>
     {input.level>=5&&<fieldset className="level-wizard-fieldset wizard-memorize-panel"><legend>Memorizar conjuro · Nivel 5</legend>
      <p className="muted-note">Al terminar un descanso corto puedes sustituir un conjuro preparado de nivel 1 o superior por otro de tu libro. No se gastan ranuras ni se eligen objetivos.</p>

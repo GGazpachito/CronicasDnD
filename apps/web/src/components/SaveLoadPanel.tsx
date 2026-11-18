@@ -71,9 +71,20 @@ export default function SaveLoadPanel<T extends SnapshotLike>({snapshot,characte
       const response=await fetch(target,{method:active?"PUT":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(active?{revision:active.revision,snapshot}:{snapshot})});
       const data=await decode<{character:RecordSummary}>(response);
       if(data.character.characterClass!==characterClass||data.character.level!==snapshot.input.level)throw new Error("La respuesta del guardado no coincide con esta clase y nivel.");
+      if(!data.character.id||!Number.isSafeInteger(data.character.revision))throw new Error("La respuesta del guardado no incluye una referencia válida.");
       setActive({id:data.character.id,revision:data.character.revision});
       setSavedFingerprint(JSON.stringify(snapshot));
-      setMessage(active?"Cambios guardados correctamente.":"Personaje creado y guardado correctamente.");
+      // El primer POST convierte la URL de creación en una URL recargable,
+      // sin añadir una entrada al historial ni forzar navegación de Next.js.
+      let linked=true;
+      if(!active){
+        try{
+          const address=new URL(window.location.href);
+          address.searchParams.set("character",data.character.id);
+          window.history.replaceState(window.history.state,"",`${address.pathname}${address.search}${address.hash}`);
+        }catch{linked=false;}
+      }
+      setMessage(active?"Cambios guardados correctamente.":linked?"Personaje creado y guardado correctamente. Puedes recargar esta página para recuperarlo.":"Personaje guardado. La URL no se pudo actualizar; vuelve a abrirlo desde el menú antes de recargar.");
       // El menú /load consultará de nuevo la base de datos; no dependemos de una recarga posterior.
     }catch(reason){setError(reason instanceof Error?reason.message:"No se pudo guardar el personaje");}
     finally{setBusy(false);}
