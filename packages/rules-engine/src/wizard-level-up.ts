@@ -1,4 +1,4 @@
-/** Progresión atómica de Mago niveles 1→19, PHB 2024 pp. 165–170 y 174.
+/** Progresión atómica de Mago niveles 1→20, PHB 2024 pp. 165–170 y 174.
  * Conserva ranuras gastadas, inventario, perfil y selección manual de biblioteca.
  */
 import {wizardAdvanceMagicState,wizardProgression,WIZARD_FEATURES,EVOKER_FEATURES} from './wizard';
@@ -39,6 +39,8 @@ export type WizardLevelUpChoices=Readonly<{
   spellMasteryIds?:readonly [string,string];
   /** Nivel 19: beneficio épico y característica aumentada. */
   epicBoon?:WizardEpicBoonChoice;
+  /** Nivel 20: dos conjuros de nivel 3 del libro siempre preparados. */
+  signatureSpellIds?:readonly [string,string];
 }>;
 export type WizardLevelUpResult=Readonly<{
  input:GuidedWizardInput;state:WizardLevelOneState;
@@ -46,10 +48,10 @@ export type WizardLevelUpResult=Readonly<{
  hitPointsIncrease:number;
 }>;
 export function prepareWizardLevelUp(input:GuidedWizardInput,state:WizardLevelOneState,choices:WizardLevelUpChoices):WizardLevelUpResult{
- if(input.level<1||input.level>=19)throw new RangeError('La progresión guiada de Mago llega actualmente a nivel 19');
+ if(input.level<1||input.level>=20)throw new RangeError('La progresión guiada de Mago llega al nivel 20');
  const prior=calculateGuidedWizard(input);
  validateWizardOneState(state,prior);
- const nextLevel=(input.level+1) as 2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19;
+ const nextLevel=(input.level+1) as 2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20;
  const newIds=choices.newSpellIds;
  if(!Array.isArray(newIds)||newIds.length!==2||new Set(newIds).size!==2||newIds.some(id=>input.spellbookIds.includes(id)))
   throw new RangeError('Debes añadir dos conjuros nuevos y diferentes al libro');
@@ -143,6 +145,12 @@ export function prepareWizardLevelUp(input:GuidedWizardInput,state:WizardLevelOn
   if(!choices.epicBoon)throw new RangeError('Elige un beneficio épico para nivel 19');
   applyWizardEpicBoon(prior.abilityScores,choices.epicBoon);
  }else if(choices.epicBoon!==undefined)throw new RangeError('El beneficio épico corresponde al nivel 19');
+ if(nextLevel===20){
+  const signature=choices.signatureSpellIds;
+  const known=new Set([...input.spellbookIds,...newIds,...(input.evokerBonusSpellIds??[]),input.evokerLevelThreeSpellId,input.evokerLevelFourSpellId,input.evokerLevelFiveSpellId,input.evokerLevelSixSpellId,input.evokerLevelSevenSpellId,input.evokerLevelEightSpellId,input.evokerLevelNineSpellId]);
+  if(!Array.isArray(signature)||signature.length!==2||new Set(signature).size!==2||signature.some(id=>!known.has(id)||catalog.get(id)?.level!==3))
+   throw new RangeError('Elige dos conjuros distintos de nivel 3 de tu libro para Conjuros de firma');
+ }else if(choices.signatureSpellIds!==undefined)throw new RangeError('Los Conjuros de firma se eligen únicamente al nivel 20');
  if(input.preparedIds.some(id=>!choices.preparedIds.includes(id)))
   throw new RangeError('Los conjuros preparados anteriores se conservan hasta completar un descanso largo');
  const gained=[...newIds,...(choices.evokerBonusSpellIds??[]),...(choices.evokerLevelThreeSpellId?[choices.evokerLevelThreeSpellId]:[]),...(choices.evokerLevelFourSpellId?[choices.evokerLevelFourSpellId]:[]),...(choices.evokerLevelFiveSpellId?[choices.evokerLevelFiveSpellId]:[]),...(choices.evokerLevelSixSpellId?[choices.evokerLevelSixSpellId]:[]),...(choices.evokerLevelSevenSpellId?[choices.evokerLevelSevenSpellId]:[]),...(choices.evokerLevelEightSpellId?[choices.evokerLevelEightSpellId]:[]),...(choices.evokerLevelNineSpellId?[choices.evokerLevelNineSpellId]:[]),...(choices.newCantripId?[choices.newCantripId]:[])];
@@ -165,6 +173,7 @@ export function prepareWizardLevelUp(input:GuidedWizardInput,state:WizardLevelOn
    ...(nextLevel===17?{evokerLevelNineSpellId:choices.evokerLevelNineSpellId}:{}),
    ...(nextLevel===18?{spellMasteryIds:choices.spellMasteryIds}:{}),
    ...(nextLevel===19?{epicBoon:choices.epicBoon}:{}),
+   ...(nextLevel===20?{signatureSpellIds:choices.signatureSpellIds}:{}),
   ...(input.spellSelection?{spellSelection:mergeWizardLevelSpells(input,gained,choices.preparedIds)}:{})};
  const next=calculateGuidedWizard(nextInput);
  const magic=wizardAdvanceMagicState(state.magic,input.level,nextLevel>=3?'evoker':undefined);
@@ -184,7 +193,7 @@ export function prepareWizardLevelUp(input:GuidedWizardInput,state:WizardLevelOn
   hitPointsIncrease:hpGain};
 }
 export function wizardLevelUpChoicesPreview(input:GuidedWizardInput){
- if(input.level<1||input.level>=19)return null;
+ if(input.level<1||input.level>=20)return null;
  const nextLevel=input.level+1;
  const progression=wizardProgression(nextLevel,nextLevel>=3?'evoker':undefined);
  return {nextLevel,progression,features:[...WIZARD_FEATURES,...EVOKER_FEATURES].filter(f=>f.level===nextLevel)};

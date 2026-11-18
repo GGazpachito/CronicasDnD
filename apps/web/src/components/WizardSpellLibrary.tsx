@@ -11,7 +11,7 @@ type Props=Readonly<{input:GuidedWizardInput;spellAttackBonus:number;spellSaveDC
 export default function WizardSpellLibrary({input,spellAttackBonus,spellSaveDC,mode,onChange}:Props){
  const selection=wizardSpellSelection(input);
  const recommended=wizardProgression(input.level,input.level>=3?'evoker':undefined);
- const mastered=new Set(input.level>=18?(input.spellMasteryIds??[]):[]);
+ const mastered=new Set([...(input.level>=18?input.spellMasteryIds??[]:[]),...(input.level>=20?input.signatureSpellIds??[]:[])]);
  return <SpellLibraryPanel
   rules={WIZARD_SPELL_RULES}
   classLists={[{id:'wizard',label:'Mago',spellIds:WIZARD_SPELL_RULES.map(spell=>spell.id)}]}

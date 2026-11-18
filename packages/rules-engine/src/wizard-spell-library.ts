@@ -16,12 +16,12 @@ export function wizardSpellSelection(input:GuidedWizardInput):WizardSpellSelecti
   learnedIds:[...input.cantripIds,...input.spellbookIds,...(input.evokerBonusSpellIds??[]),...(input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[]),...(input.evokerLevelFourSpellId?[input.evokerLevelFourSpellId]:[]),...(input.evokerLevelFiveSpellId?[input.evokerLevelFiveSpellId]:[]),...(input.evokerLevelSixSpellId?[input.evokerLevelSixSpellId]:[]),...(input.evokerLevelSevenSpellId?[input.evokerLevelSevenSpellId]:[]),...(input.evokerLevelEightSpellId?[input.evokerLevelEightSpellId]:[]),...(input.evokerLevelNineSpellId?[input.evokerLevelNineSpellId]:[])],
   preparedIds:[...input.cantripIds,...input.preparedIds],
  };
- // La biblioteca editable es independiente, pero no puede ocultar un conjuro
- // de Maestría: ambos están siempre preparados aunque se desmarque su casilla.
- const mastered=input.level>=18?(input.spellMasteryIds??[]):[];
- return mastered.length?{
-  learnedIds:[...new Set([...base.learnedIds,...mastered])],
-  preparedIds:[...new Set([...base.preparedIds,...mastered])],
+ // La biblioteca editable no puede ocultar Maestría ni Conjuros de firma:
+ // ambos rasgos conceden preparación permanente adicional.
+ const alwaysPrepared=[...(input.level>=18?input.spellMasteryIds??[]:[]),...(input.level>=20?input.signatureSpellIds??[]:[])];
+ return alwaysPrepared.length?{
+  learnedIds:[...new Set([...base.learnedIds,...alwaysPrepared])],
+  preparedIds:[...new Set([...base.preparedIds,...alwaysPrepared])],
  }:base;
 }
 export function validateWizardSpellSelection(raw:unknown):WizardSpellSelection{

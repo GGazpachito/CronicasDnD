@@ -28,7 +28,7 @@ import {ABILITIES,type Ability} from '../../../../../packages/rules-engine/src/a
 import {SKILLS,type Skill} from '../../../../../packages/rules-engine/src/proficiencies';
 import {BACKGROUNDS,SPECIES_NAMES,STANDARD_ARRAY,type BackgroundId,type SpeciesId} from '../../../../../packages/rules-engine/src/guided';
 import {EMPTY_CHARACTER_PROFILE} from '../../../../../packages/rules-engine/src/character-profile';
-import {evokerOverchannel,wizardProgression} from '../../../../../packages/rules-engine/src/wizard';
+import {evokerOverchannel,wizardProgression,wizardShortRest,wizardUseSignatureSpell} from '../../../../../packages/rules-engine/src/wizard';
 import {rollSpellDice} from '../../../../../packages/rules-engine/src/spell-dice';
 import {wizardSpellRecallResult,WIZARD_EPIC_BOONS} from '../../../../../packages/rules-engine/src/wizard-epic-boons';
 import {rollD20,type D20Mode} from '../../../../../packages/rules-engine/src/d20';
@@ -146,6 +146,14 @@ export default function WizardPage(){
   setMasteryRestOpen(false);setOverchannelResult('');setOverchannelConfirmed(false);setError('');
  }
  function rest(){if(input.level>=18){setMasteryRestOpen(true);return;}finishLongRest(input);}
+ function shortRest(){setState(previous=>({...previous,magic:wizardShortRest(previous.magic)}));setError('');}
+ function castSignature(spellId:string){
+  try{
+   const magic=wizardUseSignatureSpell(state.magic,input.level,spellId,input.signatureSpellIds??[]);
+   setState(previous=>({...previous,magic:{...previous.magic,signatureUsed:[...new Set([...previous.magic.signatureUsed,...magic.signatureUsed])]}}));
+   setError('');
+  }catch(e){setError(e instanceof Error?e.message:'No se pudo registrar el conjuro de firma');}
+ }
  function activateOverchannel(){
   if(!overchannelConfirmed){setError('Confirma que vas a activar Sobrecarga sobre un conjuro de Mago válido.');return;}
   try{
@@ -182,9 +190,9 @@ export default function WizardPage(){
    <CharacterHeader name={input.name} portraitDataUrl={input.profile?.portraitDataUrl} level={input.level}
      background={background.name} species={SPECIES_NAMES[input.species]} className="Mago" subclass={input.level>=3?'Evocación':undefined} valid={Boolean(actualSnapshot)}
      onEdit={()=>setEditing(true)}
-      onLevelUp={input.level<19&&actualSnapshot?()=>{setLevelUpOpen(true);setEditing(false);}:undefined}
+      onLevelUp={input.level<20&&actualSnapshot?()=>{setLevelUpOpen(true);setEditing(false);}:undefined}
      onLevelDown={input.level>1&&actualSnapshot?()=>setLevelDownOpen(true):undefined}/>
-   <p className="wizard-progression-hint">{input.level>=19?'Beneficio épico de nivel 19 obtenido. Próxima etapa: nivel 20.':input.level>=18?'Maestría de conjuros disponible. Próxima etapa: nivel 19.':`Próxima subida disponible: Mago de nivel ${input.level+1}.`}</p>
+   <p className="wizard-progression-hint">{input.level>=20?'Progresión del Mago completada: nivel 20. Conjuros de firma disponibles.':input.level>=19?'Beneficio épico obtenido. Próxima etapa: nivel 20.':input.level>=18?'Maestría de conjuros disponible. Próxima etapa: nivel 19.':`Próxima subida disponible: Mago de nivel ${input.level+1}.`}</p>
   {levelDownOpen&&<LevelDownDialog preview={levelDownAssessment.preview} error={levelDownAssessment.error}
      onClose={()=>setLevelDownOpen(false)} onConfirm={()=>{
       const next=levelDownAssessment.preview;
@@ -255,6 +263,7 @@ export default function WizardPage(){
       spellSlotsContent={<section className="overview-panel panel" aria-label="Espacios de conjuro"><div className="overview-panel-heading"><h3>Espacios de conjuro</h3><span>Rasgo de lanzador</span></div>{[1,2,3,4,5,6,7,8,9].filter(l=>state.magic.slots.maximum[l-1]>0).map(l=><SpellSlotDiamonds key={l} level={l} spent={wizardSlotMarks(state,l)} onToggle={index=>toggleSlot(index,l)}/>)}<div className="overview-quick-actions"><button type="button" onClick={rest}>Descanso largo</button></div><p className="overview-panel-note">Gastar una ranura no lanza el conjuro automáticamente.</p></section>}
       warningContent={error&&<div className="overview-action-message is-error" role="alert">{error}</div>}
       footerContent={<>
+       {input.level>=20&&input.signatureSpellIds&&<section className="overview-panel panel"><h3>Conjuros de firma</h3><strong className="overview-spotlight">{2-state.magic.signatureUsed.length}/2</strong><p className="overview-panel-note">Lanzamientos gratuitos de nivel 3 disponibles hasta el próximo descanso corto o largo.</p><button type="button" className="overview-link" onClick={()=>setTab('hechizos')}>Gestionar Conjuros de firma</button></section>}
        <section className="overview-panel panel"><h3>Percepción pasiva</h3><strong className="overview-spotlight">{10+sheet.skillBonuses.perception}</strong><p className="overview-panel-note">10 + Percepción {signed(sheet.skillBonuses.perception)}</p></section>
        <section className="overview-panel panel"><h3>Movimiento y origen</h3><strong className="overview-spotlight">{sheet.speedFeet} <small>pies</small></strong><p className="overview-panel-note">Tamaño {sheet.size==='medium'?'mediano':'pequeño'} · Mago nivel {input.level}</p></section>
        <section className="overview-panel panel overview-death-panel" aria-label="Salvaciones de muerte"><h3>Salvaciones de muerte</h3><div className="overview-death-markers">{(['successes','failures'] as const).map(kind=><div key={kind} className={`overview-death-track ${kind==='successes'?'is-success':'is-failure'}`}><div className="overview-death-track-heading"><span>{kind==='successes'?'Éxitos':'Fallos'}</span><small>{state.manualDeathMarks?.[kind].filter(Boolean).length??0}/3</small></div><div className="overview-death-marks" role="group" aria-label={kind==='successes'?'Éxitos':'Fallos'}>{([0,1,2] as const).map(index=>{const checked=state.manualDeathMarks?.[kind][index]??false;return <button type="button" key={index} className={`overview-death-mark${checked?' is-marked':''}`} aria-pressed={checked} aria-label={`${kind==='successes'?'Éxito':'Fallo'} ${index+1}`} onClick={()=>toggleDeathMark(kind,index)}><span aria-hidden="true">{checked?(kind==='successes'?'✓':'×'):''}</span></button>;})}</div></div>)}</div><p className="overview-panel-note">Marcadores manuales. No desencadenan reglas automáticas.</p></section>
@@ -288,6 +297,15 @@ export default function WizardPage(){
      {input.spellMasteryIds.map((id,index)=>{const detail=wizardSpellRule(id);return <div key={`${index}-${id}`} className="level-wizard-choice-info"><strong>Nivel {index+1}: {detail?.name??id} · lanzamiento básico gratuito</strong>{detail&&<WizardSpellDetails spell={detail} characterLevel={input.level} spellAttackBonus={sheet.spellAttackBonus} mode={mode}/>}</div>;})}
      <button type="button" onClick={rest}>Descanso largo · mantener o sustituir un conjuro de Maestría</button>
      <p className="muted-note">El cambio de una Maestría solo se ofrece al confirmar un descanso largo; puedes mantener las dos sin sustituir ninguna.</p>
+    </fieldset>}
+    {input.level>=20&&sheet&&input.signatureSpellIds&&<fieldset className="level-wizard-fieldset wizard-signature-panel"><legend>Conjuros de firma · Nivel 20</legend>
+     <p className="muted-note">Estos dos conjuros de nivel 3 están siempre preparados, además de los 25 preparados normales y de las dos Maestrías. Cada uno puede lanzarse gratuitamente a nivel 3 una vez por descanso corto o largo. Lanzarlos a nivel superior exige gastar una ranura manualmente.</p>
+     {input.signatureSpellIds.map(id=>{const detail=wizardSpellRule(id);const used=state.magic.signatureUsed.includes(id);return <div key={id} className="level-wizard-choice-info"><strong>{detail?.name??id} · {used?'Lanzamiento gratuito gastado':'Lanzamiento gratuito disponible'}</strong>
+      {detail&&<WizardSpellDetails spell={detail} characterLevel={input.level} spellAttackBonus={sheet.spellAttackBonus} mode={mode}/>}
+      <button type="button" disabled={used} onClick={()=>castSignature(id)}>{used?'Uso gratuito gastado':'Registrar lanzamiento gratuito · nivel 3'}</button>
+     </div>;})}
+     <button type="button" disabled={state.magic.signatureUsed.length===0} onClick={shortRest}>Confirmar descanso corto · recuperar usos gratuitos</button>
+     <p className="muted-note">El descanso corto restablece ambos usos, pero no recupera PG ni ranuras por sí solo. Recuperación arcana se gestiona más abajo. El descanso largo también los restaura y ofrece mantener o cambiar una Maestría de nivel 18. Registrar un conjuro de firma no consume ranuras, no calcula sus efectos y no efectúa ningún lanzamiento real.</p>
     </fieldset>}
     {input.level>=19&&input.epicBoon?.id==='spell_recall'&&<fieldset className="level-wizard-fieldset wizard-recall-panel"><legend>Beneficio épico · Recuperación de conjuros</legend>
      <p className="muted-note">Al lanzar un conjuro gastando una ranura de nivel 1, 2, 3 o 4, tira 1d4. Si el resultado coincide con el nivel de la ranura, conservas esa ranura. No se aplica a conjuros gratuitos de Maestría ni a ranuras de nivel 5–9.</p>

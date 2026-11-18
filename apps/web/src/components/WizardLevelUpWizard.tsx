@@ -32,6 +32,8 @@ export default function WizardLevelUpWizard({input,state,mode,onConfirm,onCancel
  const [bonusSeventeen,setBonusSeventeen]=useState('');
  const [masteryOne,setMasteryOne]=useState('');
  const [masteryTwo,setMasteryTwo]=useState('');
+ const [signatureOne,setSignatureOne]=useState('');
+ const [signatureTwo,setSignatureTwo]=useState('');
  const [epicBoonId,setEpicBoonId]=useState<WizardEpicBoonId>('spell_recall');
  const [epicAbility,setEpicAbility]=useState<Ability>('intelligence');
  const [newCantrip,setNewCantrip]=useState('');
@@ -48,9 +50,9 @@ export default function WizardLevelUpWizard({input,state,mode,onConfirm,onCancel
    ...(next===4?{newCantripId:newCantrip,level4Improvement:improvement}:{}),
    ...(next===10?{newCantripId:newCantrip}:{}),
      ...(next===8?{level8Improvement:improvement}:{}),...(next===12?{level12Improvement:improvement}:{}),...(next===16?{level16Improvement:improvement}:{}),
-   ...(next===5?{evokerLevelThreeSpellId:bonusFive}:{}),...(next===7?{evokerLevelFourSpellId:bonusSeven}:{}),...(next===9?{evokerLevelFiveSpellId:bonusNine}:{}),...(next===11?{evokerLevelSixSpellId:bonusEleven}:{}),...(next===13?{evokerLevelSevenSpellId:bonusThirteen}:{}),...(next===15?{evokerLevelEightSpellId:bonusFifteen}:{}),...(next===17?{evokerLevelNineSpellId:bonusSeventeen}:{}),...(next===18?{spellMasteryIds:[masteryOne,masteryTwo] as [string,string]}:{}),...(next===19?{epicBoon:{id:epicBoonId,ability:epicAbility}}:{})}),error:''};}
+   ...(next===5?{evokerLevelThreeSpellId:bonusFive}:{}),...(next===7?{evokerLevelFourSpellId:bonusSeven}:{}),...(next===9?{evokerLevelFiveSpellId:bonusNine}:{}),...(next===11?{evokerLevelSixSpellId:bonusEleven}:{}),...(next===13?{evokerLevelSevenSpellId:bonusThirteen}:{}),...(next===15?{evokerLevelEightSpellId:bonusFifteen}:{}),...(next===17?{evokerLevelNineSpellId:bonusSeventeen}:{}),...(next===18?{spellMasteryIds:[masteryOne,masteryTwo] as [string,string]}:{}),...(next===19?{epicBoon:{id:epicBoonId,ability:epicAbility}}:{}),...(next===20?{signatureSpellIds:[signatureOne,signatureTwo] as [string,string]}:{})}),error:''};}
   catch(e){return {result:null,error:e instanceof Error?e.message:'Elecciones incompletas'};}
- },[input,state,newSpells,prepared,next,scholarSkill,bonusSpells,newCantrip,improvement,bonusFive,bonusSeven,bonusNine,bonusEleven,bonusThirteen,bonusFifteen,bonusSeventeen,masteryOne,masteryTwo,epicBoonId,epicAbility]);
+ },[input,state,newSpells,prepared,next,scholarSkill,bonusSpells,newCantrip,improvement,bonusFive,bonusSeven,bonusNine,bonusEleven,bonusThirteen,bonusFifteen,bonusSeventeen,masteryOne,masteryTwo,signatureOne,signatureTwo,epicBoonId,epicAbility]);
  if(!plan)return null;
  const alreadyKnown=new Set([...input.spellbookIds,...input.evokerBonusSpellIds??[],...(input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[]),...(input.evokerLevelFourSpellId?[input.evokerLevelFourSpellId]:[]),...(input.evokerLevelFiveSpellId?[input.evokerLevelFiveSpellId]:[]),...(input.evokerLevelSixSpellId?[input.evokerLevelSixSpellId]:[]),...(input.evokerLevelSevenSpellId?[input.evokerLevelSevenSpellId]:[]),...(input.evokerLevelEightSpellId?[input.evokerLevelEightSpellId]:[]),...(input.evokerLevelNineSpellId?[input.evokerLevelNineSpellId]:[])]);
  const search=spellFilter.trim().toLocaleLowerCase('es');
@@ -66,6 +68,7 @@ export default function WizardLevelUpWizard({input,state,mode,onConfirm,onCancel
  const bonusSeventeenOptions=WIZARD_SPELL_CATALOG.filter(spell=>spell.level<=9&&spell.school==='evocation'&&!alreadyKnown.has(spell.id)&&!newSpells.includes(spell.id)&&matches(spell));
  const masteryOneOptions=next===18?wizardMasteryAlternatives(input,1,newSpells):[];
  const masteryTwoOptions=next===18?wizardMasteryAlternatives(input,2,newSpells):[];
+ const signatureOptions=next===20?WIZARD_SPELL_CATALOG.filter(spell=>spell.level===3&&(alreadyKnown.has(spell.id)||newSpells.includes(spell.id))):[];
  const availablePrepared=new Set([...alreadyKnown,...newSpells,...bonusSpells,...(bonusFive?[bonusFive]:[]),...(bonusSeven?[bonusSeven]:[]),...(bonusNine?[bonusNine]:[]),...(bonusEleven?[bonusEleven]:[]),...(bonusThirteen?[bonusThirteen]:[]),...(bonusFifteen?[bonusFifteen]:[]),...(bonusSeventeen?[bonusSeventeen]:[])]);
  const spellOptions=WIZARD_SPELL_CATALOG.filter(spell=>availablePrepared.has(spell.id)&&matches(spell));
  const nextCore=wizardCoreStatistics(next,current.abilityScores);
@@ -109,6 +112,8 @@ export default function WizardLevelUpWizard({input,state,mode,onConfirm,onCancel
     {next===18&&<li><strong>Maestría de conjuros</strong><p className="level-wizard-explanation">Elige un conjuro de nivel 1 y otro de nivel 2 de tu libro que puedan lanzarse con una acción. Estarán siempre preparados y podrás lanzarlos gratis a nivel básico. Si quieres potenciarlos, consumirás la ranura correspondiente. Al terminar un descanso largo podrás sustituir uno de ellos por otro válido del mismo nivel.</p></li>}
     {next===19&&<li><strong>Beneficio épico · elección obligatoria</strong><p className="level-wizard-explanation">Elige una de las cinco dotes épicas implementadas. Todas conceden +1 a una característica hasta un máximo de 30; Recuperación de conjuros limita la elección a Inteligencia, Sabiduría o Carisma. Si eliges Recuperación, tendrás un botón de tirada 1d4 en Hechizos, sin automatizar el consumo de ranuras.</p></li>}
     {next===19&&<li><strong>Mayor poder mágico</strong><p className="level-wizard-explanation">Obtienes una segunda ranura de nivel 6, pasas de 23 a 24 conjuros preparados reglamentarios y añades dos nuevos al libro, sin perder los dos de Maestría.</p></li>}
+    {next===20&&<li><strong>Conjuros de firma · dos elecciones obligatorias</strong><p className="level-wizard-explanation">Elige dos conjuros distintos de nivel 3 de tu libro, incluidos los que aprendas ahora. Permanecerán siempre preparados, además de los 25 normales y los dos de Maestría. Cada uno se puede lanzar una vez gratuitamente a nivel 3 por descanso corto o largo. Para lanzarlo a nivel superior se gasta ranura.</p></li>}
+    {next===20&&<li><strong>Última ampliación de ranuras</strong><p className="level-wizard-explanation">Obtienes una segunda ranura de nivel 7, y tu libro ordinario pasa de 42 a 44 conjuros. No recibes una Evocación gratuita adicional, pues ya accediste a ranuras de nivel 9 en el 17.</p></li>}
     {next===12&&<li><strong>Mejora de característica</strong><p className="level-wizard-explanation">Elige +2 a una característica o +1 a dos distintas, sin superar 20. La mejora se aplicará también a las estadísticas derivadas y, si afecta a Constitución, a los PG de los niveles anteriores.</p></li>}
     {next===9&&<li><strong>Experto en Evocación: conjuro gratuito</strong><p className="level-wizard-explanation">Al desbloquear ranuras de nivel 5, obtienes otra Evocación de nivel 1–5 gratuitamente, distinta de las de tu libro.</p></li>}
      {next===7&&<li><strong>Experto en Evocación: conjuro gratuito</strong><p className="level-wizard-explanation">Al adquirir ranuras de nivel 4 añades un conjuro gratuito de Evocación de nivel 1 a 4, distinto de los ya conocidos.</p></li>}
@@ -154,6 +159,14 @@ export default function WizardLevelUpWizard({input,state,mode,onConfirm,onCancel
     <label className="field"><span>Característica que aumenta en +1 (máximo 30)</span><select value={epicAbility} onChange={e=>setEpicAbility(e.target.value as Ability)}>{ABILITIES.filter(id=>epicBoonId!=='spell_recall'||(['intelligence','wisdom','charisma'] as Ability[]).includes(id)).map(id=><option key={id} value={id}>{ABILITY_NAMES[id]}: {current.abilityScores[id]} → {current.abilityScores[id]+1}</option>)}</select></label>
     <p className="muted-note">Este catálogo de cinco beneficios es una primera integración: otras dotes y beneficios épicos se incorporarán en futuras actualizaciones.</p>
    </fieldset>}
+   {next===20&&<fieldset className="level-wizard-fieldset"><legend>Conjuros de firma · Nivel 20</legend>
+    <p className="muted-note">Selecciona dos conjuros diferentes de nivel 3 que estén en tu libro o que acabes de añadir. La elección no sustituye tus dos Maestrías ni ocupa dos de los 25 preparados normales.</p>
+    <label className="field"><span>Primer conjuro de firma · nivel 3</span><select value={signatureOne} onChange={e=>setSignatureOne(e.target.value)}><option value="">Elige el primer conjuro</option>{signatureOptions.filter(spell=>spell.id!==signatureTwo).map(spell=><option key={spell.id} value={spell.id}>{spell.name}</option>)}</select></label>
+    {signatureOne&&signatureOptions.filter(spell=>spell.id===signatureOne).map(spell=>{const details=wizardSpellRule(spell.id);return details&&<WizardSpellDetails key={spell.id} spell={details} characterLevel={next} spellAttackBonus={projected?.spellAttackBonus??current.spellAttackBonus} mode={mode}/>;})}
+    <label className="field"><span>Segundo conjuro de firma · nivel 3</span><select value={signatureTwo} onChange={e=>setSignatureTwo(e.target.value)}><option value="">Elige el segundo conjuro</option>{signatureOptions.filter(spell=>spell.id!==signatureOne).map(spell=><option key={spell.id} value={spell.id}>{spell.name}</option>)}</select></label>
+    {signatureTwo&&signatureOptions.filter(spell=>spell.id===signatureTwo).map(spell=>{const details=wizardSpellRule(spell.id);return details&&<WizardSpellDetails key={spell.id} spell={details} characterLevel={next} spellAttackBonus={projected?.spellAttackBonus??current.spellAttackBonus} mode={mode}/>;})}
+    <p className="muted-note">En Hechizos podrás registrar por separado el lanzamiento gratuito de cada uno. Un descanso corto o largo restablecerá ambos usos; no se gastarán ranuras ni se elegirán blancos automáticamente.</p>
+   </fieldset>}
    <fieldset className="level-wizard-fieldset"><legend>Preparación de progresión ({prepared.length}/{plan.progression.preparedSpellCount})</legend><p className="muted-note">Se conserva la preparación anterior. En la pestaña Hechizos puedes marcar libremente conjuros adicionales, sin bloqueo numérico.</p>{displaySpellChoices(spellOptions,prepared,id=>setPrepared(v=>toggle(v,id,plan.progression.preparedSpellCount)),input.preparedIds)}</fieldset>
    {choices.result?<p className="level-wizard-ok">Todas las elecciones de progresión son válidas. Puedes revisar los cambios.</p>:<p className="level-wizard-error" role="status">Pendiente: {choices.error}</p>}
   </div>}
@@ -178,6 +191,7 @@ export default function WizardLevelUpWizard({input,state,mode,onConfirm,onCancel
     {next===10&&<p className="level-wizard-choice-info"><strong>Evocación Potenciada</strong> A partir de este nivel puedes aplicar {projected.abilityModifiers.intelligence>=0?'+':''}{projected.abilityModifiers.intelligence} a una sola tirada de daño por conjuro de Evocación de Mago. La elección de tirada la hace el jugador.</p>}
     {next===14&&<p className="level-wizard-choice-info"><strong>Sobrecarga</strong> Estará disponible en la pestaña Hechizos. Cada activación requiere confirmación manual; las ranuras, los objetivos y los PG siguen bajo tu control.</p>}
     {next===18&&<p className="level-wizard-choice-info"><strong>Maestría obtenida</strong> Nivel 1: {wizardSpellRule(masteryOne)?.name??masteryOne} · Nivel 2: {wizardSpellRule(masteryTwo)?.name??masteryTwo}. Ambos estarán siempre preparados, sin ocupar ninguna de las 23 elecciones reglamentarias. Cada uno es gratuito a su nivel mínimo.</p>}
+    {next===20&&<p className="level-wizard-choice-info"><strong>Conjuros de firma</strong> {wizardSpellRule(signatureOne)?.name??signatureOne} y {wizardSpellRule(signatureTwo)?.name??signatureTwo}. Ambos siempre preparados además de los 25 normales y las dos Maestrías. Cada uno admite un lanzamiento gratuito a nivel 3 por descanso corto o largo, registrado manualmente.</p>}
     <p className="muted-note">Se preservan daño, equipo, retrato, inspiración y ranuras gastadas. Tras confirmar, pulsa Guardar cambios para actualizar PostgreSQL.</p>
    </>:<p className="level-wizard-error" role="alert">{choices.error}</p>}
    {manualError&&<p className="level-wizard-error" role="alert">{manualError}</p>}

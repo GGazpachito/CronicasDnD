@@ -44,7 +44,7 @@ describe('Actualización 62: Mago Evocador nivel 19 y Beneficio épico',()=>{
  it('18→19: 42 conjuros, 24 preparados, 2 Maestrías y segunda ranura de nivel 6 disponible',()=>{
   const eighteen=to18(),nineteen=to19(),sheet=calculateGuidedWizard(nineteen.input);
   expect(wizardLevelUpChoicesPreview(eighteen.input)?.nextLevel).toBe(19);
-  expect(wizardLevelUpChoicesPreview(nineteen.input)).toBe(null);
+  expect(wizardLevelUpChoicesPreview(nineteen.input)?.nextLevel).toBe(20);
   expect(nineteen.input.level).toBe(19);
   expect(nineteen.input.spellbookIds).toHaveLength(42);
   expect(nineteen.input.preparedIds).toHaveLength(24);

@@ -7,7 +7,7 @@ import {ORIGIN_FEAT_EXPLANATIONS,SPECIES_TRAIT_EXPLANATIONS} from './rules-expla
 import {WIZARD_FEATURES,EVOKER_FEATURES} from './wizard';
 import {WIZARD_EPIC_BOONS,WIZARD_EPIC_BOON_DESCRIPTIONS} from './wizard-epic-boons';
 import type {CharacterTrait,TraitCollection} from './traits';
-import type {GuidedWizardInput,WizardLevelOneView} from './wizard-creation';
+import {WIZARD_SPELL_CATALOG,type GuidedWizardInput,type WizardLevelOneView} from './wizard-creation';
 export function collectWizardTraits(input:GuidedWizardInput,view:WizardLevelOneView):TraitCollection{
   const traits:CharacterTrait[]=[];
   function add(id:string,title:string,source:string,group:CharacterTrait['group'],summary:string,explanation:string,automation:CharacterTrait['automation']='manual',details:readonly string[]=[]){
@@ -15,7 +15,8 @@ export function collectWizardTraits(input:GuidedWizardInput,view:WizardLevelOneV
   }
   for(const feature of WIZARD_FEATURES.filter(feature=>feature.level<=input.level)){
     add(`wizard:${feature.id}`,feature.title,'Mago','class',feature.description,feature.description,
-      feature.id==='spellcasting'?'calculated':'partial',feature.id==='spellcasting'?[`CD de salvación: ${view.spellSaveDC}. Ataque mágico: ${view.spellAttackBonus>=0?'+':''}${view.spellAttackBonus}.`]:[]);
+      feature.id==='spellcasting'?'calculated':'partial',feature.id==='spellcasting'?[`CD de salvación: ${view.spellSaveDC}. Ataque mágico: ${view.spellAttackBonus>=0?'+':''}${view.spellAttackBonus}.`]:
+      feature.id==='signature_spells'?(input.signatureSpellIds??[]).map(id=>`Conjuro de firma: ${WIZARD_SPELL_CATALOG.find(s=>s.id===id)?.name??id} · gratuito una vez por descanso corto o largo, a nivel 3.`):[]);
   }
   if(input.level>=2&&input.scholarSkill){
     const names:Record<string,string>={arcana:'Arcanos',history:'Historia',investigation:'Investigación',medicine:'Medicina',nature:'Naturaleza',religion:'Religión'};
