@@ -2,9 +2,10 @@
  * Elecciones, proyección, acciones y estado persistido están separados.
  * Patrón Infernal se elige en nivel 3: no concede rasgos prematuros.
  */
-import {ABILITIES,abilityModifiers,validateAbilityScores,type Ability,type AbilityScores} from './abilities';
+import {ABILITIES,abilityModifiers,type Ability,type AbilityScores} from './abilities';
+import {validateGeneratedAbilities,type AbilityGenerationMethod} from './ability-generation';
 import {SKILLS,calculateSkillBonuses,calculateSavingThrows,type Skill} from './proficiencies';
-import {BACKGROUNDS,SPECIES_NAMES,STANDARD_ARRAY,type BackgroundId,type SpeciesId,type ElfLineage} from './guided';
+import {BACKGROUNDS,SPECIES_NAMES,type BackgroundId,type SpeciesId,type ElfLineage} from './guided';
 import {EMPTY_CHARACTER_PROFILE,validateCharacterProfile,type CharacterProfile} from './character-profile';
 import {calculateArmorClass} from './defense';
 import {equippedArmor,type InventoryAction,type InventoryState} from './inventory';
@@ -39,6 +40,7 @@ const SIMPLE_WEAPONS=new Set<WeaponId>(['club','dagger','greatclub','handaxe','j
 export type GuidedWarlockInput=Readonly<{
  classId:'warlock';level:1;name:string;profile?:CharacterProfile;
  background:BackgroundId;species:SpeciesId;assignedAbilities:AbilityScores;
+ abilityGenerationMethod?:AbilityGenerationMethod;
  increaseMode:'two_plus_one'|'three_ones';plusTwoAbility:Ability;plusOneAbility:Ability;
  warlockSkills:readonly WarlockSkill[];humanSkill?:Skill;humanFeat?:'alert'|'tough';
  humanSize?:'small'|'medium';elfLineage?:ElfLineage;
@@ -69,7 +71,6 @@ export type CalculatedWarlockOne=Readonly<{
  inventory:InventoryState;invocations:readonly WarlockInvocationId[];
 }>;
 const validSkill=(value:unknown):value is Skill=>typeof value==='string'&&(SKILLS as readonly string[]).includes(value);
-const sameSet=(values:readonly number[],expected:readonly number[])=>[...values].sort((a,b)=>a-b).join(',')===[...expected].sort((a,b)=>a-b).join(',');
 const uniqueChoices=(list:readonly string[],allowed:readonly string[],count:number,label:string)=>{
  if(!Array.isArray(list)||list.length!==count||new Set(list).size!==count||list.some(id=>typeof id!=='string'||!allowed.includes(id)))throw new RangeError(label+': elige '+count+' opciones distintas del catálogo');
 };
@@ -81,8 +82,7 @@ export function calculateWarlockOne(input:GuidedWarlockInput,state?:Pick<Warlock
  if(typeof input.name!=='string'||!input.name.trim()||input.name.length>120)throw new RangeError('Introduce el nombre del Brujo');
  const bg=BACKGROUNDS[input.background];
  if(!bg||!Object.hasOwn(SPECIES_NAMES,input.species))throw new RangeError('Origen no disponible');
- const assigned=validateAbilityScores(input.assignedAbilities);
- if(!sameSet(Object.values(assigned),STANDARD_ARRAY))throw new RangeError('Distribuye exactamente 15, 14, 13, 12, 10 y 8');
+ const assigned=validateGeneratedAbilities(input.assignedAbilities,input.abilityGenerationMethod??'standard_array');
  const scores={...assigned};const permitted=bg.abilities as readonly Ability[];
  if(input.increaseMode==='two_plus_one'){
   if(!permitted.includes(input.plusTwoAbility)||!permitted.includes(input.plusOneAbility)||input.plusOneAbility===input.plusTwoAbility)throw new RangeError('Dos características de trasfondo diferentes requeridas');
@@ -188,7 +188,7 @@ export function validateWarlockCharacterSnapshot(raw:unknown):WarlockCharacterSn
  if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new RangeError('Guardado de Brujo inválido');
  const value=raw as Record<string,unknown>;
  if(value.schemaVersion!==4||value.ruleset!=='dnd-2024'||Object.keys(value).some(k=>!['schemaVersion','ruleset','input','warlockState'].includes(k)))throw new RangeError('Versión o estructura del Brujo no compatible');
- const allowed=['classId','level','name','profile','background','species','assignedAbilities','increaseMode','plusTwoAbility','plusOneAbility','warlockSkills','humanSkill','humanFeat','humanSize','elfLineage','equipmentChoice','backgroundEquipment','inventoryActions','cantripIds','preparedIds','invocations','pactWeaponId','tomeCantripIds','tomeRitualIds'];
+ const allowed=['abilityGenerationMethod','classId','level','name','profile','background','species','assignedAbilities','increaseMode','plusTwoAbility','plusOneAbility','warlockSkills','humanSkill','humanFeat','humanSize','elfLineage','equipmentChoice','backgroundEquipment','inventoryActions','cantripIds','preparedIds','invocations','pactWeaponId','tomeCantripIds','tomeRitualIds'];
  if(!value.input||typeof value.input!=='object'||Array.isArray(value.input)||Object.keys(value.input as Record<string,unknown>).some(k=>!allowed.includes(k)))throw new RangeError('Elecciones de Brujo con campos desconocidos');
  let input:GuidedWarlockInput;
  try{const json=JSON.stringify(value.input);if(json.length>120000)throw new Error();input=JSON.parse(json) as GuidedWarlockInput;}catch{throw new RangeError('Elecciones de Brujo demasiado grandes');}

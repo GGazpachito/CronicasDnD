@@ -2,6 +2,7 @@
  * El catálogo declara las capacidades que aún no están implementadas, en vez de simularlas.
  */
 import { ABILITIES, type Ability, type AbilityScores, proficiencyBonus } from './abilities';
+import {validateGeneratedAbilities,type AbilityGenerationMethod} from './ability-generation';
 import type { CharacterProfile } from './character-profile';
 import { SKILLS, type Skill } from './proficiencies';
 import { calculateFighterSheet, type CalculatedFighterSheet, type FighterCharacterInput } from './sheet';
@@ -61,6 +62,7 @@ export type GuidedFighterInput = Readonly<{
   species: SpeciesId;
   /** Puntuaciones antes de los aumentos por trasfondo. */
   assignedAbilities: AbilityScores;
+  abilityGenerationMethod?:AbilityGenerationMethod;
   increaseMode: 'two_plus_one' | 'three_ones';
   plusTwoAbility: Ability;
   plusOneAbility: Ability;
@@ -110,10 +112,7 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
   if (![1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20].includes(input.level)) fail('Solo Guerrero nivel 1 a 20');
   if (!input.name?.trim() || input.name.length > 120) fail('Introduce un nombre válido');
   if (!input.assignedAbilities || typeof input.assignedAbilities !== 'object') fail('Faltan características');
-  const assigned = ABILITIES.map(a => input.assignedAbilities[a]);
-  if (assigned.some(v=>!Number.isInteger(v)) || [...assigned].sort((a,b)=>a-b).join(',') !== [...STANDARD_ARRAY].sort((a,b)=>a-b).join(',')) {
-    fail('Debes distribuir exactamente los seis valores de la matriz estándar, sin repetirlos');
-  }
+  validateGeneratedAbilities(input.assignedAbilities,input.abilityGenerationMethod??'standard_array');
   const allowed = [...bg.abilities] as Ability[];
   if (input.increaseMode !== 'two_plus_one' && input.increaseMode !== 'three_ones') fail('Método de mejora inválido');
   if (input.increaseMode === 'two_plus_one' && (!isAbility(input.plusTwoAbility) || !isAbility(input.plusOneAbility) || !allowed.includes(input.plusTwoAbility) || !allowed.includes(input.plusOneAbility) || input.plusTwoAbility===input.plusOneAbility)) {

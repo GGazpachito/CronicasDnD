@@ -13,6 +13,10 @@ import WizardSpellDetails from '../../components/WizardSpellDetails';
 import LevelDownDialog from '../../components/LevelDownDialog';
 import {previewWizardLevelDown} from '../../../../../packages/rules-engine/src/level-down';
 import WizardSpellLibrary from '../../components/WizardSpellLibrary';
+import AbilityScoreMethodPicker from '../../components/AbilityScoreMethodPicker';
+import type {AbilityGenerationMethod} from '../../../../../packages/rules-engine/src/ability-generation';
+import type {AbilityScores} from '../../../../../packages/rules-engine/src/abilities';
+import SharedSpellsLayout from '../../components/SharedSpellsLayout';
 import BasicWeaponAttacks from '../../components/BasicWeaponAttacks';
 import SheetPlaceholder from '../../components/SheetPlaceholder';
 import {collectWizardTraits} from '../../../../../packages/rules-engine/src/wizard-traits';
@@ -24,9 +28,9 @@ import {nextMagicInstanceId,type InventoryAction,equippedArmor,INVENTORY_NAMES} 
 import CharacterHeader from '../../components/CharacterHeader';
 import CharacterProfilePanel from '../../components/CharacterProfilePanel';
 import SharedPrincipalSheet from '../../components/SharedPrincipalSheet';
-import {ABILITIES,type Ability} from '../../../../../packages/rules-engine/src/abilities';
+import {type Ability} from '../../../../../packages/rules-engine/src/abilities';
 import {SKILLS,type Skill} from '../../../../../packages/rules-engine/src/proficiencies';
-import {BACKGROUNDS,SPECIES_NAMES,STANDARD_ARRAY,type BackgroundId,type SpeciesId} from '../../../../../packages/rules-engine/src/guided';
+import {BACKGROUNDS,SPECIES_NAMES,type BackgroundId,type SpeciesId} from '../../../../../packages/rules-engine/src/guided';
 import {EMPTY_CHARACTER_PROFILE} from '../../../../../packages/rules-engine/src/character-profile';
 import {evokerOverchannel,wizardProgression,wizardShortRest,wizardUseSignatureSpell} from '../../../../../packages/rules-engine/src/wizard';
 import {rollSpellDice} from '../../../../../packages/rules-engine/src/spell-dice';
@@ -93,6 +97,14 @@ export default function WizardPage(){
  function recoveryLabel(slots:readonly number[]):string{const counts=new Map<number,number>();for(const n of slots)counts.set(n,(counts.get(n)??0)+1);return [...counts].map(([level,n])=>`${n} ${n===1?'ranura':'ranuras'} de nivel ${level}`).join(' + ');}
  const background=BACKGROUNDS[input.background];
  function patch(values:Partial<GuidedWizardInput>){setInput(previous=>({...previous,...values}));}
+ function updateAbilityScores(abilityGenerationMethod:AbilityGenerationMethod,assignedAbilities:AbilityScores){
+  const next={...input,abilityGenerationMethod,assignedAbilities};
+  patch({abilityGenerationMethod,assignedAbilities});
+  try{
+   const newMaximum=calculateGuidedWizard(wizardInputForPreview(next)).maximumHitPoints;
+   setState(previous=>({...previous,hitPointsCurrent:previous.hitPointsCurrent===sheet?.maximumHitPoints?newMaximum:Math.min(previous.hitPointsCurrent,newMaximum)}));
+  }catch{/* Una elección intermedia puede ser inválida; el editor muestra el error para corregirla. */}
+ }
  function changeBackground(next:BackgroundId){
   const b=BACKGROUNDS[next];const allowed=WIZARD_SKILL_OPTIONS.filter(k=>!(b.skills as readonly string[]).includes(k));
   patch({background:next,backgroundEquipment:{startingPackage:'a',...(next==='soldier'?{gamingSet:'dice_set' as const}:{})},inventoryActions:[],plusTwoAbility:b.abilities[0],plusOneAbility:b.abilities[1],wizardSkills:allowed.slice(0,2),
@@ -226,8 +238,8 @@ export default function WizardPage(){
       {(input.inventoryActions?.length??0)>0&&<p className="muted-note">Cambiar el equipo inicial reinicia los movimientos de inventario de esta creación.</p>}
      </div>
      <div>
-      <div className="section-label"><h3>Distribución de características</h3><span>15, 14, 13, 12, 10, 8</span></div>
-      <div className="wizard-score-grid">{ABILITIES.map(ability=><label key={ability} className="field"><span>{ABILITY_NAMES[ability]}</span><select value={input.assignedAbilities[ability]} onChange={(e:{target:{value:string}})=>patch({assignedAbilities:{...input.assignedAbilities,[ability]:Number(e.target.value)}})}>{options(STANDARD_ARRAY.map(String),s=>s)}</select></label>)}</div>
+      <div className="section-label"><h3>Distribución de características</h3><span>Tres métodos</span></div>
+      <AbilityScoreMethodPicker method={input.abilityGenerationMethod??'standard_array'} scores={input.assignedAbilities} onChange={updateAbilityScores}/>
       <label className="field"><span>Mejoras por trasfondo</span><select value={input.increaseMode} onChange={(e:{target:{value:string}})=>patch({increaseMode:e.target.value as GuidedWizardInput['increaseMode']})}><option value="two_plus_one">+2 y +1</option><option value="three_ones">+1 a las tres</option></select></label>
       {input.increaseMode==='two_plus_one'&&<div className="wizard-score-grid"><label className="field"><span>+2 a</span><select value={input.plusTwoAbility} onChange={(e:{target:{value:string}})=>patch({plusTwoAbility:e.target.value as Ability})}>{options(background.abilities as readonly Ability[],a=>ABILITY_NAMES[a])}</select></label><label className="field"><span>+1 a</span><select value={input.plusOneAbility} onChange={(e:{target:{value:string}})=>patch({plusOneAbility:e.target.value as Ability})}>{options(background.abilities as readonly Ability[],a=>ABILITY_NAMES[a])}</select></label></div>}
       <div className="section-label"><h3>Habilidades de Mago</h3><span>Elige dos distintas</span></div>
@@ -285,7 +297,9 @@ export default function WizardPage(){
       onOpenAttacks={()=>setTab('principal')}/>
     <p className="overview-panel-note">El Mago no tiene competencia con armaduras ni escudos. Equiparlos puede impedir lanzar conjuros hasta obtener la formación adecuada.</p>
    </section>
-   <section id="sheet-panel-hechizos" role="tabpanel" aria-labelledby="sheet-tab-hechizos" hidden={tab!=='hechizos'} className="sheet-tab-panel"><div className="wizard-module panel"><h2>Hechizos del Mago</h2>
+   <section id="sheet-panel-hechizos" role="tabpanel" aria-labelledby="sheet-tab-hechizos" hidden={tab!=='hechizos'} className="sheet-tab-panel"><SharedSpellsLayout spellClass="Mago" description="La magia y las ranuras específicas de clase se gestionan debajo de la biblioteca.">
+    {sheet&&<WizardSpellLibrary input={input} spellAttackBonus={sheet.spellAttackBonus} spellSaveDC={sheet.spellSaveDC} mode={mode} onChange={(selection:WizardSpellSelection)=>patch({spellSelection:selection})}/>}
+    <div className="divider"/><h3>Opciones específicas de Mago</h3>
     <div className="wizard-attack-actions"><span>Bonificador de ataque mágico: <strong>{sheet?signed(sheet.spellAttackBonus):'—'}</strong></span><button type="button" disabled={!sheet} onClick={()=>{if(!sheet)return;try{const result=rollD20(sheet.spellAttackBonus,mode);setMagicAttackResult(`${result.dice.join(' / ')} ${signed(sheet.spellAttackBonus)} = ${result.total}`);}catch(e){setMagicAttackResult(e instanceof Error?e.message:'No se pudo tirar el dado');}}}>Tirar ataque mágico · d20</button>{magicAttackResult&&<output aria-live="polite">{magicAttackResult}</output>}</div>
     {input.level>=10&&sheet&&<p className="muted-note"><strong>Evocación Potenciada:</strong> puedes sumar {signed(sheet.abilityModifiers.intelligence)} a una tirada de daño de cada conjuro de Mago de la escuela de Evocación. La elección de qué tirada potenciar es tuya; no se suma a cada dado.</p>}
     {input.level>=14&&sheet&&<fieldset className="level-wizard-fieldset wizard-overchannel-panel"><legend>Sobrecarga · Evocación nivel 14</legend>
@@ -339,8 +353,7 @@ export default function WizardPage(){
      <label className="field"><span>Conjuro del libro que preparas</span><select value={memorizeNew} onChange={e=>setMemorizeNew(e.target.value)}><option value="">Selecciona el nuevo conjuro</option>{[...memorizedKnown].filter(id=>!input.preparedIds.includes(id)).map(id=><option key={id} value={id}>{spellLabel(id)}</option>)}</select></label>
      <button type="button" disabled={!memorizeOld||!memorizeNew} onClick={memorize}>Confirmar cambio tras descanso corto</button>
     </fieldset>}
-    {sheet&&<WizardSpellLibrary input={input} spellAttackBonus={sheet.spellAttackBonus} spellSaveDC={sheet.spellSaveDC} mode={mode} onChange={(selection:WizardSpellSelection)=>patch({spellSelection:selection})}/>}
-    <p className="muted-note">Rombo marcado = disponible; vacío = gastado. Preparar, aprender o tirar dados no lanza conjuros ni consume ranuras.</p></div></section>
+    <p className="muted-note">Rombo marcado = disponible; vacío = gastado. Preparar, aprender o tirar dados no lanza conjuros ni consume ranuras.</p></SharedSpellsLayout></section>
    <section id="sheet-panel-personaje" role="tabpanel" aria-labelledby="sheet-tab-personaje" hidden={tab!=='personaje'} className="sheet-tab-panel"><CharacterProfilePanel key={profileRevision} profile={input.profile??EMPTY_CHARACTER_PROFILE} name={input.name} species={SPECIES_NAMES[input.species]} background={background.name} level={input.level} onChange={profile=>patch({profile})} onEditIdentity={()=>setEditing(true)}/></section>
    <section id="sheet-panel-companions" role="tabpanel" aria-labelledby="sheet-tab-companions" hidden={tab!=='companions'} className="sheet-tab-panel"><SheetPlaceholder eyebrow="COMPAÑEROS · HOJA COMÚN" title="Compañeros" description="El Mago no tiene todavía compañeros registrados. La pestaña compartida admitirá familiares invocados y otros aliados cuando se integre su gestión."/></section>
    <section id="sheet-panel-combate" role="tabpanel" aria-labelledby="sheet-tab-combate" hidden={tab!=='combate'} className="sheet-tab-panel"><SheetPlaceholder eyebrow="COMBATE · DESARROLLO FUTURO" title="Coming Soon" description="La interfaz de combate llegará más adelante. Mientras tanto, realiza tiradas desde Principal y gestiona las ranuras desde Hechizos; los turnos y objetivos siguen en manos de los jugadores." actionLabel="Volver a Principal" onAction={()=>setTab('principal')}/></section>

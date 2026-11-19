@@ -2,9 +2,10 @@
  * El Mago usa su propio modelo; no se convierte artificialmente en Guerrero.
  * Las especies y dotes con efectos activos se muestran como pendientes de automatizar.
  */
-import {ABILITIES,abilityModifiers,validateAbilityScores,type Ability,type AbilityScores} from './abilities';
+import {ABILITIES,abilityModifiers,type Ability,type AbilityScores} from './abilities';
+import {validateGeneratedAbilities,type AbilityGenerationMethod} from './ability-generation';
 import {SKILLS,calculateSkillBonuses,calculateSavingThrows,type Skill} from './proficiencies';
-import {BACKGROUNDS,SPECIES_NAMES,STANDARD_ARRAY,type BackgroundId,type SpeciesId,type ElfLineage} from './guided';
+import {BACKGROUNDS,SPECIES_NAMES,type BackgroundId,type SpeciesId,type ElfLineage} from './guided';
 import {EMPTY_CHARACTER_PROFILE,validateCharacterProfile,type CharacterProfile} from './character-profile';
 import {wizardCoreStatistics,wizardProgression,validateWizardSpellChoices,initialWizardMagicState,type WizardMagicState,type WizardSpellChoices,type WizardSpellReference} from './wizard';
 import {createSlotPool} from './spellcasting-core';
@@ -98,6 +99,7 @@ export type GuidedWizardInput=Readonly<{
  classId:'wizard';level:1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20;name:string;profile?:CharacterProfile;
  background:BackgroundId;species:SpeciesId;
  assignedAbilities:AbilityScores;
+ abilityGenerationMethod?:AbilityGenerationMethod;
  increaseMode:'two_plus_one'|'three_ones';plusTwoAbility:Ability;plusOneAbility:Ability;
  wizardSkills:readonly WizardSkill[];humanSkill?:Skill;humanFeat?:'alert'|'tough';
  humanSize?:'small'|'medium';elfLineage?:ElfLineage;
@@ -178,9 +180,7 @@ export function calculateGuidedWizard(input:GuidedWizardInput):WizardLevelOneVie
  if(typeof input.name!=='string'||!input.name.trim()||input.name.length>120)throw new RangeError('Nombre de Mago inválido');
  const bg=BACKGROUNDS[input.background];if(!bg)throw new RangeError('Trasfondo desconocido');
  if(!Object.prototype.hasOwnProperty.call(SPECIES_NAMES,input.species))throw new RangeError('Especie desconocida');
- const assigned=validateAbilityScores(input.assignedAbilities);
- if([...Object.values(assigned)].sort((a,b)=>a-b).join(',')!==[...STANDARD_ARRAY].sort((a,b)=>a-b).join(','))
-  throw new RangeError('Distribuye los valores 15, 14, 13, 12, 10 y 8 exactamente una vez');
+ const assigned=validateGeneratedAbilities(input.assignedAbilities,input.abilityGenerationMethod??'standard_array');
  const scores={...assigned};const allowed=bg.abilities as readonly Ability[];
  if(input.increaseMode==='two_plus_one'){
   if(!allowed.includes(input.plusTwoAbility)||!allowed.includes(input.plusOneAbility)||input.plusTwoAbility===input.plusOneAbility)throw new RangeError('Selecciona dos características diferentes permitidas por el trasfondo');
@@ -346,7 +346,7 @@ export function validateWizardCharacterSnapshot(raw:unknown):WizardCharacterSnap
  if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new RangeError('Guardado de Mago inválido');
  const value=raw as Record<string,unknown>;
  if(value.schemaVersion!==3||value.ruleset!=='dnd-2024'||Object.keys(value).some(k=>!['schemaVersion','ruleset','input','wizardState'].includes(k)))throw new RangeError('Versión o estructura de Mago incorrectas');
- const permitted=['spellSelection','scholarSkill','subclass','evokerBonusSpellIds','level4Improvement','evokerLevelThreeSpellId','evokerLevelFourSpellId','level8Improvement','level12Improvement','level16Improvement','evokerLevelFiveSpellId','evokerLevelSixSpellId','evokerLevelSevenSpellId','evokerLevelEightSpellId','evokerLevelNineSpellId','spellMasteryIds','epicBoon','signatureSpellIds','classId','level','name','profile','background','species','assignedAbilities','increaseMode','plusTwoAbility','plusOneAbility','wizardSkills','humanSkill','humanFeat','humanSize','elfLineage','equipmentChoice','backgroundEquipment','inventoryActions','cantripIds','spellbookIds','preparedIds'];
+ const permitted=['abilityGenerationMethod','spellSelection','scholarSkill','subclass','evokerBonusSpellIds','level4Improvement','evokerLevelThreeSpellId','evokerLevelFourSpellId','level8Improvement','level12Improvement','level16Improvement','evokerLevelFiveSpellId','evokerLevelSixSpellId','evokerLevelSevenSpellId','evokerLevelEightSpellId','evokerLevelNineSpellId','spellMasteryIds','epicBoon','signatureSpellIds','classId','level','name','profile','background','species','assignedAbilities','increaseMode','plusTwoAbility','plusOneAbility','wizardSkills','humanSkill','humanFeat','humanSize','elfLineage','equipmentChoice','backgroundEquipment','inventoryActions','cantripIds','spellbookIds','preparedIds'];
  if(!value.input||typeof value.input!=='object'||Array.isArray(value.input)||Object.keys(value.input as Record<string,unknown>).some(key=>!permitted.includes(key)))throw new RangeError('La creación de Mago incluye campos desconocidos');
  let clean:GuidedWizardInput;
  try{const json=JSON.stringify(value.input);if(json.length>120_000)throw new Error();clean=JSON.parse(json) as GuidedWizardInput;}catch{throw new RangeError('Datos de Mago demasiado grandes o no serializables');}

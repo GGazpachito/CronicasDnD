@@ -8,7 +8,9 @@ import CharacterHeader from "../../components/CharacterHeader";
 import CharacterProfilePanel from "../../components/CharacterProfilePanel";
 import PrincipalOverview from "../../components/PrincipalOverview";
 import TraitsPanel from "../../components/TraitsPanel";
-import SpellsPanel from "../../components/SpellsPanel";
+import AbilityScoreMethodPicker from "../../components/AbilityScoreMethodPicker";
+import FighterSpellLibrary from "../../components/FighterSpellLibrary";
+import SharedSpellsLayout from "../../components/SharedSpellsLayout";
 import LevelUpWizard from "../../components/LevelUpWizard";
 import LevelDownDialog from "../../components/LevelDownDialog";
 import {previewFighterLevelDown} from "../../../../../packages/rules-engine/src/level-down";
@@ -33,6 +35,7 @@ import { EMPTY_CHARACTER_PROFILE, validateCharacterProfile, type CharacterProfil
 import { calculateGuidedFighter, BACKGROUNDS, SPECIES_NAMES, FIGHTER_SKILL_OPTIONS, HUMAN_FEATS, type BackgroundId, type SpeciesId, type ElfLineage, type GuidedFighterInput, type HumanOriginFeat } from "../../../../../packages/rules-engine/src/guided";
 import { adjacentFighterLevel, type SupportedFighterLevel } from "../../../../../packages/rules-engine/src/progression";
 import { ABILITIES, type Ability, type AbilityScores } from "../../../../../packages/rules-engine/src/abilities";
+import type {AbilityGenerationMethod} from '../../../../../packages/rules-engine/src/ability-generation';
 import { SKILLS, type Skill } from "../../../../../packages/rules-engine/src/proficiencies";
 import type { ArmorId } from "../../../../../packages/rules-engine/src/defense";
 import { FIGHTING_STYLES, WEAPONS, FIGHTER_PACKAGES, type FightingStyleId, type WeaponId, type StartingPackageId } from "../../../../../packages/rules-engine/src/martial";
@@ -102,6 +105,7 @@ export default function Home(){
   const [background,setBackground]=useState<BackgroundId>('soldier');
   const [species,setSpecies]=useState<SpeciesId>('human');
   const [scores,setScores]=useState<AbilityScores>({strength:15,dexterity:14,constitution:13,intelligence:10,wisdom:12,charisma:8});
+  const [abilityGenerationMethod,setAbilityGenerationMethod]=useState<AbilityGenerationMethod>('standard_array');
   const [mode,setMode]=useState<'two_plus_one'|'three_ones'>('two_plus_one');
   const [two,setTwo]=useState<Ability>('strength');
   const [one,setOne]=useState<Ability>('dexterity');
@@ -171,8 +175,8 @@ export default function Home(){
     ...(level>=14?{level14Improvement:{mode:asi14Mode,first:asi14First,...(asi14Mode==='two_ones'?{second:asi14Second}:{})}}:{}),
     ...(level>=16?{level16Improvement:{mode:asi16Mode,first:asi16First,...(asi16Mode==='two_ones'?{second:asi16Second}:{})}}:{}),
     ...(level>=19&&epicBoon?{epicBoon:{id:epicBoon,ability:epicAbility}}:{}),
-    assignedAbilities:scores,increaseMode:mode,plusTwoAbility:two,plusOneAbility:one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,elfLineage:lineage,elfSenseSkill:elfSkill,elfSpellAbility:elfSpell,armor,shield,inventoryActions:activeActions,martial:{fightingStyle:style,...(level>=7?{additionalFightingStyle:additionalStyle as FightingStyleId}:{}),weaponMasteries:masteries,startingPackage:starter},
-    backgroundEquipment:{startingPackage:backgroundPackage,...(background==='soldier'?{gamingSet:soldierGamingSet}:{})}}),[name,level,asiMode,asiFirst,asiSecond,asi6Mode,asi6First,asi6Second,asi8Mode,asi8First,asi8Second,asi12Mode,asi12First,asi12Second,asi14Mode,asi14First,asi14Second,asi16Mode,asi16First,asi16Second,epicBoon,epicAbility,additionalStyle,background,species,scores,mode,two,one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,lineage,elfSkill,elfSpell,armor,shield,style,masteries,starter,backgroundPackage,soldierGamingSet,activeActions]);
+    assignedAbilities:scores,abilityGenerationMethod,increaseMode:mode,plusTwoAbility:two,plusOneAbility:one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,elfLineage:lineage,elfSenseSkill:elfSkill,elfSpellAbility:elfSpell,armor,shield,inventoryActions:activeActions,martial:{fightingStyle:style,...(level>=7?{additionalFightingStyle:additionalStyle as FightingStyleId}:{}),weaponMasteries:masteries,startingPackage:starter},
+    backgroundEquipment:{startingPackage:backgroundPackage,...(background==='soldier'?{gamingSet:soldierGamingSet}:{})}}),[name,level,asiMode,asiFirst,asiSecond,asi6Mode,asi6First,asi6Second,asi8Mode,asi8First,asi8Second,asi12Mode,asi12First,asi12Second,asi14Mode,asi14First,asi14Second,asi16Mode,asi16First,asi16Second,epicBoon,epicAbility,additionalStyle,background,species,scores,abilityGenerationMethod,mode,two,one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,lineage,elfSkill,elfSpell,armor,shield,style,masteries,starter,backgroundPackage,soldierGamingSet,activeActions]);
   // Separar perfil y reglas evita recalcular toda la hoja por cada tecla en las notas.
   const input=useMemo<GuidedFighterInput>(()=>({...rulesInput,profile}),[rulesInput,profile]);
   const output=useMemo(()=>{try{return {result:calculateGuidedFighter(rulesInput),error:null};}catch(e){return {result:null,error:e instanceof Error?e.message:'Error al crear el personaje'};}},[rulesInput]);
@@ -192,7 +196,7 @@ export default function Home(){
     setAsi14Second(saved.level14Improvement?.second??'dexterity');
     setAsi16Mode(saved.level16Improvement?.mode??'plus_two');setAsi16First(saved.level16Improvement?.first??'intelligence');
     setAsi16Second(saved.level16Improvement?.second??'dexterity');setEpicBoon(saved.epicBoon?.id??'');setEpicAbility(saved.epicBoon?.ability??'strength');setBackground(saved.background);setSpecies(saved.species);
-    setScores({...saved.assignedAbilities});setMode(saved.increaseMode);setTwo(saved.plusTwoAbility);setOne(saved.plusOneAbility);
+    setScores({...saved.assignedAbilities});setAbilityGenerationMethod(saved.abilityGenerationMethod??'standard_array');setMode(saved.increaseMode);setTwo(saved.plusTwoAbility);setOne(saved.plusOneAbility);
     setFighterSkills([...saved.fighterSkills]);setHumanSkill(saved.humanSkill??'investigation');
     setHumanFeat(saved.humanFeat??'tough');setHumanSize(saved.humanSize??'medium');
     setLineage(saved.elfLineage??'wood_elf');setElfSkill(saved.elfSenseSkill??'insight');setElfSpell(saved.elfSpellAbility??'intelligence');
@@ -403,9 +407,8 @@ export default function Home(){
             {species==='halfling'&&<div className="info-line">Mediano: tamaño Pequeño y 30 pies de velocidad. En Rasgos encontrarás Suerte, Valentía, Agilidad de mediano y Sigilo natural; sus efectos situacionales se gestionan manualmente.</div>}
           </>}
           {step===2&&<>
-            <div className="section-label"><h3>Matriz estándar</h3><span>15, 14, 13, 12, 10, 8</span></div>
-            <div className="ability-inputs">{ABILITIES.map(a=><label className="ability-input" key={a}><span>{NAMES[a].slice(0,3).toUpperCase()}</span><select aria-label={NAMES[a]} value={scores[a]} onChange={e=>setScores(prev=>({...prev,[a]:Number(e.target.value)}))}>{[15,14,13,12,10,8].map(v=><option key={v} value={v}>{v}</option>)}</select><small>{NAMES[a]}</small></label>)}</div>
-            <p className="muted-note">Asigna cada valor una sola vez. Si repites alguno, se mostrará el error y no se calculará la hoja.</p>
+            <div className="section-label"><h3>Características iniciales</h3><span>Tres métodos</span></div>
+            <AbilityScoreMethodPicker method={abilityGenerationMethod} scores={scores} onChange={(method,nextScores)=>{setAbilityGenerationMethod(method);setScores(nextScores);}}/>
             <div className="divider"/><div className="section-label"><h3>Mejoras del trasfondo</h3></div>
             <label className="field"><span>Distribución</span><select value={mode} onChange={e=>setMode(e.target.value as typeof mode)}><option value="two_plus_one">+2 y +1 a características distintas</option><option value="three_ones">+1 a las tres características</option></select></label>
             {mode==='two_plus_one'&&<><label className="field"><span>Característica que recibe +2</span><select value={two} onChange={e=>setTwo(e.target.value as Ability)}>{allowed.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label><label className="field"><span>Característica que recibe +1</span><select value={one} onChange={e=>setOne(e.target.value as Ability)}>{allowed.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label></>}
@@ -559,7 +562,9 @@ export default function Home(){
         />
       </section>
       <section id="sheet-panel-hechizos" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-hechizos" hidden={activeTab!=='hechizos'}>
-        <SpellsPanel result={output.result} error={output.error} onEditOrigin={()=>openEditorAt(1)}/>
+        <SharedSpellsLayout spellClass="Guerrero" description="La magia de origen no concede ranuras de clase.">
+          <FighterSpellLibrary result={output.result} error={output.error} mode="normal" onEditOrigin={()=>openEditorAt(1)}/>
+        </SharedSpellsLayout>
       </section>
       <section id="sheet-panel-personaje" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-personaje" hidden={activeTab!=='personaje'}>
         <CharacterProfilePanel key={profileLoadRevision} profile={profile} onChange={setProfile} name={name}

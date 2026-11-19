@@ -955,3 +955,24 @@
 .level-down-acknowledge{display:flex;align-items:flex-start;gap:.7rem;padding:1rem;border:1px solid var(--border-color,rgba(142,129,106,.35));border-radius:10px;cursor:pointer}
 .level-down-acknowledge input{width:1.1rem;height:1.1rem;flex:none;margin-top:.16rem;accent-color:#b48548}
 .level-down-acknowledge span{line-height:1.45}
+
+/* Paso 67: mismo selector de características en Guerrero, Mago y Brujo. */
+.ability-method-picker{margin-bottom:18px}
+.ability-method-picker .wizard-score-grid{margin-top:14px}
+.ability-method-budget{background:#233a33;border:1px solid #598878;border-radius:9px;padding:11px 14px;color:#daf1e4}
+.ability-method-budget strong{color:#ffe2a5}
+.ability-method-roll,.ability-method-die button{padding:9px 12px;border:1px solid #b39157;border-radius:8px;background:#293d50;color:#ffdfac;font-size:12px;font-weight:700}
+.ability-method-roll{margin:3px 0 9px;min-height:42px}
+.ability-method-die{display:flex;gap:8px;align-items:center}
+.ability-method-die output{min-width:45px;padding:8px 12px;background:#111f2e;border:1px solid #62748a;border-radius:8px;text-align:center;font-weight:800;font-size:20px}
+.ability-method-die button{flex:1;min-height:42px}
+/* Paso 67: envoltura estable de Hechizos + extensiones de clase separadas. */
+.shared-spells-layout{display:flex;flex-direction:column;gap:12px}
+.shared-spells-layout .sheet-section-heading{margin-bottom:6px}
+.shared-spells-class{border:1px solid #856e4b;border-radius:20px;padding:6px 13px;color:#f3d6a3;font-size:12px;white-space:nowrap}
+.shared-spells-origin{padding:15px 18px;border:1px solid #536579;border-radius:12px;background:#1a2b3a}
+.shared-spells-origin summary{cursor:pointer;font-weight:700;color:#f5dbb0}
+.shared-spells-origin li{padding:5px 0;font-size:12px}
+.warlock-special-traits{display:grid;gap:14px;margin-top:18px}
+.shared-spells-layout .wizard-spell-library{min-width:0}
+@media(max-width:700px){.ability-method-die{flex-wrap:wrap}.ability-method-die button{width:100%}.shared-spells-layout .sheet-section-heading{flex-wrap:wrap}}
