@@ -18,6 +18,7 @@ type Props=Readonly<{
  onPrepared:(id:string,checked:boolean)=>void;
  /** Una sola interfaz para todas las clases: solo cambian reglas y permisos. */
  editable?:boolean;
+ editableForSpell?:(id:string)=>boolean;
  learnedLabel?:string;
  preparedLabel?:string;
  knownLabel?:string;
@@ -28,7 +29,7 @@ type Props=Readonly<{
 
 /** Las acciones son inyectadas por la clase: la vista nunca decide cómo preparar/guardar. */
 export default function SpellLibraryPanel({rules,classLists,selection,limits,characterLevel,spellAttackBonus,spellSaveDC,mode,onLearned,onPrepared,
- editable=true,learnedLabel='Aprendidos',preparedLabel='Preparados',knownLabel='En el libro',note,maxSlotLevel,statsAvailable=true}:Props){
+ editable=true,editableForSpell=()=>true,learnedLabel='Aprendidos',preparedLabel='Preparados',knownLabel='En el libro',note,maxSlotLevel,statsAvailable=true}:Props){
  const [tab,setTab]=useState<Tab>('prepared');
  const [query,setQuery]=useState('');
  const [selectedLists,setSelectedLists]=useState<string[]>(classLists.map(list=>list.id));
@@ -59,7 +60,7 @@ export default function SpellLibraryPanel({rules,classLists,selection,limits,cha
    <fieldset><legend>Nivel del conjuro</legend><div className="wizard-spell-level-filters">{Array.from({length:10},(_,n)=>n).map(level=><label key={level}><input type="checkbox" checked={levels.includes(level)} onChange={event=>setLevels(prev=>event.target.checked?[...prev,level]:prev.filter(n=>n!==level))}/> {level===0?'Trucos':`N. ${level}`}</label>)}</div></fieldset>
   </div>}
   <div role="tabpanel" className="wizard-spell-list">
-   {visible.length===0?<p className="spells-empty">No hay conjuros que coincidan con estos filtros.</p>:visible.map(spell=><SpellSelectionCard key={spell.id} spell={spell} tab={tab} known={learned.has(spell.id)} ready={prepared.has(spell.id)} editable={editable} onLearned={onLearned} onPrepared={onPrepared} characterLevel={characterLevel} spellAttackBonus={spellAttackBonus} mode={mode} maxSlotLevel={maxSlotLevel??Math.floor((characterLevel+1)/2)}/>)}
+   {visible.length===0?<p className="spells-empty">No hay conjuros que coincidan con estos filtros.</p>:visible.map(spell=><SpellSelectionCard key={spell.id} spell={spell} tab={tab} known={learned.has(spell.id)} ready={prepared.has(spell.id)} editable={editable&&editableForSpell(spell.id)} onLearned={onLearned} onPrepared={onPrepared} characterLevel={characterLevel} spellAttackBonus={spellAttackBonus} mode={mode} maxSlotLevel={maxSlotLevel??Math.floor((characterLevel+1)/2)}/>)}
   </div>
  </section>;
 }

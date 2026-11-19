@@ -6,7 +6,8 @@ import { type Ability } from "../../../../packages/rules-engine/src/abilities";
 import { SKILLS, type Skill } from "../../../../packages/rules-engine/src/proficiencies";
 import { BACKGROUNDS, type GuidedFighterInput, type GuidedFighterResult } from "../../../../packages/rules-engine/src/guided";
 import { applyAdventureAction, setManualDeathSaveMark, type AdventureAction, type AdventureState } from "../../../../packages/rules-engine/src/adventure";
-import { PrincipalHealthControls, PrincipalResourceControls, PrincipalInspirationControls } from "./PrincipalSessionControls";
+import { PrincipalHealthControls, PrincipalResourceControls } from "./PrincipalSessionControls";
+import SharedInspirationPanel from "./SharedInspirationPanel";
 import PrincipalEquippedAttacks from "./PrincipalEquippedAttacks";
 import SharedPrincipalSheet from "./SharedPrincipalSheet";
 
@@ -101,7 +102,9 @@ export default function PrincipalOverview({ result, error, input, adventure, out
       })}</div>
       <p className="overview-panel-note">Marca o desmarca manualmente. Los marcadores no aplican reglas automáticas.</p>
     </section>
-    <PrincipalInspirationControls state={current} sheet={sheet} onAction={runAdventureAction}/>
+    <SharedInspirationPanel checked={current?.combat.heroicInspiration===true} disabled={!current} onChange={checked=>{runAdventureAction({type:checked?'gain_heroic_inspiration':'spend_heroic_inspiration'});}}>
+      {sheet.features.includes('champion_heroic_warrior')&&<p className="overview-panel-note">Guerrero heroico: la inspiración se recupera al iniciar tu turno mediante el panel de turnos.</p>}
+    </SharedInspirationPanel>
   </>;
   return <>
     {outOfSync&&<div className="overview-warning" role="status">La partida no está sincronizada con la hoja. Revísala en el editor.</div>}

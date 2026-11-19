@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {DEFAULT_POINT_BUY,pointBuySpent,rollD20AbilityScores,validateGeneratedAbilities} from '../src/ability-generation';
+import {DEFAULT_POINT_BUY,POINT_BUY_EXAMPLE,pointBuySpent,rollD20AbilityScores,rollAbilityScore4d6,rollAbilityScores4d6,validateGeneratedAbilities} from '../src/ability-generation';
 import {calculateWarlockOne,initialWarlockOneState,makeWarlockCharacterSnapshot,validateWarlockCharacterSnapshot,type GuidedWarlockInput} from '../src/warlock';
 import {calculateGuidedWizard,initialWizardOneState,makeWizardCharacterSnapshot,validateWizardCharacterSnapshot,WIZARD_LEVEL_ONE_DEFAULTS,type GuidedWizardInput} from '../src/wizard-creation';
 import {collectWarlockTraits} from '../src/warlock-traits';
@@ -22,14 +22,22 @@ describe('Paso 67: métodos comunes de características y hojas',()=>{
   expect(calculateGuidedWizard(wizard).abilityScores.intelligence).toBe(17);
  });
  it('compra de puntos: coste exacto 27, límites por característica y exceso',()=>{
-  expect(pointBuySpent(DEFAULT_POINT_BUY)).toBe(27);
+  expect(pointBuySpent(DEFAULT_POINT_BUY)).toBe(0);
+  expect(pointBuySpent(POINT_BUY_EXAMPLE)).toBe(27);
   expect(pointBuySpent({strength:15,dexterity:15,constitution:15,intelligence:8,wisdom:8,charisma:8})).toBe(27);
   expect(validateGeneratedAbilities(DEFAULT_POINT_BUY,'point_buy')).toEqual(DEFAULT_POINT_BUY);
   expect(validateGeneratedAbilities({strength:8,dexterity:8,constitution:8,intelligence:8,wisdom:8,charisma:8},'point_buy')).toBeTruthy();
   expect(()=>validateGeneratedAbilities({strength:15,dexterity:15,constitution:15,intelligence:9,wisdom:8,charisma:8},'point_buy')).toThrow(/27/);
   expect(()=>validateGeneratedAbilities({...DEFAULT_POINT_BUY,strength:16},'point_buy')).toThrow(/8 a 15/);
  });
- it('los d20 usan dados válidos y las tiradas son reproducibles con generador de prueba',()=>{
+ it('4d6 descarta el dado menor, deja tres dados y se puede repetir por característica',()=>{
+  const rolls=[6,3,2,5];let index=0;
+  expect(rollAbilityScore4d6(()=>rolls[index++])).toEqual({dice:rolls,discarded:2,total:14});
+  expect(rollAbilityScores4d6(()=>6)).toEqual({strength:18,dexterity:18,constitution:18,intelligence:18,wisdom:18,charisma:18});
+  expect(()=>validateGeneratedAbilities({...scores,charisma:19},'roll_4d6')).toThrow(/3 y 18/);
+  expect(()=>rollAbilityScore4d6(()=>0)).toThrow(/d6/);
+ });
+ it('el d20 antiguo solo se conserva para la compatibilidad de guardados existentes',()=>{
   const rolls=[1,5,20,7,14,9];let index=0;
   expect(rollD20AbilityScores(()=>rolls[index++])).toEqual({strength:1,dexterity:5,constitution:20,intelligence:7,wisdom:14,charisma:9});
   expect(()=>validateGeneratedAbilities({...scores,charisma:21},'d20')).toThrow(/1 a 20/);
@@ -42,7 +50,7 @@ describe('Paso 67: métodos comunes de características y hojas',()=>{
   const saved=makeWarlockCharacterSnapshot(chosen,initialWarlockOneState(chosen));
   const loaded=validateWarlockCharacterSnapshot(JSON.parse(JSON.stringify(saved)));
   expect(loaded.input.abilityGenerationMethod).toBe('point_buy');
-  expect(view.abilityScores.strength).toBe(15);
+  expect(view.abilityScores.strength).toBe(8);
   const traits=collectWarlockTraits(chosen,view).traits;
   expect(traits.some(trait=>trait.id==='warlock:invocation:pact_of_blade')).toBe(true);
   expect(traits.some(trait=>trait.group==='species')).toBe(true);
@@ -50,7 +58,7 @@ describe('Paso 67: métodos comunes de características y hojas',()=>{
   expect(traits.some(trait=>trait.group==='subclass')).toBe(false);
  });
  it('Mago: persistencia estricta acepta compra y d20 y evita alteraciones posteriores',()=>{
-  const chosen={...wizard,abilityGenerationMethod:'point_buy' as const,assignedAbilities:{...DEFAULT_POINT_BUY,intelligence:15}};
+  const chosen={...wizard,abilityGenerationMethod:'point_buy' as const,assignedAbilities:{strength:15,dexterity:15,constitution:15,intelligence:9,wisdom:8,charisma:8}};
   // El cambio manual anterior excede presupuesto; no se puede guardar.
   expect(()=>calculateGuidedWizard(chosen)).toThrow(/27/);
   const valid={...wizard,abilityGenerationMethod:'point_buy' as const,assignedAbilities:DEFAULT_POINT_BUY};

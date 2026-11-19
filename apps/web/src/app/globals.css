@@ -976,3 +976,29 @@
 .warlock-special-traits{display:grid;gap:14px;margin-top:18px}
 .shared-spells-layout .wizard-spell-library{min-width:0}
 @media(max-width:700px){.ability-method-die{flex-wrap:wrap}.ability-method-die button{width:100%}.shared-spells-layout .sheet-section-heading{flex-wrap:wrap}}
+
+/* Paso 68: controles de compra de puntos y fichas de compañero canónicas. */
+.ability-method-stepper{display:flex;align-items:stretch;gap:5px;width:100%}
+.ability-method-stepper output{display:flex;align-items:center;justify-content:center;flex:1;min-width:42px;border:1px solid #73818d;border-radius:8px;background:#152839;color:#fce4b6;font-size:20px;font-weight:800}
+.ability-method-stepper button{width:38px;min-height:44px;border:1px solid #b59457;border-radius:7px;background:#263f4e;color:#fce4b6;font-size:15px;cursor:pointer}
+.ability-method-stepper button:disabled{opacity:.36;cursor:not-allowed}
+.ability-method-roll-detail{display:block;margin-top:7px;color:#f0d5a8;line-height:1.4}
+.ability-method-legacy-score{font-weight:800;font-size:20px}
+.shared-companions-page{display:grid;gap:18px}
+.shared-companion-toolbar{display:flex;gap:18px;align-items:end;flex-wrap:wrap;margin:20px 0}
+.shared-companion-toolbar>.field{min-width:min(100%,280px);flex:1}
+.shared-companion-editor{padding:20px;border:1px solid #7e694e;border-radius:14px;background:#1a2e3a;display:grid;gap:14px}
+.shared-companion-fields,.shared-companion-abilities{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.shared-companion-fields .field textarea{width:100%;min-height:80px;resize:vertical}
+.shared-companion-attack-edit{border:1px solid #546579;border-radius:12px;padding:12px;display:grid;gap:10px}
+.shared-companion-sheet{border:1px solid #60748b;border-radius:14px;padding:20px;background:#172a38;display:grid;gap:12px}
+.shared-companion-sheet h3,.shared-companion-editor h3{margin:0;color:#f3d7ae}
+.shared-companion-sheet h4,.shared-companion-editor h4{margin:14px 0 2px;color:#f3d7ae}
+.shared-companion-sheet header p{margin:5px 0}
+.shared-companion-vitals,.shared-companion-ability-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:9px}
+.shared-companion-vitals>div,.shared-companion-ability-cards>div{display:grid;gap:2px;text-align:center;padding:13px 8px;border:1px solid #65778b;border-radius:10px;background:#253b4b}
+.shared-companion-vitals span,.shared-companion-ability-cards span{font-size:11px;text-transform:uppercase}
+.shared-companion-vitals strong,.shared-companion-ability-cards strong{font-size:24px;color:#f5d6a8}
+.shared-companion-ability-cards small{font-weight:700}
+.shared-companion-prose{white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:640px){.shared-companion-editor,.shared-companion-sheet{padding:12px}.shared-companion-vitals,.shared-companion-ability-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}

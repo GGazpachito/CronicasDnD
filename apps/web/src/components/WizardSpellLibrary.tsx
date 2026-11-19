@@ -1,6 +1,6 @@
 'use client';
 import {wizardProgression} from '../../../../packages/rules-engine/src/wizard';
-import {WIZARD_SPELL_RULES} from '../../../../packages/rules-engine/src/wizard-spell-details';
+import {SHARED_SPELL_RULES,SHARED_CLASS_SPELL_LISTS,WIZARD_SPELL_IDS} from '../../../../packages/rules-engine/src/shared-spell-catalog';
 import {setWizardSpellLearned,setWizardSpellPrepared,wizardEditableSpellSelection,wizardSpellSelection,type WizardSpellSelection} from '../../../../packages/rules-engine/src/wizard-spell-library';
 import type {GuidedWizardInput} from '../../../../packages/rules-engine/src/wizard-creation';
 import type {D20Mode} from '../../../../packages/rules-engine/src/d20';
@@ -15,11 +15,12 @@ export default function WizardSpellLibrary({input,spellAttackBonus,spellSaveDC,m
  const recommended=wizardProgression(input.level,input.level>=3?'evoker':undefined);
  const mastered=new Set([...(input.level>=18?input.spellMasteryIds??[]:[]),...(input.level>=20?input.signatureSpellIds??[]:[])]);
  return <SpellLibraryPanel
-  rules={WIZARD_SPELL_RULES}
-  classLists={[{id:'wizard',label:'Mago',spellIds:WIZARD_SPELL_RULES.map(spell=>spell.id)}]}
+  rules={SHARED_SPELL_RULES}
+  classLists={SHARED_CLASS_SPELL_LISTS}
   selection={selection}
   limits={{cantrips:recommended.cantripsKnown,learnedMinimum:recommended.minimumSpellbookCount,prepared:recommended.preparedSpellCount}}
   characterLevel={input.level} spellAttackBonus={spellAttackBonus} spellSaveDC={spellSaveDC} mode={mode}
+  editableForSpell={id=>WIZARD_SPELL_IDS.has(id)}
   onLearned={(id,checked)=>{if(!mastered.has(id))onChange(setWizardSpellLearned(editable,id,checked));}}
   onPrepared={(id,checked)=>{if(!mastered.has(id))onChange(setWizardSpellPrepared(editable,id,checked));}}
  />;

@@ -3,6 +3,7 @@
 import type {GuidedFighterResult} from '../../../../packages/rules-engine/src/guided';
 import {collectCharacterSpellbook} from '../../../../packages/rules-engine/src/spellbook';
 import {wizardSpellRule,type WizardSpellRule} from '../../../../packages/rules-engine/src/wizard-spell-details';
+import {SHARED_SPELL_RULES,SHARED_CLASS_SPELL_LISTS} from '../../../../packages/rules-engine/src/shared-spell-catalog';
 import type {D20Mode} from '../../../../packages/rules-engine/src/d20';
 import SpellLibraryPanel from './SpellLibraryPanel';
 
@@ -24,7 +25,7 @@ export default function FighterSpellLibrary({result,error,mode,onEditOrigin}:{
  const prepared=ids;
  const primary=book.entries[0];
  return <>
-  <SpellLibraryPanel rules={[...distinct.values()]} classLists={[{id:'origin',label:'Conjuros de origen',spellIds:ids}]}
+  <SpellLibraryPanel rules={[...new Map([...SHARED_SPELL_RULES,...distinct.values()].map(rule=>[rule.id,rule])).values()]} classLists={[...SHARED_CLASS_SPELL_LISTS,{id:'origin',label:'Conjuros de origen',spellIds:ids}]}
    selection={{learnedIds:ids,preparedIds:prepared}} limits={{cantrips:[...distinct.values()].filter(rule=>rule.level===0).length,learnedMinimum:0,prepared:[...distinct.values()].filter(rule=>rule.level>0).length}}
    characterLevel={result.sheet.level} spellAttackBonus={primary?.attackBonus??0} spellSaveDC={primary?.saveDC??8}
    mode={mode} maxSlotLevel={0} editable={false} statsAvailable={book.entries.length>0} knownLabel="Concedidos por origen" preparedLabel="Disponibles"

@@ -4,6 +4,7 @@
  */
 import {ABILITIES,abilityModifiers,type Ability,type AbilityScores} from './abilities';
 import {validateGeneratedAbilities,type AbilityGenerationMethod} from './ability-generation';
+import {validateCompanionSheets,type CompanionSheet} from './companions';
 import {SKILLS,calculateSkillBonuses,calculateSavingThrows,type Skill} from './proficiencies';
 import {BACKGROUNDS,SPECIES_NAMES,type BackgroundId,type SpeciesId,type ElfLineage} from './guided';
 import {EMPTY_CHARACTER_PROFILE,validateCharacterProfile,type CharacterProfile} from './character-profile';
@@ -41,6 +42,7 @@ export type GuidedWarlockInput=Readonly<{
  classId:'warlock';level:1;name:string;profile?:CharacterProfile;
  background:BackgroundId;species:SpeciesId;assignedAbilities:AbilityScores;
  abilityGenerationMethod?:AbilityGenerationMethod;
+ companions?:readonly CompanionSheet[];
  increaseMode:'two_plus_one'|'three_ones';plusTwoAbility:Ability;plusOneAbility:Ability;
  warlockSkills:readonly WarlockSkill[];humanSkill?:Skill;humanFeat?:'alert'|'tough';
  humanSize?:'small'|'medium';elfLineage?:ElfLineage;
@@ -59,6 +61,7 @@ export type WarlockOneState=Readonly<{
  tomePresent:boolean;
  familiarForm:FamiliarForm|null;
  familiarName:string;
+ manualDeathMarks?:Readonly<{successes:readonly [boolean,boolean,boolean];failures:readonly [boolean,boolean,boolean]}>;
 }>;
 export type CalculatedWarlockOne=Readonly<{
  level:1;name:string;abilityScores:AbilityScores;
@@ -83,6 +86,7 @@ export function calculateWarlockOne(input:GuidedWarlockInput,state?:Pick<Warlock
  const bg=BACKGROUNDS[input.background];
  if(!bg||!Object.hasOwn(SPECIES_NAMES,input.species))throw new RangeError('Origen no disponible');
  const assigned=validateGeneratedAbilities(input.assignedAbilities,input.abilityGenerationMethod??'standard_array');
+ if(input.companions!==undefined)validateCompanionSheets(input.companions);
  const scores={...assigned};const permitted=bg.abilities as readonly Ability[];
  if(input.increaseMode==='two_plus_one'){
   if(!permitted.includes(input.plusTwoAbility)||!permitted.includes(input.plusOneAbility)||input.plusOneAbility===input.plusTwoAbility)throw new RangeError('Dos características de trasfondo diferentes requeridas');
@@ -165,7 +169,7 @@ export function warlockLongRest(state:WarlockOneState,maximumHitPoints:number,is
 export function validateWarlockOneState(raw:unknown,input:GuidedWarlockInput,sheet:CalculatedWarlockOne):WarlockOneState{
  if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new RangeError('Estado del Brujo inválido');
  const state=raw as Record<string,unknown>;
- if(Object.keys(state).some(k=>!['hitPointsCurrent','temporaryHitPoints','heroicInspiration','pactSlotSpent','mageArmorActive','tomePresent','familiarForm','familiarName'].includes(k)))throw new RangeError('Estado del Brujo con campos desconocidos');
+ if(Object.keys(state).some(k=>!['hitPointsCurrent','temporaryHitPoints','heroicInspiration','pactSlotSpent','mageArmorActive','tomePresent','familiarForm','familiarName','manualDeathMarks'].includes(k)))throw new RangeError('Estado del Brujo con campos desconocidos');
  if(!Number.isInteger(state.hitPointsCurrent)||(state.hitPointsCurrent as number)<0||(state.hitPointsCurrent as number)>sheet.maximumHitPoints||
   !Number.isInteger(state.temporaryHitPoints)||(state.temporaryHitPoints as number)<0||(state.temporaryHitPoints as number)>10000)throw new RangeError('Puntos de golpe del Brujo inválidos');
  for(const k of ['heroicInspiration','pactSlotSpent','mageArmorActive','tomePresent']){
@@ -176,10 +180,16 @@ export function validateWarlockOneState(raw:unknown,input:GuidedWarlockInput,she
  if(state.familiarForm!==null&&(!input.invocations.includes('pact_of_chain')||typeof state.familiarForm!=='string'||!Object.hasOwn(WARLOCK_FAMILIARS,state.familiarForm)))throw new RangeError('Familiar no disponible');
  if(typeof state.familiarName!=='string'||state.familiarName.length>120)throw new RangeError('Nombre del familiar inválido');
  if(!input.invocations.includes('pact_of_chain')&&state.familiarName)throw new RangeError('Nombre de familiar sin pacto');
+ if(state.manualDeathMarks!==undefined){
+  const marks=state.manualDeathMarks as WarlockOneState['manualDeathMarks'];
+  if(!marks||!['successes','failures'].every(kind=>Array.isArray(marks[kind as 'successes'|'failures'])&&marks[kind as 'successes'|'failures'].length===3&&marks[kind as 'successes'|'failures'].every(mark=>typeof mark==='boolean')))
+   throw new RangeError('Marcadores de salvación de muerte del Brujo inválidos');
+ }
  return {hitPointsCurrent:state.hitPointsCurrent as number,temporaryHitPoints:state.temporaryHitPoints as number,
   heroicInspiration:state.heroicInspiration as boolean,pactSlotSpent:state.pactSlotSpent as boolean,
   mageArmorActive:state.mageArmorActive as boolean,tomePresent:state.tomePresent as boolean,
-  familiarForm:state.familiarForm as FamiliarForm|null,familiarName:state.familiarName as string};
+  familiarForm:state.familiarForm as FamiliarForm|null,familiarName:state.familiarName as string,
+  ...(state.manualDeathMarks!==undefined?{manualDeathMarks:state.manualDeathMarks as NonNullable<WarlockOneState['manualDeathMarks']>}:{})};
 }
 export type WarlockCharacterSnapshot=Readonly<{
  schemaVersion:4;ruleset:'dnd-2024';input:GuidedWarlockInput;warlockState:WarlockOneState;
@@ -188,7 +198,7 @@ export function validateWarlockCharacterSnapshot(raw:unknown):WarlockCharacterSn
  if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new RangeError('Guardado de Brujo inválido');
  const value=raw as Record<string,unknown>;
  if(value.schemaVersion!==4||value.ruleset!=='dnd-2024'||Object.keys(value).some(k=>!['schemaVersion','ruleset','input','warlockState'].includes(k)))throw new RangeError('Versión o estructura del Brujo no compatible');
- const allowed=['abilityGenerationMethod','classId','level','name','profile','background','species','assignedAbilities','increaseMode','plusTwoAbility','plusOneAbility','warlockSkills','humanSkill','humanFeat','humanSize','elfLineage','equipmentChoice','backgroundEquipment','inventoryActions','cantripIds','preparedIds','invocations','pactWeaponId','tomeCantripIds','tomeRitualIds'];
+ const allowed=['companions','abilityGenerationMethod','classId','level','name','profile','background','species','assignedAbilities','increaseMode','plusTwoAbility','plusOneAbility','warlockSkills','humanSkill','humanFeat','humanSize','elfLineage','equipmentChoice','backgroundEquipment','inventoryActions','cantripIds','preparedIds','invocations','pactWeaponId','tomeCantripIds','tomeRitualIds'];
  if(!value.input||typeof value.input!=='object'||Array.isArray(value.input)||Object.keys(value.input as Record<string,unknown>).some(k=>!allowed.includes(k)))throw new RangeError('Elecciones de Brujo con campos desconocidos');
  let input:GuidedWarlockInput;
  try{const json=JSON.stringify(value.input);if(json.length>120000)throw new Error();input=JSON.parse(json) as GuidedWarlockInput;}catch{throw new RangeError('Elecciones de Brujo demasiado grandes');}

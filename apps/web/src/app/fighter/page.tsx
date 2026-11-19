@@ -10,6 +10,8 @@ import PrincipalOverview from "../../components/PrincipalOverview";
 import TraitsPanel from "../../components/TraitsPanel";
 import AbilityScoreMethodPicker from "../../components/AbilityScoreMethodPicker";
 import FighterSpellLibrary from "../../components/FighterSpellLibrary";
+import SharedCompanionsPanel from "../../components/SharedCompanionsPanel";
+import type {CompanionSheet} from "../../../../../packages/rules-engine/src/companions";
 import SharedSpellsLayout from "../../components/SharedSpellsLayout";
 import LevelUpWizard from "../../components/LevelUpWizard";
 import LevelDownDialog from "../../components/LevelDownDialog";
@@ -105,6 +107,7 @@ export default function Home(){
   const [background,setBackground]=useState<BackgroundId>('soldier');
   const [species,setSpecies]=useState<SpeciesId>('human');
   const [scores,setScores]=useState<AbilityScores>({strength:15,dexterity:14,constitution:13,intelligence:10,wisdom:12,charisma:8});
+  const [companions,setCompanions]=useState<readonly CompanionSheet[]>([]);
   const [abilityGenerationMethod,setAbilityGenerationMethod]=useState<AbilityGenerationMethod>('standard_array');
   const [mode,setMode]=useState<'two_plus_one'|'three_ones'>('two_plus_one');
   const [two,setTwo]=useState<Ability>('strength');
@@ -175,8 +178,8 @@ export default function Home(){
     ...(level>=14?{level14Improvement:{mode:asi14Mode,first:asi14First,...(asi14Mode==='two_ones'?{second:asi14Second}:{})}}:{}),
     ...(level>=16?{level16Improvement:{mode:asi16Mode,first:asi16First,...(asi16Mode==='two_ones'?{second:asi16Second}:{})}}:{}),
     ...(level>=19&&epicBoon?{epicBoon:{id:epicBoon,ability:epicAbility}}:{}),
-    assignedAbilities:scores,abilityGenerationMethod,increaseMode:mode,plusTwoAbility:two,plusOneAbility:one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,elfLineage:lineage,elfSenseSkill:elfSkill,elfSpellAbility:elfSpell,armor,shield,inventoryActions:activeActions,martial:{fightingStyle:style,...(level>=7?{additionalFightingStyle:additionalStyle as FightingStyleId}:{}),weaponMasteries:masteries,startingPackage:starter},
-    backgroundEquipment:{startingPackage:backgroundPackage,...(background==='soldier'?{gamingSet:soldierGamingSet}:{})}}),[name,level,asiMode,asiFirst,asiSecond,asi6Mode,asi6First,asi6Second,asi8Mode,asi8First,asi8Second,asi12Mode,asi12First,asi12Second,asi14Mode,asi14First,asi14Second,asi16Mode,asi16First,asi16Second,epicBoon,epicAbility,additionalStyle,background,species,scores,abilityGenerationMethod,mode,two,one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,lineage,elfSkill,elfSpell,armor,shield,style,masteries,starter,backgroundPackage,soldierGamingSet,activeActions]);
+    assignedAbilities:scores,abilityGenerationMethod,companions,increaseMode:mode,plusTwoAbility:two,plusOneAbility:one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,elfLineage:lineage,elfSenseSkill:elfSkill,elfSpellAbility:elfSpell,armor,shield,inventoryActions:activeActions,martial:{fightingStyle:style,...(level>=7?{additionalFightingStyle:additionalStyle as FightingStyleId}:{}),weaponMasteries:masteries,startingPackage:starter},
+    backgroundEquipment:{startingPackage:backgroundPackage,...(background==='soldier'?{gamingSet:soldierGamingSet}:{})}}),[name,level,asiMode,asiFirst,asiSecond,asi6Mode,asi6First,asi6Second,asi8Mode,asi8First,asi8Second,asi12Mode,asi12First,asi12Second,asi14Mode,asi14First,asi14Second,asi16Mode,asi16First,asi16Second,epicBoon,epicAbility,additionalStyle,background,species,scores,abilityGenerationMethod,companions,mode,two,one,fighterSkills,humanSkill,humanFeat,humanFeatDetails,backgroundMagicInitiate,humanSize,lineage,elfSkill,elfSpell,armor,shield,style,masteries,starter,backgroundPackage,soldierGamingSet,activeActions]);
   // Separar perfil y reglas evita recalcular toda la hoja por cada tecla en las notas.
   const input=useMemo<GuidedFighterInput>(()=>({...rulesInput,profile}),[rulesInput,profile]);
   const output=useMemo(()=>{try{return {result:calculateGuidedFighter(rulesInput),error:null};}catch(e){return {result:null,error:e instanceof Error?e.message:'Error al crear el personaje'};}},[rulesInput]);
@@ -196,6 +199,7 @@ export default function Home(){
     setAsi14Second(saved.level14Improvement?.second??'dexterity');
     setAsi16Mode(saved.level16Improvement?.mode??'plus_two');setAsi16First(saved.level16Improvement?.first??'intelligence');
     setAsi16Second(saved.level16Improvement?.second??'dexterity');setEpicBoon(saved.epicBoon?.id??'');setEpicAbility(saved.epicBoon?.ability??'strength');setBackground(saved.background);setSpecies(saved.species);
+    setCompanions([...(saved.companions??[])]);
     setScores({...saved.assignedAbilities});setAbilityGenerationMethod(saved.abilityGenerationMethod??'standard_array');setMode(saved.increaseMode);setTwo(saved.plusTwoAbility);setOne(saved.plusOneAbility);
     setFighterSkills([...saved.fighterSkills]);setHumanSkill(saved.humanSkill??'investigation');
     setHumanFeat(saved.humanFeat??'tough');setHumanSize(saved.humanSize??'medium');
@@ -572,7 +576,7 @@ export default function Home(){
           background={bg.name} level={level} onEditIdentity={()=>openEditorAt(0)}/>
       </section>
       <section id="sheet-panel-companions" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-companions" hidden={activeTab!=='companions'}>
-        <SheetPlaceholder eyebrow="COMPAÑEROS · HOJA COMÚN" title="Compañeros" description="Esta clase no dispone todavía de un compañero gestionado por la hoja. El módulo compartido está preparado para familiares, monturas y aliados futuros."/>
+        <SharedCompanionsPanel companions={companions} onChange={setCompanions}/>
       </section>
       <section id="sheet-panel-combate" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-combate" hidden={activeTab!=='combate'}>
         <SheetPlaceholder eyebrow="COMBATE · DESARROLLO FUTURO" title="Coming Soon"

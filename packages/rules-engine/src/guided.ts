@@ -3,6 +3,7 @@
  */
 import { ABILITIES, type Ability, type AbilityScores, proficiencyBonus } from './abilities';
 import {validateGeneratedAbilities,type AbilityGenerationMethod} from './ability-generation';
+import {validateCompanionSheets,type CompanionSheet} from './companions';
 import type { CharacterProfile } from './character-profile';
 import { SKILLS, type Skill } from './proficiencies';
 import { calculateFighterSheet, type CalculatedFighterSheet, type FighterCharacterInput } from './sheet';
@@ -63,6 +64,7 @@ export type GuidedFighterInput = Readonly<{
   /** Puntuaciones antes de los aumentos por trasfondo. */
   assignedAbilities: AbilityScores;
   abilityGenerationMethod?:AbilityGenerationMethod;
+  companions?:readonly CompanionSheet[];
   increaseMode: 'two_plus_one' | 'three_ones';
   plusTwoAbility: Ability;
   plusOneAbility: Ability;
@@ -113,6 +115,7 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
   if (!input.name?.trim() || input.name.length > 120) fail('Introduce un nombre válido');
   if (!input.assignedAbilities || typeof input.assignedAbilities !== 'object') fail('Faltan características');
   validateGeneratedAbilities(input.assignedAbilities,input.abilityGenerationMethod??'standard_array');
+  if(input.companions!==undefined)validateCompanionSheets(input.companions);
   const allowed = [...bg.abilities] as Ability[];
   if (input.increaseMode !== 'two_plus_one' && input.increaseMode !== 'three_ones') fail('Método de mejora inválido');
   if (input.increaseMode === 'two_plus_one' && (!isAbility(input.plusTwoAbility) || !isAbility(input.plusOneAbility) || !allowed.includes(input.plusTwoAbility) || !allowed.includes(input.plusOneAbility) || input.plusTwoAbility===input.plusOneAbility)) {

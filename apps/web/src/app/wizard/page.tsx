@@ -14,6 +14,10 @@ import LevelDownDialog from '../../components/LevelDownDialog';
 import {previewWizardLevelDown} from '../../../../../packages/rules-engine/src/level-down';
 import WizardSpellLibrary from '../../components/WizardSpellLibrary';
 import AbilityScoreMethodPicker from '../../components/AbilityScoreMethodPicker';
+import SharedHealthControls from '../../components/SharedHealthControls';
+import SharedInspirationPanel from '../../components/SharedInspirationPanel';
+import SharedDeathSavePanel from '../../components/SharedDeathSavePanel';
+import SharedCompanionsPanel from '../../components/SharedCompanionsPanel';
 import type {AbilityGenerationMethod} from '../../../../../packages/rules-engine/src/ability-generation';
 import type {AbilityScores} from '../../../../../packages/rules-engine/src/abilities';
 import SharedSpellsLayout from '../../components/SharedSpellsLayout';
@@ -64,8 +68,6 @@ export default function WizardPage(){
  const [levelDownOpen,setLevelDownOpen]=useState(false);
  const [masteryRestOpen,setMasteryRestOpen]=useState(false);
  const [mode,setMode]=useState<D20Mode>('normal');
- const [hpDraft,setHpDraft]=useState('');
- const [tempDraft,setTempDraft]=useState('');
  const [profileRevision,setProfileRevision]=useState(0);
  const [error,setError]=useState('');
  const [magicAttackResult,setMagicAttackResult]=useState('');
@@ -136,14 +138,6 @@ export default function WizardPage(){
    const absorbed=Math.min(previous.temporaryHitPoints,-delta);
    return {...previous,temporaryHitPoints:previous.temporaryHitPoints-absorbed,hitPointsCurrent:Math.max(0,previous.hitPointsCurrent+delta+absorbed)};
   });
- }
- function commitDelta(value:string,temporary:boolean){
-  if(!value.trim())return;
-  if(!/^[+-]?\d+$/.test(value.trim())){setError('Introduce un número positivo o negativo, por ejemplo +5 o -7.');return;}
-  const delta=Number(value.trim());
-  if(!Number.isSafeInteger(delta)||Math.abs(delta)>100000){setError('El ajuste de PG es demasiado grande.');return;}
-  adjustHp(delta,temporary);setError('');
-  if(temporary)setTempDraft('');else setHpDraft('');
  }
  function toggleDeathMark(kind:'successes'|'failures',index:number){
   setState(previous=>{
@@ -266,15 +260,7 @@ export default function WizardPage(){
       armorClass={sheet.armorClass} armorDescription={equippedArmor(sheet.inventory)?`Armadura equipada: ${INVENTORY_NAMES[equippedArmor(sheet.inventory)!]} · Sin entrenamiento en armaduras`:'10 + modificador de Destreza · sin armadura'}
       initiative={sheet.initiative} mode={mode} onModeChange={setMode}
       hitDiceDescription={`Dados de golpe: ${input.level}d6 · Mago nivel ${input.level}`}
-      hpContent={<div className="overview-health-inline" aria-label="Modificar PG del Mago"><div className="overview-health-pair">
-        {([{title:'PG actuales',current:state.hitPointsCurrent,max:sheet.maximumHitPoints,draft:hpDraft,setDraft:setHpDraft,temporary:false},{title:'PG temporales',current:state.temporaryHitPoints,max:10000,draft:tempDraft,setDraft:setTempDraft,temporary:true}] as const).map(item=><div className="overview-hp-stat" key={item.title}>
-         <label className="overview-hp-label" htmlFor={item.temporary?'wizard-temp-hp':'wizard-current-hp'}>{item.title}</label>
-         <div className="overview-hp-reading"><strong>{item.current}</strong>{!item.temporary&&<small> / {sheet.maximumHitPoints}</small>}</div>
-         <div className="overview-hp-input-group"><input id={item.temporary?'wizard-temp-hp':'wizard-current-hp'} value={item.draft} placeholder="+5 / -5" inputMode="numeric" aria-label={`Ajuste de ${item.title}`} onChange={e=>item.setDraft(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();commitDelta(item.draft,item.temporary);}if(e.key==='Escape')item.setDraft('');if(e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();adjustHp(e.key==='ArrowUp'?1:-1,item.temporary);}}}/>
-          <div className="overview-hp-stepper"><button type="button" onClick={()=>adjustHp(1,item.temporary)} aria-label={`Aumentar ${item.title}`}>▲</button><button type="button" onClick={()=>adjustHp(-1,item.temporary)} aria-label={`Reducir ${item.title}`}>▼</button></div>
-         </div>
-        </div>)}
-       </div><p className="overview-health-hint">Escribe +5 o -5 y pulsa Intro. El daño consume primero PG temporales.</p></div>}
+      hpContent={<SharedHealthControls current={state.hitPointsCurrent} temporary={state.temporaryHitPoints} maximum={sheet.maximumHitPoints} onAdjust={adjustHp} onError={setError}/>}
       attacksContent={<BasicWeaponAttacks inventory={sheet.inventory} scores={sheet.abilityScores} proficiency={wizardProgression(input.level,input.level>=3?'evoker':undefined).proficiencyBonus} mode={mode}/>}
       resourcesContent={<section className="overview-panel panel"><div className="overview-panel-heading"><h3>Recursos</h3><span>Clase</span></div><div className="overview-record"><span>Recuperación arcana</span><strong>{state.magic.arcaneRecoveryUsed?'Gastada':'Disponible'}</strong></div><button className="overview-link" type="button" disabled={state.magic.arcaneRecoveryUsed||state.magic.slots.remaining.every((n,i)=>n===state.magic.slots.maximum[i])} onClick={()=>setTab('hechizos')}>Ver opciones de Recuperación arcana</button><p className="overview-panel-note">Después de un descanso corto, recupera ranuras gastadas hasta el límite de Recuperación arcana. Elige cuántas ranuras recuperar desde Hechizos.</p>{input.level>=14&&<><div className="overview-record"><span>Sobrecarga</span><strong>{state.magic.overchannelUses} usos</strong></div><button type="button" className="overview-link" onClick={()=>setTab('hechizos')}>Gestionar Sobrecarga en Hechizos</button></>}{input.level>=18&&<><div className="overview-record"><span>Maestría</span><strong>2 conjuros siempre preparados</strong></div><button type="button" className="overview-link" onClick={()=>setTab('hechizos')}>Consultar Maestría de conjuros</button></>}{input.level>=19&&input.epicBoon&&<><div className="overview-record"><span>Beneficio épico</span><strong>{WIZARD_EPIC_BOONS[input.epicBoon.id]}</strong></div>{input.epicBoon.id==='spell_recall'&&<button type="button" className="overview-link" onClick={()=>setTab('hechizos')}>Tirar Recuperación de conjuros</button>}{sheet.truesightFeet>0&&<div className="overview-record"><span>Visión verdadera</span><strong>{sheet.truesightFeet} pies</strong></div>}</>}</section>}
       spellSlotsContent={<section className="overview-panel panel" aria-label="Espacios de conjuro"><div className="overview-panel-heading"><h3>Espacios de conjuro</h3><span>Rasgo de lanzador</span></div>{[1,2,3,4,5,6,7,8,9].filter(l=>state.magic.slots.maximum[l-1]>0).map(l=><SpellSlotDiamonds key={l} level={l} spent={wizardSlotMarks(state,l)} onToggle={index=>toggleSlot(index,l)}/>)}<div className="overview-quick-actions"><button type="button" onClick={rest}>Descanso largo</button></div><p className="overview-panel-note">Gastar una ranura no lanza el conjuro automáticamente.</p></section>}
@@ -283,8 +269,8 @@ export default function WizardPage(){
        {input.level>=20&&input.signatureSpellIds&&<section className="overview-panel panel"><h3>Conjuros de firma</h3><strong className="overview-spotlight">{2-state.magic.signatureUsed.length}/2</strong><p className="overview-panel-note">Lanzamientos gratuitos de nivel 3 disponibles hasta el próximo descanso corto o largo.</p><button type="button" className="overview-link" onClick={()=>setTab('hechizos')}>Gestionar Conjuros de firma</button></section>}
        <section className="overview-panel panel"><h3>Percepción pasiva</h3><strong className="overview-spotlight">{10+sheet.skillBonuses.perception}</strong><p className="overview-panel-note">10 + Percepción {signed(sheet.skillBonuses.perception)}</p></section>
        <section className="overview-panel panel"><h3>Movimiento y origen</h3><strong className="overview-spotlight">{sheet.speedFeet} <small>pies</small></strong><p className="overview-panel-note">Tamaño {sheet.size==='medium'?'mediano':'pequeño'} · Mago nivel {input.level}</p></section>
-       <section className="overview-panel panel overview-death-panel" aria-label="Salvaciones de muerte"><h3>Salvaciones de muerte</h3><div className="overview-death-markers">{(['successes','failures'] as const).map(kind=><div key={kind} className={`overview-death-track ${kind==='successes'?'is-success':'is-failure'}`}><div className="overview-death-track-heading"><span>{kind==='successes'?'Éxitos':'Fallos'}</span><small>{state.manualDeathMarks?.[kind].filter(Boolean).length??0}/3</small></div><div className="overview-death-marks" role="group" aria-label={kind==='successes'?'Éxitos':'Fallos'}>{([0,1,2] as const).map(index=>{const checked=state.manualDeathMarks?.[kind][index]??false;return <button type="button" key={index} className={`overview-death-mark${checked?' is-marked':''}`} aria-pressed={checked} aria-label={`${kind==='successes'?'Éxito':'Fallo'} ${index+1}`} onClick={()=>toggleDeathMark(kind,index)}><span aria-hidden="true">{checked?(kind==='successes'?'✓':'×'):''}</span></button>;})}</div></div>)}</div><p className="overview-panel-note">Marcadores manuales. No desencadenan reglas automáticas.</p></section>
-       <section className="overview-panel panel"><h3>Inspiración heroica</h3><label className={`wizard-inspiration unified-inspiration${state.heroicInspiration?' is-active':''}`}><input type="checkbox" checked={state.heroicInspiration} onChange={e=>setState(prev=>({...prev,heroicInspiration:e.target.checked}))}/><span className="wizard-star">★</span><span>{state.heroicInspiration?'Disponible':'Sin inspiración'}</span></label><p className="overview-panel-note">Marca para tener inspiración; desmarca al gastarla.</p></section>
+       <SharedDeathSavePanel marks={state.manualDeathMarks} onToggle={toggleDeathMark}/>
+       <SharedInspirationPanel checked={state.heroicInspiration} onChange={checked=>setState(prev=>({...prev,heroicInspiration:checked}))}/>
       </>}
     />}
    </section>
@@ -355,7 +341,7 @@ export default function WizardPage(){
     </fieldset>}
     <p className="muted-note">Rombo marcado = disponible; vacío = gastado. Preparar, aprender o tirar dados no lanza conjuros ni consume ranuras.</p></SharedSpellsLayout></section>
    <section id="sheet-panel-personaje" role="tabpanel" aria-labelledby="sheet-tab-personaje" hidden={tab!=='personaje'} className="sheet-tab-panel"><CharacterProfilePanel key={profileRevision} profile={input.profile??EMPTY_CHARACTER_PROFILE} name={input.name} species={SPECIES_NAMES[input.species]} background={background.name} level={input.level} onChange={profile=>patch({profile})} onEditIdentity={()=>setEditing(true)}/></section>
-   <section id="sheet-panel-companions" role="tabpanel" aria-labelledby="sheet-tab-companions" hidden={tab!=='companions'} className="sheet-tab-panel"><SheetPlaceholder eyebrow="COMPAÑEROS · HOJA COMÚN" title="Compañeros" description="El Mago no tiene todavía compañeros registrados. La pestaña compartida admitirá familiares invocados y otros aliados cuando se integre su gestión."/></section>
+   <section id="sheet-panel-companions" role="tabpanel" aria-labelledby="sheet-tab-companions" hidden={tab!=='companions'} className="sheet-tab-panel"><SharedCompanionsPanel companions={input.companions??[]} onChange={companions=>patch({companions})}/></section>
    <section id="sheet-panel-combate" role="tabpanel" aria-labelledby="sheet-tab-combate" hidden={tab!=='combate'} className="sheet-tab-panel"><SheetPlaceholder eyebrow="COMBATE · DESARROLLO FUTURO" title="Coming Soon" description="La interfaz de combate llegará más adelante. Mientras tanto, realiza tiradas desde Principal y gestiona las ranuras desde Hechizos; los turnos y objetivos siguen en manos de los jugadores." actionLabel="Volver a Principal" onAction={()=>setTab('principal')}/></section>
    <footer className="footer">Hoja compartida · Mago nivel {input.level} · Guardado manual en PostgreSQL.</footer>
   </div>

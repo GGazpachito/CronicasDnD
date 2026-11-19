@@ -6,6 +6,11 @@ import CharacterTabs,{type SheetTab} from '../../components/CharacterTabs';
 import CharacterHeader from '../../components/CharacterHeader';
 import SaveLoadPanel from '../../components/SaveLoadPanel';
 import SharedPrincipalSheet from '../../components/SharedPrincipalSheet';
+import SharedHealthControls from '../../components/SharedHealthControls';
+import SharedInspirationPanel from '../../components/SharedInspirationPanel';
+import SharedDeathSavePanel from '../../components/SharedDeathSavePanel';
+import SharedCompanionsPanel from '../../components/SharedCompanionsPanel';
+import {SHARED_SPELL_RULES,SHARED_CLASS_SPELL_LISTS} from '../../../../../packages/rules-engine/src/shared-spell-catalog';
 import AbilityScoreMethodPicker from '../../components/AbilityScoreMethodPicker';
 import type {AbilityGenerationMethod} from '../../../../../packages/rules-engine/src/ability-generation';
 import type {AbilityScores} from '../../../../../packages/rules-engine/src/abilities';
@@ -55,8 +60,6 @@ export default function WarlockPage(){
  const [editing,setEditing]=useState(true);
  const [mode,setMode]=useState<D20Mode>('normal');
  const [feedback,setFeedback]=useState('');
- const [hpDraft,setHpDraft]=useState('');
- const [tempDraft,setTempDraft]=useState('');
  const [profileRevision,setProfileRevision]=useState(0);
  const calculated=useMemo(()=>{
   try{return {sheet:calculateWarlockOne(warlockInputForPreview(input),state),error:''};}
@@ -130,15 +133,20 @@ export default function WarlockPage(){
    return null;
   }catch(e){return e instanceof Error?e.message:'Movimiento de inventario inválido';}
  }
- function applyHitPoints(kind:'current'|'temporary'){
+ function adjustHp(delta:number,temporary:boolean){
   if(!sheet)return;
-  const raw=kind==='current'?hpDraft:tempDraft;
-  const number=Number(raw);
-  if(raw.trim()===''||!Number.isInteger(number)||number<0||number>(kind==='current'?sheet.maximumHitPoints:10000)){
-   setFeedback('Introduce un valor de PG entero dentro del intervalo permitido.');return;
-  }
-  patchState(kind==='current'?{hitPointsCurrent:number}:{temporaryHitPoints:number});
-  setFeedback('Puntos de golpe registrados de forma manual.');
+  setState(previous=>{
+   if(temporary)return {...previous,temporaryHitPoints:Math.max(0,Math.min(10000,previous.temporaryHitPoints+delta))};
+   if(delta>=0)return {...previous,hitPointsCurrent:Math.min(sheet.maximumHitPoints,previous.hitPointsCurrent+delta)};
+   const absorbed=Math.min(previous.temporaryHitPoints,-delta);
+   return {...previous,temporaryHitPoints:previous.temporaryHitPoints-absorbed,hitPointsCurrent:Math.max(0,previous.hitPointsCurrent+delta+absorbed)};
+  });
+ }
+ function toggleDeathMark(kind:'successes'|'failures',index:number){
+  setState(previous=>{const current=previous.manualDeathMarks??{successes:[false,false,false],failures:[false,false,false]};
+   const next=[...current[kind]] as [boolean,boolean,boolean];next[index]=!next[index];
+   return {...previous,manualDeathMarks:{...current,[kind]:next}};
+  });
  }
  function shortRest(){setState(warlockShortRest);setFeedback('Descanso corto: la ranura de Magia de Pacto se ha recuperado. Los PG no cambian automáticamente.');}
  function longRest(){
@@ -152,7 +160,7 @@ export default function WarlockPage(){
  const tomeCantrips=hasTome&&state.tomePresent?(input.tomeCantripIds??[]).map(id=>warlockSpellRule(id)).filter(x=>x!==undefined):[];
  const tomeRituals=hasTome&&state.tomePresent?(input.tomeRitualIds??[]).map(id=>warlockSpellRule(id)).filter(x=>x!==undefined):[];
  const tomeActive=hasTome&&state.tomePresent;
- const spellRules=[...new Map([...WARLOCK_LEVEL_ONE_CANTRIPS,...WARLOCK_LEVEL_ONE_SPELLS,...tomeCantrips,...tomeRituals].map(spell=>[spell.id,spell])).values()];
+ const spellRules=[...new Map([...SHARED_SPELL_RULES,...tomeCantrips,...tomeRituals].map(spell=>[spell.id,spell])).values()];
  const activeSpellIds=[...new Set([...input.cantripIds,...input.preparedIds,...(tomeActive?input.tomeCantripIds??[]:[]),...(tomeActive?input.tomeRitualIds??[]:[])])];
  const inventory=sheet?.inventory;
  const eligiblePactWeapons=inventory?.items.filter(item=>Object.hasOwn(WEAPONS,item.id)&&WEAPON_STATS[item.id as WeaponId].kind==='melee')??[];
@@ -216,11 +224,11 @@ export default function WarlockPage(){
      trainedSkills={new Set(sheet.skillProficiencies)} trainedSaves={new Set<Ability>(['wisdom','charisma'])}
      initiative={sheet.initiative} armorClass={sheet.armorClass} armorDescription={sheet.armorDescription}
      hitDiceDescription="Dados de golpe: 1d8 · Brujo nivel 1" mode={mode} onModeChange={setMode}
-     hpContent={<div><strong>{state.hitPointsCurrent} / {sheet.maximumHitPoints}</strong><p>Temporales: {state.temporaryHitPoints}</p><div className="overview-quick-actions"><label className="field"><span>PG actuales</span><input type="number" min={0} max={sheet.maximumHitPoints} value={hpDraft} onChange={e=>setHpDraft(e.target.value)} placeholder={String(state.hitPointsCurrent)}/></label><button type="button" onClick={()=>applyHitPoints('current')}>Ajustar PG</button><label className="field"><span>PG temporales</span><input type="number" min={0} value={tempDraft} onChange={e=>setTempDraft(e.target.value)} placeholder={String(state.temporaryHitPoints)}/></label><button type="button" onClick={()=>applyHitPoints('temporary')}>Ajustar temporales</button></div></div>}
+     hpContent={<SharedHealthControls current={state.hitPointsCurrent} temporary={state.temporaryHitPoints} maximum={sheet.maximumHitPoints} onAdjust={adjustHp} onError={setFeedback}/>}
      attacksContent={<><WarlockWeaponAttacks inventory={sheet.inventory} scores={sheet.abilityScores} proficiency={sheet.proficiencyBonus} mode={mode} pactWeaponId={input.pactWeaponId} invocations={input.invocations}/><WarlockEldritchBlast known={input.cantripIds.includes('eldritch_blast')} level={1} spellAttackBonus={sheet.spellAttackBonus} mode={mode}/></>}
-     resourcesContent={<section className="overview-panel panel"><div className="overview-panel-heading"><h3>Recursos de Brujo</h3><span>Nivel 1</span></div><div className="overview-record"><span>Inspiración heroica</span><strong>{state.heroicInspiration?'Disponible':'Usada'}</strong></div><button type="button" className="overview-link" onClick={()=>patchState({heroicInspiration:!state.heroicInspiration})}>Marcar inspiración {state.heroicInspiration?'gastada':'disponible'}</button><p className="overview-panel-note">Invocación: {WARLOCK_INVOCATIONS[invocation].name}. La decisión de activarla corresponde al jugador.</p></section>}
+     resourcesContent={<section className="overview-panel panel"><div className="overview-panel-heading"><h3>Recursos</h3><span>Brujo nivel 1</span></div><div className="overview-record"><span>Invocación sobrenatural</span><strong>{WARLOCK_INVOCATIONS[invocation].name}</strong></div><p className="overview-panel-note">La decisión de activar un rasgo corresponde al jugador.</p></section>}
      spellSlotsContent={<section className="overview-panel panel"><div className="overview-panel-heading"><h3>Magia de Pacto</h3><span>Recuperación corta y larga</span></div><SpellSlotDiamonds level={1} spent={[state.pactSlotSpent]} onToggle={()=>patchState({pactSlotSpent:!state.pactSlotSpent})}/><p className="overview-panel-note">Una ranura de nivel 1. Gastarla no lanza un conjuro automáticamente.</p><div className="overview-quick-actions"><button type="button" onClick={shortRest}>Descanso corto</button><button type="button" onClick={longRest}>Descanso largo</button></div></section>}
-     footerContent={<><section className="overview-panel panel"><h3>Movimiento y origen</h3><strong className="overview-spotlight">{sheet.speedFeet} <small>pies</small></strong><p className="overview-panel-note">Tamaño {sheet.size==='medium'?'mediano':'pequeño'}</p></section><section className="overview-panel panel"><h3>Conjuros</h3><strong className="overview-spotlight">CD {sheet.spellSaveDC}</strong><p className="overview-panel-note">Ataque mágico {signed(sheet.spellAttackBonus)} · Carisma</p><button className="overview-link" type="button" onClick={()=>setTab('hechizos')}>Ver conjuros</button></section></>}
+     footerContent={<><section className="overview-panel panel"><h3>Percepción pasiva</h3><strong className="overview-spotlight">{10+sheet.skillBonuses.perception}</strong><p className="overview-panel-note">10 + Percepción {signed(sheet.skillBonuses.perception)}</p></section><section className="overview-panel panel"><h3>Movimiento y origen</h3><strong className="overview-spotlight">{sheet.speedFeet} <small>pies</small></strong><p className="overview-panel-note">Tamaño {sheet.size==='medium'?'mediano':'pequeño'} · Brujo nivel 1</p></section><SharedDeathSavePanel marks={state.manualDeathMarks} onToggle={toggleDeathMark}/><SharedInspirationPanel checked={state.heroicInspiration} onChange={checked=>patchState({heroicInspiration:checked})}/></>}
      warningContent={feedback?<p className="panel overview-panel-note" role="status">{feedback}</p>:undefined}
     />}
    </section>
@@ -244,7 +252,7 @@ export default function WarlockPage(){
    </section>
    <section id="sheet-panel-hechizos" role="tabpanel" aria-labelledby="sheet-tab-hechizos" hidden={tab!=='hechizos'} className="sheet-tab-panel">
     <SharedSpellsLayout spellClass="Brujo" description="La biblioteca reutiliza las mismas fichas y filtros que Mago y Guerrero.">
-     <SpellLibraryPanel rules={spellRules} classLists={[{id:'warlock',label:'Brujo',spellIds:[...WARLOCK_LEVEL_ONE_CANTRIPS,...WARLOCK_LEVEL_ONE_SPELLS].map(spell=>spell.id)},...(tomeActive?[{id:'tome',label:'Libro de las Sombras',spellIds:[...tomeCantrips,...tomeRituals].map(spell=>spell.id)}]:[])]}
+     <SpellLibraryPanel rules={spellRules} classLists={[...SHARED_CLASS_SPELL_LISTS,...(tomeActive?[{id:'tome',label:'Libro de las Sombras',spellIds:[...tomeCantrips,...tomeRituals].map(spell=>spell.id)}]:[])]}
       selection={{learnedIds:activeSpellIds,preparedIds:activeSpellIds}}
       limits={{cantrips:2+(tomeActive?3:0),learnedMinimum:2,prepared:2+(tomeActive?2:0)}}
       characterLevel={1} spellAttackBonus={sheet?.spellAttackBonus??2} spellSaveDC={sheet?.spellSaveDC??10} mode={mode}
@@ -262,7 +270,7 @@ export default function WarlockPage(){
     <CharacterProfilePanel key={profileRevision} profile={input.profile??EMPTY_CHARACTER_PROFILE} name={input.name} species={SPECIES_NAMES[input.species]} background={background.name} level={1} onChange={profile=>patch({profile})} onEditIdentity={()=>setEditing(true)}/>
    </section>
    <section id="sheet-panel-companions" role="tabpanel" aria-labelledby="sheet-tab-companions" hidden={tab!=='companions'} className="sheet-tab-panel">
-    <WarlockCompanionsPanel hasChain={hasChain} state={state} onChange={patchState}/>
+    <SharedCompanionsPanel companions={input.companions??[]} onChange={companions=>patch({companions})}><WarlockCompanionsPanel hasChain={hasChain} state={state} onChange={patchState}/></SharedCompanionsPanel>
    </section>
    <section id="sheet-panel-combate" role="tabpanel" aria-labelledby="sheet-tab-combate" hidden={tab!=='combate'} className="sheet-tab-panel">
     <SheetPlaceholder eyebrow="COMBATE · DESARROLLO FUTURO" title="Coming Soon" description="Combate permanece manual. Puedes usar los dados de ataques, conjuros y Descarga sobrenatural desde Principal." actionLabel="Volver a Principal" onAction={()=>setTab('principal')}/>

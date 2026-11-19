@@ -4,6 +4,7 @@
  */
 import {ABILITIES,abilityModifiers,type Ability,type AbilityScores} from './abilities';
 import {validateGeneratedAbilities,type AbilityGenerationMethod} from './ability-generation';
+import {validateCompanionSheets,type CompanionSheet} from './companions';
 import {SKILLS,calculateSkillBonuses,calculateSavingThrows,type Skill} from './proficiencies';
 import {BACKGROUNDS,SPECIES_NAMES,type BackgroundId,type SpeciesId,type ElfLineage} from './guided';
 import {EMPTY_CHARACTER_PROFILE,validateCharacterProfile,type CharacterProfile} from './character-profile';
@@ -100,6 +101,7 @@ export type GuidedWizardInput=Readonly<{
  background:BackgroundId;species:SpeciesId;
  assignedAbilities:AbilityScores;
  abilityGenerationMethod?:AbilityGenerationMethod;
+ companions?:readonly CompanionSheet[];
  increaseMode:'two_plus_one'|'three_ones';plusTwoAbility:Ability;plusOneAbility:Ability;
  wizardSkills:readonly WizardSkill[];humanSkill?:Skill;humanFeat?:'alert'|'tough';
  humanSize?:'small'|'medium';elfLineage?:ElfLineage;
@@ -181,6 +183,7 @@ export function calculateGuidedWizard(input:GuidedWizardInput):WizardLevelOneVie
  const bg=BACKGROUNDS[input.background];if(!bg)throw new RangeError('Trasfondo desconocido');
  if(!Object.prototype.hasOwnProperty.call(SPECIES_NAMES,input.species))throw new RangeError('Especie desconocida');
  const assigned=validateGeneratedAbilities(input.assignedAbilities,input.abilityGenerationMethod??'standard_array');
+ if(input.companions!==undefined)validateCompanionSheets(input.companions);
  const scores={...assigned};const allowed=bg.abilities as readonly Ability[];
  if(input.increaseMode==='two_plus_one'){
   if(!allowed.includes(input.plusTwoAbility)||!allowed.includes(input.plusOneAbility)||input.plusTwoAbility===input.plusOneAbility)throw new RangeError('Selecciona dos características diferentes permitidas por el trasfondo');
@@ -346,7 +349,7 @@ export function validateWizardCharacterSnapshot(raw:unknown):WizardCharacterSnap
  if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new RangeError('Guardado de Mago inválido');
  const value=raw as Record<string,unknown>;
  if(value.schemaVersion!==3||value.ruleset!=='dnd-2024'||Object.keys(value).some(k=>!['schemaVersion','ruleset','input','wizardState'].includes(k)))throw new RangeError('Versión o estructura de Mago incorrectas');
- const permitted=['abilityGenerationMethod','spellSelection','scholarSkill','subclass','evokerBonusSpellIds','level4Improvement','evokerLevelThreeSpellId','evokerLevelFourSpellId','level8Improvement','level12Improvement','level16Improvement','evokerLevelFiveSpellId','evokerLevelSixSpellId','evokerLevelSevenSpellId','evokerLevelEightSpellId','evokerLevelNineSpellId','spellMasteryIds','epicBoon','signatureSpellIds','classId','level','name','profile','background','species','assignedAbilities','increaseMode','plusTwoAbility','plusOneAbility','wizardSkills','humanSkill','humanFeat','humanSize','elfLineage','equipmentChoice','backgroundEquipment','inventoryActions','cantripIds','spellbookIds','preparedIds'];
+ const permitted=['companions','abilityGenerationMethod','spellSelection','scholarSkill','subclass','evokerBonusSpellIds','level4Improvement','evokerLevelThreeSpellId','evokerLevelFourSpellId','level8Improvement','level12Improvement','level16Improvement','evokerLevelFiveSpellId','evokerLevelSixSpellId','evokerLevelSevenSpellId','evokerLevelEightSpellId','evokerLevelNineSpellId','spellMasteryIds','epicBoon','signatureSpellIds','classId','level','name','profile','background','species','assignedAbilities','increaseMode','plusTwoAbility','plusOneAbility','wizardSkills','humanSkill','humanFeat','humanSize','elfLineage','equipmentChoice','backgroundEquipment','inventoryActions','cantripIds','spellbookIds','preparedIds'];
  if(!value.input||typeof value.input!=='object'||Array.isArray(value.input)||Object.keys(value.input as Record<string,unknown>).some(key=>!permitted.includes(key)))throw new RangeError('La creación de Mago incluye campos desconocidos');
  let clean:GuidedWizardInput;
  try{const json=JSON.stringify(value.input);if(json.length>120_000)throw new Error();clean=JSON.parse(json) as GuidedWizardInput;}catch{throw new RangeError('Datos de Mago demasiado grandes o no serializables');}
