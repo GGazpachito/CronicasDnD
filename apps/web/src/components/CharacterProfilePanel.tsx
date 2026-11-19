@@ -12,6 +12,7 @@ type Props = {
   name: string;
   species: string;
   background: string;
+  characterClass: 'Guerrero' | 'Mago' | 'Brujo';
   level: number;
   onChange: (profile: CharacterProfile) => void;
   onEditIdentity: () => void;
@@ -117,7 +118,7 @@ function DisplayText({value,empty='Sin completar todavía.'}: {value:string;empt
   return <p className={`character-profile-readonly${value.trim()?'':' is-empty'}`}>{value.trim()||empty}</p>;
 }
 
-export default function CharacterProfilePanel({profile,name,species,background,level,onChange,onEditIdentity}:Props) {
+export default function CharacterProfilePanel({profile,name,species,background,characterClass,level,onChange,onEditIdentity}:Props) {
   const inputId = useId();
   const uploadSequence = useRef(0);
   const [uploading,setUploading] = useState(false);
@@ -292,7 +293,7 @@ export default function CharacterProfilePanel({profile,name,species,background,l
           <div className="character-profile-card-heading"><div><span className="eyebrow">HOJA</span><h3 id="profile-identity-title">Identidad</h3></div></div>
           <dl className="character-profile-identity">
             <div><dt>Nombre</dt><dd>{name.trim()||'Sin nombre'}</dd></div>
-            <div><dt>Clase y nivel</dt><dd>Guerrero {level}</dd></div>
+            <div><dt>Clase y nivel</dt><dd>{characterClass} {level}</dd></div>
             <div><dt>Especie</dt><dd>{species}</dd></div>
             <div><dt>Trasfondo</dt><dd>{background}</dd></div>
           </dl>

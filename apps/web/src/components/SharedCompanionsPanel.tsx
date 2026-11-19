@@ -16,10 +16,11 @@ export default function SharedCompanionsPanel({companions,onChange,children}:Pro
  const [creating,setCreating]=useState(false);
  const [error,setError]=useState('');
  const [lastRoll,setLastRoll]=useState('');
+ const [pendingDeleteId,setPendingDeleteId]=useState<string|null>(null);
  const selected=companions.find(c=>c.id===selectedId)??companions[0];
  const editing=draft!==null;
- function startCreate(){setCreating(true);setDraft({...EMPTY_COMPANION,id:id()});setError('');setLastRoll('');}
- function startEdit(){if(!selected)return;setCreating(false);setDraft({...selected,abilities:{...selected.abilities},attacks:selected.attacks.map(a=>({...a}))});setError('');setLastRoll('');}
+ function startCreate(){setPendingDeleteId(null);setCreating(true);setDraft({...EMPTY_COMPANION,id:id()});setError('');setLastRoll('');}
+ function startEdit(){if(!selected)return;setPendingDeleteId(null);setCreating(false);setDraft({...selected,abilities:{...selected.abilities},attacks:selected.attacks.map(a=>({...a}))});setError('');setLastRoll('');}
  function cancel(){setDraft(null);setCreating(false);setError('');}
  function patch(values:Partial<CompanionSheet>){setDraft(prev=>prev?{...prev,...values}:prev);}
  function patchAttack(attackId:string,values:Partial<CompanionAttack>){if(!draft)return;patch({attacks:draft.attacks.map(attack=>attack.id===attackId?{...attack,...values}:attack)});}
@@ -28,6 +29,13 @@ export default function SharedCompanionsPanel({companions,onChange,children}:Pro
   const next=creating?[...companions,draft]:companions.map(c=>c.id===draft.id?draft:c);
   try{validateCompanionSheets(next);onChange(next);setSelectedId(draft.id);cancel();}
   catch(reason){setError(reason instanceof Error?reason.message:'Revisa los datos de la ficha');}
+ }
+ function removeSelected(){
+  if(!selected||pendingDeleteId!==selected.id)return;
+  const next=companions.filter(companion=>companion.id!==selected.id);
+  try{
+   validateCompanionSheets(next);onChange(next);setSelectedId(next[0]?.id??'');setPendingDeleteId(null);setLastRoll('');setError('');
+  }catch(reason){setError(reason instanceof Error?reason.message:'No se pudo eliminar el compañero');}
  }
  function roll(label:string,modifier:number){
   try{const result=rollD20(modifier,'normal','normal');setLastRoll(`${label}: d20 ${result.chosen} ${signed(modifier)} = ${result.total}`);}
@@ -40,9 +48,10 @@ export default function SharedCompanionsPanel({companions,onChange,children}:Pro
    <span className="eyebrow">COMPAÑEROS · ESTRUCTURA COMÚN</span><h2>Mis compañeros</h2>
    <p className="muted-note">Registra hasta 20 compañeros manuales, con su ficha editable y guardable. Son independientes de familiares, invocaciones u otros aliados concedidos por rasgos; los rasgos especiales se muestran más abajo.</p>
    <div className="shared-companion-toolbar">
-    <label className="field"><span>Compañero visible</span><select aria-label="Seleccionar compañero" disabled={editing||companions.length===0} value={selected?.id??''} onChange={event=>{setSelectedId(event.target.value);setLastRoll('');}}>{companions.length===0&&<option value="">Sin compañeros</option>}{companions.map(companion=><option key={companion.id} value={companion.id}>{companion.name}</option>)}</select></label>
-    <div className="overview-quick-actions"><button type="button" disabled={editing||companions.length>=20} onClick={startCreate}>+ Crear compañero</button><button type="button" disabled={editing||!selected} onClick={startEdit}>Editar ficha</button></div>
+    <label className="field"><span>Compañero visible</span><select aria-label="Seleccionar compañero" disabled={editing||companions.length===0} value={selected?.id??''} onChange={event=>{setSelectedId(event.target.value);setLastRoll('');setPendingDeleteId(null);}}>{companions.length===0&&<option value="">Sin compañeros</option>}{companions.map(companion=><option key={companion.id} value={companion.id}>{companion.name}</option>)}</select></label>
+    <div className="overview-quick-actions"><button type="button" disabled={editing||companions.length>=20} onClick={startCreate}>+ Crear compañero</button><button type="button" disabled={editing||!selected} onClick={startEdit}>Editar ficha</button><button type="button" className="danger-action" disabled={editing||!selected} onClick={()=>setPendingDeleteId(selected?.id??null)}>Eliminar compañero</button></div>
    </div>
+   {!editing&&selected&&pendingDeleteId===selected.id&&<div className="shared-companion-delete-confirm" role="group" aria-label="Confirmar eliminación del compañero"><p>¿Eliminar a <strong>{selected.name}</strong> de este personaje?</p><div className="overview-quick-actions"><button type="button" className="danger-action" onClick={removeSelected}>Sí, eliminar</button><button type="button" onClick={()=>setPendingDeleteId(null)}>Cancelar</button></div><small>Después, pulsa «Guardar cambios» en la hoja del personaje para conservar esta eliminación.</small></div>}
    {editing&&draft&&<div className="shared-companion-editor" aria-label={creating?'Crear compañero':'Editar compañero'}>
     <h3>{creating?'Crear nuevo compañero':'Editar ficha de '+draft.name}</h3>
     <div className="shared-companion-fields">{textField('Nombre','name')}{textField('Especie / tipo de criatura','creatureType')}{textField('Tamaño','size')}{textField('Velocidad','speed')}{textField('Valor de desafío','challengeRating')}

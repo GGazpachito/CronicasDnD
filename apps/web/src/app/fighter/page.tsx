@@ -573,7 +573,7 @@ export default function Home(){
       <section id="sheet-panel-personaje" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-personaje" hidden={activeTab!=='personaje'}>
         <CharacterProfilePanel key={profileLoadRevision} profile={profile} onChange={setProfile} name={name}
           species={SPECIES_NAMES[species]}
-          background={bg.name} level={level} onEditIdentity={()=>openEditorAt(0)}/>
+          background={bg.name} characterClass="Guerrero" level={level} onEditIdentity={()=>openEditorAt(0)}/>
       </section>
       <section id="sheet-panel-companions" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-companions" hidden={activeTab!=='companions'}>
         <SharedCompanionsPanel companions={companions} onChange={setCompanions}/>

@@ -22,6 +22,7 @@ import SpellSlotDiamonds from '../../components/SpellSlotDiamonds';
 import SpellLibraryPanel from '../../components/SpellLibraryPanel';
 import SharedSpellsLayout from '../../components/SharedSpellsLayout';
 import WarlockCompanionsPanel from '../../components/WarlockCompanionsPanel';
+import WarlockLevelUpWizard from '../../components/WarlockLevelUpWizard';
 import {WarlockWeaponAttacks,WarlockEldritchBlast} from '../../components/WarlockAttacks';
 import SheetPlaceholder from '../../components/SheetPlaceholder';
 import {type Ability} from '../../../../../packages/rules-engine/src/abilities';
@@ -35,8 +36,8 @@ import {WARLOCK_LEVEL_ONE_CANTRIPS,WARLOCK_LEVEL_ONE_SPELLS,TOME_CANTRIP_OPTIONS
 import {type InventoryAction} from '../../../../../packages/rules-engine/src/inventory';
 import {type D20Mode} from '../../../../../packages/rules-engine/src/d20';
 import {
- WARLOCK_INVOCATIONS,WARLOCK_SKILL_OPTIONS,
- calculateWarlockOne,initialWarlockOneState,makeWarlockCharacterSnapshot,warlockShortRest,warlockLongRest,
+ WARLOCK_INVOCATIONS,WARLOCK_LEVEL_ONE_INVOCATIONS,WARLOCK_SKILL_OPTIONS,
+ calculateWarlockOne,initialWarlockOneState,makeWarlockCharacterSnapshot,warlockShortRest,warlockLongRest,warlockMagicalCunning,warlockPactSlots,toggleWarlockPactSlot,
  validateWarlockCharacterSnapshot,warlockInputForPreview,
  type GuidedWarlockInput,type WarlockOneState,type WarlockInvocationId,
 } from '../../../../../packages/rules-engine/src/warlock';
@@ -61,6 +62,7 @@ export default function WarlockPage(){
  const [mode,setMode]=useState<D20Mode>('normal');
  const [feedback,setFeedback]=useState('');
  const [profileRevision,setProfileRevision]=useState(0);
+ const [levelUpOpen,setLevelUpOpen]=useState(false);
  const calculated=useMemo(()=>{
   try{return {sheet:calculateWarlockOne(warlockInputForPreview(input),state),error:''};}
   catch(e){return {sheet:null,error:e instanceof Error?e.message:'Elecciones no válidas'};}
@@ -72,9 +74,9 @@ export default function WarlockPage(){
  },[input,state,sheet]);
  const background=BACKGROUNDS[input.background];
  const invocation=input.invocations[0];
- const hasBlade=invocation==='pact_of_blade';
- const hasChain=invocation==='pact_of_chain';
- const hasTome=invocation==='pact_of_tome';
+ const hasBlade=input.invocations.includes('pact_of_blade');
+ const hasChain=input.invocations.includes('pact_of_chain');
+ const hasTome=input.invocations.includes('pact_of_tome');
  function patch(changes:Partial<GuidedWarlockInput>){setInput(prev=>({...prev,...changes}));}
  function updateAbilityScores(abilityGenerationMethod:AbilityGenerationMethod,assignedAbilities:AbilityScores){
   const next={...input,abilityGenerationMethod,assignedAbilities};
@@ -104,6 +106,7 @@ export default function WarlockPage(){
   patchState({heroicInspiration:species==='human'});
  }
  function swapInvocation(id:WarlockInvocationId){
+  if(input.level!==1)return;
   setInput(prev=>{
    const {pactWeaponId,tomeCantripIds,tomeRitualIds,...rest}=prev;
    void pactWeaponId;void tomeCantripIds;void tomeRitualIds;
@@ -113,6 +116,7 @@ export default function WarlockPage(){
   patchState({mageArmorActive:false,tomePresent:false,familiarForm:null,familiarName:''});
  }
  function toggleSpell(field:'cantripIds'|'preparedIds',id:string){
+  if(input.level!==1)return;
   setInput(prev=>{
    const options=prev[field];
    const next=options.includes(id)?options.filter(value=>value!==id):options.length<2?[...options,id]:options;
@@ -148,14 +152,19 @@ export default function WarlockPage(){
    return {...previous,manualDeathMarks:{...current,[kind]:next}};
   });
  }
- function shortRest(){setState(warlockShortRest);setFeedback('Descanso corto: la ranura de Magia de Pacto se ha recuperado. Los PG no cambian automáticamente.');}
+ function shortRest(){setState(warlockShortRest);setFeedback('Descanso corto: las ranuras de Magia de Pacto se recuperan. Astucia mágica no se recarga hasta el descanso largo. Los PG no cambian automáticamente.');}
  function longRest(){
   if(!sheet)return;
   setState(prev=>warlockLongRest(prev,sheet.maximumHitPoints,input.species==='human'));
-  setFeedback('Descanso largo: ranura y PG recuperados. Los efectos temporales de duración limitada deben revisarse.');
+  setFeedback('Descanso largo: ranuras, Astucia mágica y PG recuperados. Revisa los efectos temporales.');
  }
+ function useMagicalCunning(){
+  try{setState(warlockMagicalCunning(state,input.level));setFeedback('Astucia mágica: tras un rito de un minuto recuperas una ranura de pacto gastada. Uso consumido hasta el próximo descanso largo.');}
+  catch(reason){setFeedback(reason instanceof Error?reason.message:'Astucia mágica no disponible');}
+ }
+ function togglePactSlot(index:number){setState(previous=>toggleWarlockPactSlot(previous,input.level,index));}
  function restore(saved:ReturnType<typeof makeWarlockCharacterSnapshot>){
-  setInput(saved.input);setState(saved.warlockState);setEditing(false);setTab('principal');setFeedback('');setProfileRevision(n=>n+1);
+  setInput(saved.input);setState(saved.warlockState);setEditing(false);setLevelUpOpen(false);setTab('principal');setFeedback('');setProfileRevision(n=>n+1);
  }
  const tomeCantrips=hasTome&&state.tomePresent?(input.tomeCantripIds??[]).map(id=>warlockSpellRule(id)).filter(x=>x!==undefined):[];
  const tomeRituals=hasTome&&state.tomePresent?(input.tomeRitualIds??[]).map(id=>warlockSpellRule(id)).filter(x=>x!==undefined):[];
@@ -164,16 +173,20 @@ export default function WarlockPage(){
  const activeSpellIds=[...new Set([...input.cantripIds,...input.preparedIds,...(tomeActive?input.tomeCantripIds??[]:[]),...(tomeActive?input.tomeRitualIds??[]:[])])];
  const inventory=sheet?.inventory;
  const eligiblePactWeapons=inventory?.items.filter(item=>Object.hasOwn(WEAPONS,item.id)&&WEAPON_STATS[item.id as WeaponId].kind==='melee')??[];
+ const pactSlots=warlockPactSlots(state,input.level);
+ const pactActions=<div className="overview-quick-actions"><button type="button" onClick={shortRest}>Descanso corto</button><button type="button" onClick={longRest}>Descanso largo</button>{input.level>=2&&<button type="button" disabled={Boolean(state.magicalCunningUsed)||pactSlots.every(spent=>!spent)} onClick={useMagicalCunning}>Astucia mágica · {state.magicalCunningUsed?'usada':'1 uso'}</button>}</div>;
 
  return <main className="app-shell wizard-page">
   <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Brujo · D&D 2024</span></div></div><Link href="/" className="wizard-class-link">Menú de personajes</Link></header>
   <div className="content">
-   <p className="sheet-release-note">CLASE · BRUJO NIVEL 1 · PHB 2024</p>
-   <CharacterHeader name={input.name} portraitDataUrl={input.profile?.portraitDataUrl} level={1} background={background.name} species={SPECIES_NAMES[input.species]} className="Brujo" valid={Boolean(snapshot)} onEdit={()=>setEditing(true)}/>
-   <p className="wizard-progression-hint">Patrón Infernal previsto para el nivel 3. Próximo paso: nivel 2 con Astucia mágica, nuevas invocaciones y sustitución guiada en la ventana de subida de nivel.</p>
+   <p className="sheet-release-note">CLASE · BRUJO NIVEL {input.level} · PHB 2024</p>
+   <CharacterHeader name={input.name} portraitDataUrl={input.profile?.portraitDataUrl} level={input.level} background={background.name} species={SPECIES_NAMES[input.species]} className="Brujo" valid={Boolean(snapshot)} onEdit={()=>setEditing(true)}/>
+   <p className="wizard-progression-hint">{input.level===1?'Siguiente desbloqueo: Astucia mágica, nuevas invocaciones y segunda ranura de Magia de Pacto.':'Nivel 2 completado. La subclase Patrón Infernal comienza en nivel 3; todavía no concede sus rasgos.'}</p>
+   {input.level===1&&<div className="wizard-level-controls"><button type="button" disabled={!snapshot} onClick={()=>{setLevelUpOpen(true);setEditing(false);}}>↑ Subir al nivel 2</button><span>Elige invocaciones y conjuros en la ventana de subida.</span></div>}
+   {levelUpOpen&&<div className="warlock-level-up-overlay"><WarlockLevelUpWizard input={input} state={state} onAdvance={(nextInput,nextState)=>{setInput(nextInput);setState(nextState);setLevelUpOpen(false);setEditing(false);setFeedback('¡Brujo nivel 2! Astucia mágica disponible y ranuras ampliadas. Guarda los cambios para conservar el progreso.');}} onCancel={()=>setLevelUpOpen(false)}/></div>}
    <SaveLoadPanel characterClass="warlock" snapshot={snapshot} validate={validateWarlockCharacterSnapshot} onLoad={restore} normalize={saved=>makeWarlockCharacterSnapshot(saved.input,saved.warlockState)}/>
    {editing&&<section className="wizard-editor panel" aria-label="Creación de Brujo">
-    <div className="panel-heading"><div><span className="eyebrow">CREACIÓN · NIVEL 1</span><h2>Opciones de Brujo</h2><p>Selecciona origen, Carisma, invocación y dos conjuros preparados. No necesitas libro de conjuros.</p></div></div>
+    <div className="panel-heading"><div><span className="eyebrow">PERSONAJE · NIVEL {input.level}</span><h2>Opciones de Brujo</h2><p>{input.level===1?'Selecciona origen, Carisma, invocación y dos conjuros preparados. No necesitas libro de conjuros.':'Identidad, origen, equipo y ajustes del personaje. Las invocaciones y los conjuros se escogieron en la subida de nivel.'}</p></div></div>
     <div className="wizard-editor-grid">
      <div>
       <label className="field"><span>Nombre</span><input maxLength={120} value={input.name} onChange={e=>patch({name:e.target.value})}/></label>
@@ -197,9 +210,9 @@ export default function WarlockPage(){
       {input.increaseMode==='two_plus_one'&&<div className="wizard-score-grid"><label className="field"><span>+2</span><select value={input.plusTwoAbility} onChange={e=>patch({plusTwoAbility:e.target.value as Ability})}>{picker(background.abilities as readonly Ability[],a=>ABILITY_NAMES[a])}</select></label><label className="field"><span>+1</span><select value={input.plusOneAbility} onChange={e=>patch({plusOneAbility:e.target.value as Ability})}>{picker(background.abilities as readonly Ability[],a=>ABILITY_NAMES[a])}</select></label></div>}
       <div className="section-label"><h3>Competencias de Brujo</h3><span>Elige dos</span></div>
       {[0,1].map(index=><label className="field" key={index}><span>Habilidad {index+1}</span><select value={input.warlockSkills[index]} onChange={e=>patch({warlockSkills:input.warlockSkills.map((skill,i)=>i===index?e.target.value as typeof skill:skill)})}>{picker(WARLOCK_SKILL_OPTIONS.filter(s=>!(background.skills as readonly string[]).includes(s)),s=>SKILL_NAMES[s])}</select></label>)}
-      <div className="section-label"><h3>Invocación sobrenatural</h3><span>1 al nivel 1</span></div>
-      <label className="field"><span>Invocación conocida</span><select value={invocation} onChange={e=>swapInvocation(e.target.value as WarlockInvocationId)}>{picker(Object.keys(WARLOCK_INVOCATIONS) as WarlockInvocationId[],id=>WARLOCK_INVOCATIONS[id].name)}</select></label>
-      <p className="muted-note">{WARLOCK_INVOCATIONS[invocation].summary}</p>
+      <div className="section-label"><h3>Invocaciones sobrenaturales</h3><span>{input.invocations.length} de {input.level===1?1:3}</span></div>
+      {input.level===1?<label className="field"><span>Invocación conocida</span><select value={invocation} onChange={e=>swapInvocation(e.target.value as WarlockInvocationId)}>{picker(WARLOCK_LEVEL_ONE_INVOCATIONS,id=>WARLOCK_INVOCATIONS[id].name)}</select></label>:<p className="muted-note">{input.invocations.map(id=>WARLOCK_INVOCATIONS[id].name).join(' · ')}. Las sustituciones reglamentarias se realizan al subir de nivel.</p>}
+      {input.level===1&&<p className="muted-note">{WARLOCK_INVOCATIONS[invocation].summary}</p>}
       {hasTome&&<><p className="muted-note">El libro permite elegir tres trucos y dos rituales. En esta fase se ofrecen opciones del catálogo compartido ya disponible; se ampliará a otras listas.</p>
        <h4>Trucos del Tomo ({input.tomeCantripIds?.length??0}/3)</h4><div className="wizard-spell-picker">{TOME_CANTRIP_OPTIONS.map(s=><label className="wizard-spell-option" key={s.id}><input type="checkbox" checked={input.tomeCantripIds?.includes(s.id)??false} onChange={()=>toggleTome('tomeCantripIds',s.id,3)}/>{s.name}</label>)}</div>
        <h4>Rituales del Tomo ({input.tomeRitualIds?.length??0}/2)</h4><div className="wizard-spell-picker">{TOME_RITUAL_OPTIONS.filter(s=>!input.preparedIds.includes(s.id)).map(s=><label className="wizard-spell-option" key={s.id}><input type="checkbox" checked={input.tomeRitualIds?.includes(s.id)??false} onChange={()=>toggleTome('tomeRitualIds',s.id,2)}/>{s.name}</label>)}</div>
@@ -208,8 +221,8 @@ export default function WarlockPage(){
     </div>
     <div className="divider"/>
     <div className="wizard-editor-grid">
-     <div><h3>Trucos ({input.cantripIds.length}/2)</h3><div className="wizard-spell-picker">{WARLOCK_LEVEL_ONE_CANTRIPS.map(spell=><label className="wizard-spell-option" key={spell.id}><input type="checkbox" checked={input.cantripIds.includes(spell.id)} onChange={()=>toggleSpell('cantripIds',spell.id)}/>{spell.name}</label>)}</div></div>
-     <div><h3>Conjuros preparados ({input.preparedIds.length}/2)</h3><div className="wizard-spell-picker">{WARLOCK_LEVEL_ONE_SPELLS.map(spell=><label className="wizard-spell-option" key={spell.id}><input type="checkbox" checked={input.preparedIds.includes(spell.id)} onChange={()=>toggleSpell('preparedIds',spell.id)}/>{spell.name}</label>)}</div></div>
+     <div><h3>Trucos ({input.cantripIds.length}/2)</h3><div className="wizard-spell-picker">{WARLOCK_LEVEL_ONE_CANTRIPS.map(spell=><label className="wizard-spell-option" key={spell.id}><input type="checkbox" disabled={input.level>=2} checked={input.cantripIds.includes(spell.id)} onChange={()=>toggleSpell('cantripIds',spell.id)}/>{spell.name}</label>)}</div></div>
+     <div><h3>Conjuros preparados ({input.preparedIds.length}/{input.level===1?2:3})</h3><div className="wizard-spell-picker">{WARLOCK_LEVEL_ONE_SPELLS.map(spell=><label className="wizard-spell-option" key={spell.id}><input type="checkbox" disabled={input.level>=2} checked={input.preparedIds.includes(spell.id)} onChange={()=>toggleSpell('preparedIds',spell.id)}/>{spell.name}</label>)}</div></div>
     </div>
     <div className="overview-quick-actions"><button type="button" onClick={()=>setEditing(false)}>Cerrar editor</button></div>
     {calculated.error&&<p role="alert" className="error">{calculated.error}</p>}
@@ -223,24 +236,26 @@ export default function WarlockPage(){
      skillBonuses={sheet.skillBonuses} savingThrowBonuses={sheet.savingThrowBonuses}
      trainedSkills={new Set(sheet.skillProficiencies)} trainedSaves={new Set<Ability>(['wisdom','charisma'])}
      initiative={sheet.initiative} armorClass={sheet.armorClass} armorDescription={sheet.armorDescription}
-     hitDiceDescription="Dados de golpe: 1d8 · Brujo nivel 1" mode={mode} onModeChange={setMode}
+     hitDiceDescription={`Dados de golpe: ${input.level}d8 · Brujo nivel ${input.level}`} mode={mode} onModeChange={setMode}
      hpContent={<SharedHealthControls current={state.hitPointsCurrent} temporary={state.temporaryHitPoints} maximum={sheet.maximumHitPoints} onAdjust={adjustHp} onError={setFeedback}/>}
-     attacksContent={<><WarlockWeaponAttacks inventory={sheet.inventory} scores={sheet.abilityScores} proficiency={sheet.proficiencyBonus} mode={mode} pactWeaponId={input.pactWeaponId} invocations={input.invocations}/><WarlockEldritchBlast known={input.cantripIds.includes('eldritch_blast')} level={1} spellAttackBonus={sheet.spellAttackBonus} mode={mode}/></>}
-     resourcesContent={<section className="overview-panel panel"><div className="overview-panel-heading"><h3>Recursos</h3><span>Brujo nivel 1</span></div><div className="overview-record"><span>Invocación sobrenatural</span><strong>{WARLOCK_INVOCATIONS[invocation].name}</strong></div><p className="overview-panel-note">La decisión de activar un rasgo corresponde al jugador.</p></section>}
-     spellSlotsContent={<section className="overview-panel panel"><div className="overview-panel-heading"><h3>Magia de Pacto</h3><span>Recuperación corta y larga</span></div><SpellSlotDiamonds level={1} spent={[state.pactSlotSpent]} onToggle={()=>patchState({pactSlotSpent:!state.pactSlotSpent})}/><p className="overview-panel-note">Una ranura de nivel 1. Gastarla no lanza un conjuro automáticamente.</p><div className="overview-quick-actions"><button type="button" onClick={shortRest}>Descanso corto</button><button type="button" onClick={longRest}>Descanso largo</button></div></section>}
-     footerContent={<><section className="overview-panel panel"><h3>Percepción pasiva</h3><strong className="overview-spotlight">{10+sheet.skillBonuses.perception}</strong><p className="overview-panel-note">10 + Percepción {signed(sheet.skillBonuses.perception)}</p></section><section className="overview-panel panel"><h3>Movimiento y origen</h3><strong className="overview-spotlight">{sheet.speedFeet} <small>pies</small></strong><p className="overview-panel-note">Tamaño {sheet.size==='medium'?'mediano':'pequeño'} · Brujo nivel 1</p></section><SharedDeathSavePanel marks={state.manualDeathMarks} onToggle={toggleDeathMark}/><SharedInspirationPanel checked={state.heroicInspiration} onChange={checked=>patchState({heroicInspiration:checked})}/></>}
+     attacksContent={<><WarlockWeaponAttacks inventory={sheet.inventory} scores={sheet.abilityScores} proficiency={sheet.proficiencyBonus} mode={mode} pactWeaponId={input.pactWeaponId} invocations={input.invocations}/><WarlockEldritchBlast known={input.cantripIds.includes('eldritch_blast')} level={input.level} spellAttackBonus={sheet.spellAttackBonus} charismaModifier={sheet.abilityModifiers.charisma} invocations={input.invocations} mode={mode}/></>}
+     resourcesContent={<section className="overview-panel panel"><div className="overview-panel-heading"><h3>Recursos</h3><span>Brujo nivel {input.level}</span></div>{input.invocations.map(id=><div key={id} className="overview-record"><span>Invocación sobrenatural</span><strong>{WARLOCK_INVOCATIONS[id].name}</strong></div>)}{input.level>=2&&<div className="overview-record"><span>Astucia mágica</span><strong>{state.magicalCunningUsed?'Usada · 0/1':'Disponible · 1/1'}</strong></div>}<p className="overview-panel-note">La decisión de activar un rasgo corresponde al jugador.</p></section>}
+     spellSlotsContent={<section className="overview-panel panel"><div className="overview-panel-heading"><h3>Magia de Pacto</h3><span>Recuperación corta y larga</span></div><SpellSlotDiamonds level={1} spent={pactSlots} onToggle={togglePactSlot}/><p className="overview-panel-note">{pactSlots.length} ranura{pactSlots.length===1?'':'s'} de nivel 1. Gastarlas no lanza automáticamente un conjuro.</p>{pactActions}</section>}
+     footerContent={<><section className="overview-panel panel"><h3>Percepción pasiva</h3><strong className="overview-spotlight">{10+sheet.skillBonuses.perception}</strong><p className="overview-panel-note">10 + Percepción {signed(sheet.skillBonuses.perception)}</p></section><section className="overview-panel panel"><h3>Movimiento y origen</h3><strong className="overview-spotlight">{sheet.speedFeet} <small>pies</small></strong><p className="overview-panel-note">Tamaño {sheet.size==='medium'?'mediano':'pequeño'} · Brujo nivel {input.level}</p></section><SharedDeathSavePanel marks={state.manualDeathMarks} onToggle={toggleDeathMark}/><SharedInspirationPanel checked={state.heroicInspiration} onChange={checked=>patchState({heroicInspiration:checked})}/></>}
      warningContent={feedback?<p className="panel overview-panel-note" role="status">{feedback}</p>:undefined}
     />}
    </section>
    <section id="sheet-panel-rasgos" role="tabpanel" aria-labelledby="sheet-tab-rasgos" hidden={tab!=='rasgos'} className="sheet-tab-panel">
     <TraitsPanel collection={sheet?collectWarlockTraits(input,sheet):undefined} error={calculated.error} onEdit={()=>setEditing(true)}/>
     <div className="warlock-special-traits">
-     <section className="panel wizard-module"><h3>Opciones específicas de Brujo · {WARLOCK_INVOCATIONS[invocation].name}</h3>
+     <section className="panel wizard-module"><h3>Opciones específicas de Brujo</h3>
       {hasBlade&&<div className="wizard-module"><h4>Arma del Pacto de la Hoja</h4><p className="muted-note">Elige un arma cuerpo a cuerpo que poseas; solo recibe competencia y la opción de usar Carisma si está equipada desde Equipo.</p><label className="field"><span>Arma vinculada</span><select value={input.pactWeaponId??''} onChange={e=>patch({pactWeaponId:e.target.value?e.target.value as WeaponId:undefined})}><option value="">Sin arma vinculada</option>{eligiblePactWeapons.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}</select></label>{input.pactWeaponId&&<p className="muted-note" role="status">{inventory?.equipped.weapons.includes(input.pactWeaponId)?'Pacto activo sobre el arma equipada.':'Vínculo seleccionado; equipa el arma en Equipo para aplicar sus beneficios.'}</p>}</div>}
-      {invocation==='armor_of_shadows'&&<div><h4>Armadura de sombras</h4><p className="muted-note">Marca el efecto cuando lances Armadura de mago sobre ti. No se gasta ranura.</p><label className="field"><span>Conjuro activo</span><input type="checkbox" checked={state.mageArmorActive} onChange={e=>patchState({mageArmorActive:e.target.checked})}/></label>{inventory?.equipped.armor&&<p className="muted-note">La fórmula 13 + Destreza no se aplica mientras lleves armadura equipada.</p>}</div>}
-      {invocation==='eldritch_mind'&&<p className="muted-note">Ventaja en las tiradas de salvación de Constitución para mantener concentración. Se elige y tira con ventaja cuando la situación lo requiera; no todas las salvaciones de Constitución la reciben.</p>}
+      {input.invocations.includes('armor_of_shadows')&&<div><h4>Armadura de sombras</h4><p className="muted-note">Marca el efecto cuando lances Armadura de mago sobre ti. No se gasta ranura.</p><label className="field"><span>Conjuro activo</span><input type="checkbox" checked={state.mageArmorActive} onChange={e=>patchState({mageArmorActive:e.target.checked})}/></label>{inventory?.equipped.armor&&<p className="muted-note">La fórmula 13 + Destreza no se aplica mientras lleves armadura equipada.</p>}</div>}
+      {input.invocations.includes('eldritch_mind')&&<p className="muted-note">Ventaja en las tiradas de salvación de Constitución para mantener concentración. Se elige y tira con ventaja cuando la situación lo requiera; no todas las salvaciones de Constitución la reciben.</p>}
       {hasTome&&<div><h4>Libro de las sombras</h4><label className="field"><span>Libro presente y llevado</span><input type="checkbox" checked={state.tomePresent} onChange={e=>patchState({tomePresent:e.target.checked})}/></label><p className="muted-note">Los conjuros del libro aparecen en Hechizos mientras lo lleves. Invoca un nuevo libro al acabar un descanso para cambiar las elecciones en el editor.</p></div>}
       {hasChain&&<button type="button" className="overview-link" onClick={()=>setTab('companions')}>Abrir familiar en Compañeros</button>}
+      {input.invocations.includes('lessons_of_the_first_ones')&&<p className="muted-note">Lecciones de los Primeros: dote de origen {input.lessonsFeat==='alert'?'Alerta':'Duro'}. Sus efectos pasivos se incorporan a la hoja.</p>}
+      {input.level>=2&&<div><h4>Astucia mágica</h4><p className="muted-note">Rito de un minuto: recuperas una ranura de Magia de Pacto gastada. Solo una vez por descanso largo. No se realiza ninguna acción de partida automáticamente.</p><button type="button" disabled={Boolean(state.magicalCunningUsed)||pactSlots.every(spent=>!spent)} onClick={useMagicalCunning}>Recuperar una ranura · {state.magicalCunningUsed?'uso agotado':'1 uso'}</button></div>}
      </section>
      <section className="panel wizard-module"><h3>Patrón Infernal · pendiente</h3><p>La subclase comienza en nivel 3; todavía no concede efectos.</p></section>
     </div>
@@ -254,20 +269,20 @@ export default function WarlockPage(){
     <SharedSpellsLayout spellClass="Brujo" description="La biblioteca reutiliza las mismas fichas y filtros que Mago y Guerrero.">
      <SpellLibraryPanel rules={spellRules} classLists={[...SHARED_CLASS_SPELL_LISTS,...(tomeActive?[{id:'tome',label:'Libro de las Sombras',spellIds:[...tomeCantrips,...tomeRituals].map(spell=>spell.id)}]:[])]}
       selection={{learnedIds:activeSpellIds,preparedIds:activeSpellIds}}
-      limits={{cantrips:2+(tomeActive?3:0),learnedMinimum:2,prepared:2+(tomeActive?2:0)}}
-      characterLevel={1} spellAttackBonus={sheet?.spellAttackBonus??2} spellSaveDC={sheet?.spellSaveDC??10} mode={mode}
+      limits={{cantrips:2+(tomeActive?3:0),learnedMinimum:2,prepared:input.preparedIds.length+(tomeActive?2:0)}}
+      characterLevel={input.level} spellAttackBonus={sheet?.spellAttackBonus??2} spellSaveDC={sheet?.spellSaveDC??10} mode={mode}
       maxSlotLevel={1} editable={false} knownLabel="Conocidos" preparedLabel="Disponibles"
-      note="Los trucos no consumen ranura. El Tomo añade tres trucos y dos rituales mientras se lleve, sin cambiar las dos preparaciones normales. Cambia los conjuros en el editor; los descansos y gastos se marcan manualmente."
+      note="Los trucos no consumen ranura. El Tomo añade tres trucos y dos rituales mientras se lleve. Los conjuros preparados se seleccionan durante creación y subida de nivel; los descansos y gastos se marcan manualmente."
       onLearned={()=>{}} onPrepared={()=>{}}/>
      <div className="divider"/><h3>Opciones específicas de Brujo · Magia de Pacto</h3>
-     <SpellSlotDiamonds level={1} spent={[state.pactSlotSpent]} onToggle={()=>patchState({pactSlotSpent:!state.pactSlotSpent})}/>
-     <p className="muted-note">Una ranura de nivel 1. Se recupera tras descansos cortos y largos; no se consume al consultar un conjuro.</p>
-     <div className="overview-quick-actions"><button type="button" onClick={shortRest}>Confirmar descanso corto</button><button type="button" onClick={longRest}>Confirmar descanso largo</button></div>
+     <SpellSlotDiamonds level={1} spent={pactSlots} onToggle={togglePactSlot}/>
+     <p className="muted-note">{pactSlots.length} ranura{pactSlots.length===1?'':'s'} de nivel 1. Se recuperan tras descansos cortos y largos; no se consumen al consultar un conjuro.</p>
+     {pactActions}
      {tomeActive&&<p className="muted-note">Libro de las Sombras presente. Los rituales pueden lanzarse como rituales sin gastar una ranura; se resuelven durante la partida.</p>}
     </SharedSpellsLayout>
    </section>
    <section id="sheet-panel-personaje" role="tabpanel" aria-labelledby="sheet-tab-personaje" hidden={tab!=='personaje'} className="sheet-tab-panel">
-    <CharacterProfilePanel key={profileRevision} profile={input.profile??EMPTY_CHARACTER_PROFILE} name={input.name} species={SPECIES_NAMES[input.species]} background={background.name} level={1} onChange={profile=>patch({profile})} onEditIdentity={()=>setEditing(true)}/>
+    <CharacterProfilePanel key={profileRevision} profile={input.profile??EMPTY_CHARACTER_PROFILE} name={input.name} species={SPECIES_NAMES[input.species]} background={background.name} characterClass="Brujo" level={input.level} onChange={profile=>patch({profile})} onEditIdentity={()=>setEditing(true)}/>
    </section>
    <section id="sheet-panel-companions" role="tabpanel" aria-labelledby="sheet-tab-companions" hidden={tab!=='companions'} className="sheet-tab-panel">
     <SharedCompanionsPanel companions={input.companions??[]} onChange={companions=>patch({companions})}><WarlockCompanionsPanel hasChain={hasChain} state={state} onChange={patchState}/></SharedCompanionsPanel>
@@ -275,7 +290,7 @@ export default function WarlockPage(){
    <section id="sheet-panel-combate" role="tabpanel" aria-labelledby="sheet-tab-combate" hidden={tab!=='combate'} className="sheet-tab-panel">
     <SheetPlaceholder eyebrow="COMBATE · DESARROLLO FUTURO" title="Coming Soon" description="Combate permanece manual. Puedes usar los dados de ataques, conjuros y Descarga sobrenatural desde Principal." actionLabel="Volver a Principal" onAction={()=>setTab('principal')}/>
    </section>
-   <footer className="footer">Brujo 1 · D&D 2024 · Una invocación · Guardado en PostgreSQL por acción explícita.</footer>
+   <footer className="footer">Brujo {input.level} · D&D 2024 · {input.invocations.length} invocaciones · Guardado en PostgreSQL por acción explícita.</footer>
   </div>
  </main>;
 }

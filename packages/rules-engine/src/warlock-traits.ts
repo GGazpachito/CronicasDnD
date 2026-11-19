@@ -9,20 +9,24 @@ export function collectWarlockTraits(input:GuidedWarlockInput,sheet:CalculatedWa
  const traits:CharacterTrait[]=[];
  function add(trait:CharacterTrait){traits.push(trait);}
  add({id:'warlock:pact_magic',title:'Magia de Pacto',group:'class',source:'Brujo',level:1,
-  summary:'Dos trucos, dos conjuros preparados y una ranura de nivel 1 recargable tras descansar.',
-  explanation:'La ranura se marca manualmente en Hechizos; los conjuros no se lanzan automáticamente.',automation:'calculated',
+  summary:`Dos trucos, ${input.level===1?'dos':'tres'} conjuros preparados y ${input.level===1?'una':'dos'} ranuras de nivel 1 recargables tras descansar.`,
+  explanation:'Las ranuras se marcan manualmente en Hechizos; los conjuros no se lanzan automáticamente.',automation:'calculated',
   details:[`CD de salvación ${sheet.spellSaveDC}. Ataque mágico ${sheet.spellAttackBonus>=0?'+':''}${sheet.spellAttackBonus}.`,
-   'El Brujo recupera su ranura de Magia de Pacto al terminar un descanso corto o largo.']});
+   'El Brujo recupera todas sus ranuras de Magia de Pacto al terminar un descanso corto o largo.']});
+ if(input.level>=2)add({id:'warlock:magical_cunning',title:'Astucia mágica',group:'class',source:'Brujo',level:2,
+  summary:'Tras un rito de un minuto, recuperas una ranura de pacto gastada; una vez por descanso largo.',
+  explanation:'La recuperación se ejecuta solo cuando el jugador confirma el rito desde Principal, Rasgos o Hechizos.',automation:'partial',details:['En nivel 2 recupera una de las dos ranuras, si está gastada.','Un descanso corto no restablece el uso de Astucia mágica.']});
  for(const invocation of input.invocations){
   const info=WARLOCK_INVOCATIONS[invocation];
-  add({id:`warlock:invocation:${invocation}`,title:info.name,group:'class',source:'Invocación sobrenatural',level:1,
-   summary:info.summary,explanation:'Esta invocación se elige al crear el personaje y más adelante se sustituirá mediante la subida de nivel.',
-   automation:invocation==='pact_of_blade'||invocation==='armor_of_shadows'?'calculated':'partial',details:[
+  add({id:`warlock:invocation:${invocation}`,title:info.name,group:'class',source:'Invocación sobrenatural',level:info.minLevel,
+   summary:info.summary,explanation:'Las invocaciones se eligen en creación o en la ventana de subida de nivel.',
+   automation:['pact_of_blade','armor_of_shadows','agonizing_blast','eldritch_spear'].includes(invocation)?'calculated':'partial',details:[
     invocation==='pact_of_blade'?'Los beneficios se aplican al arma vinculada solo cuando esté equipada.':
     invocation==='pact_of_chain'?'El familiar se gestiona en la pestaña Compañeros.':
     invocation==='pact_of_tome'?'Los conjuros adicionales aparecen en Hechizos mientras lleves el Libro de las Sombras.':
     invocation==='armor_of_shadows'?'La CA alternativa se aplica cuando activas el efecto y no llevas armadura.':
-    'La ventaja se aplica solo a salvaciones para mantener la concentración.',
+    invocation==='eldritch_mind'?'La ventaja se aplica solo a salvaciones para mantener la concentración.':
+    invocation==='agonizing_blast'||invocation==='eldritch_spear'?'Se muestra el efecto al tirar Descarga sobrenatural.':'La activación y los efectos narrativos los resuelve el jugador.',
    ]});
  }
  const origin=SPECIES_NAMES[input.species];
@@ -45,5 +49,6 @@ export function collectWarlockTraits(input:GuidedWarlockInput,sheet:CalculatedWa
  }
  feat(BACKGROUNDS[input.background].feat,`Trasfondo: ${BACKGROUNDS[input.background].name}`);
  if(input.species==='human'&&input.humanFeat)feat(input.humanFeat,'Humano');
+ if(input.lessonsFeat)feat(input.lessonsFeat,'Lecciones de los Primeros');
  return {traits,pendingAutomation:['La activación de invocaciones y los usos de conjuros siguen bajo control del jugador.','El Patrón Infernal comienza en nivel 3; no concede rasgos antes.']};
 }

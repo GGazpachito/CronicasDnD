@@ -1,4 +1,4 @@
-# Contrato de arquitectura visual: hoja de personaje CRÓNICAS (actualización 68)
+# Contrato de arquitectura visual: hoja de personaje CRÓNICAS (actualización 69)
 
 > **DOCUMENTO NORMATIVO PARA TODAS LAS CLASES.** Antes de implementar otra clase o subclase, mantener este contrato. Si un módulo cambia, actualizar el componente común, sus adaptadores y este documento en el mismo cambio. Nunca reproducir bloques JSX específicos de otra clase mediante copia de código.
 
@@ -20,7 +20,7 @@ Implementación: `apps/web/src/components/CharacterTabs.tsx`. Orden e identifica
 | 6 | `companions` | Compañeros | `SharedCompanionsPanel` en **todas** las clases, incluso sin rasgos de invocación; debajo, extensiones específicas |
 | 7 | `combate` | Combate | Pestaña universal reservada al futuro sistema, sin alterar las otras pestañas |
 
-Identidad visual compartida en la cabecera (`CharacterHeader`), guardado/carga (`SaveLoadPanel`) y pestañas (`CharacterTabs`). No hacer otra navegación solo para Mago o Brujo.
+Identidad visual compartida en la cabecera (`CharacterHeader`), guardado/carga (`SaveLoadPanel`) y pestañas (`CharacterTabs`). No hacer otra navegación solo para Mago o Brujo. La pantalla común `apps/web/src/app/load/page.tsx` debe mostrar «Abrir» y «Eliminar personaje» como acciones independientes. Borrar exige confirmación y la revisión vigente del registro para no eliminar modificaciones concurrentes.
 
 ## Principal: estructura obligatoria
 
@@ -32,6 +32,7 @@ Responsable: `SharedPrincipalSheet.tsx` en Guerrero, Mago y Brujo.
 4. Columna de habilidades con entrenamiento, bonificación y tiradas.
 5. Columna de salvaciones y tiradas; continuación con **ataques**, **recursos de clase**, **ranuras de conjuro cuando correspondan**.
 6. Pie de hoja, orden obligatorio: **Percepción pasiva → Movimiento y origen → Salvaciones de muerte → Inspiración heroica**. Los datos adicionales (p. ej., firma de Mago) pueden añadirse como módulo identificable separado, sin sustituir estos cuatro.
+7. Módulos exclusivos de ataques como `WarlockEldritchBlast` son complementos a `SharedPrincipalSheet`: resultados presentados con **`overview-roll-result`, `overview-roll-result-heading`, `overview-roll-dice`, `overview-die` y `overview-roll-formula`**, nunca como una frase diminuta sin jerarquía visual.
 
 Controles: `SharedHealthControls.tsx` para Mago/Brujo y `PrincipalHealthControls` de Guerrero, con el **mismo DOM visible y clases CSS** (`overview-health-inline`, `overview-health-pair`, `overview-hp-stat`, `overview-hp-reading`, `overview-hp-input-group`, `overview-hp-stepper`, `overview-health-hint`). Flechas ▲/▼, entrada de ajuste firmado, Intro, Escape y daño que consume antes PG temporales. El Guerrero conserva opciones especiales como Fortaleza épica en un espacio adicional.
 
@@ -56,23 +57,29 @@ Marcadores: `SharedDeathSavePanel.tsx` para Mago/Brujo, el control equivalente d
 
 1. En **todas las clases**, «Todos los conjuros» permite buscar por nombre/escuela/descripción y filtrar por **lista Mago**, **lista Brujo** y nivel 0–9. Por defecto, las listas están marcadas y se ve la unión.
 2. El selector de filtros y el detalle del conjuro (`WizardSpellDetails.tsx`) son compartidos, sin variantes visuales por clase.
-3. **Ver un conjuro no equivale a poder aprenderlo.** La lista de clase determina permisos; Mago solo puede editar fichas de su lista mediante `editableForSpell`; Brujo nivel 1 edita su selección en la creación, y Guerrero solo consulta hechizos otorgados por origen. No conceder conjuros o ranuras indebidos mediante el catálogo.
+3. **Ver un conjuro no equivale a poder aprenderlo.** La lista de clase determina permisos; Mago solo puede editar fichas de su lista mediante `editableForSpell`; Brujo nivel 1 elige conjuros en la creación y en el nivel 2 modifica las preparaciones solo durante la subida de nivel; Guerrero consulta hechizos otorgados por origen. No conceder conjuros o ranuras indebidos mediante el catálogo.
 4. Las ranuras, descansos, Recuperación arcana, Magia de Pacto y rasgos relacionados van en módulos separados de `SharedSpellsLayout.tsx`, sin reemplazar filtros ni fichas.
 5. Al ampliar el catálogo (otras clases o niveles), añadir reglas nuevas al motor y **agregarlas a la unión**, más su lista de clase. Nunca crear una biblioteca duplicada de 27 registros para Brujo.
 
 ## Personaje
 
-Componente: `CharacterProfilePanel.tsx`. Campos narrativos, retrato, información de origen y datos personales con persistencia en `profile`. Las clases solo pasan valores de origen/nivel para la cabecera; no recrear su disposición.
+Componente: `CharacterProfilePanel.tsx`. Campos narrativos, retrato, información de origen y datos personales con persistencia en `profile`. Las clases pasan **obligatoriamente** `characterClass` (`Guerrero`/`Mago`/`Brujo`) y el nivel real junto a origen/especie; nunca escribir «Guerrero» como literal dentro del componente universal. No recrear su disposición para otra clase.
 
 ## Compañeros: módulo universal
 
 Componente: `SharedCompanionsPanel.tsx`, modelo y validador: `packages/rules-engine/src/companions.ts`.
 
-Interacciones: selector **Compañero visible**; **Crear compañero** (abre ficha vacía editable); **Editar ficha** (abre borrador); **Guardar ficha** (valida y añade/actualiza), **Cancelar** (no modifica guardado). Campos comunes: nombre, tipo/especie, tamaño, desafío, CA, PG actuales/máximos, velocidad, competencia, seis características y modificadores, iniciativa, salvaciones, habilidades, sentidos, idiomas, defensas, ataques (nombre, bono, daño, notas), rasgos, acciones/reacciones, equipo y notas. Hay tiradas d20 para características, iniciativa y ataques; no se automatizan órdenes del compañero ni combate.
+Interacciones: selector **Compañero visible**; **Crear compañero** (abre ficha vacía editable); **Editar ficha** (abre borrador); **Guardar ficha** (valida y añade/actualiza), **Cancelar** (no modifica guardado); **Eliminar compañero** (solicita confirmación antes de quitarlo del borrador de personaje). Campos comunes: nombre, tipo/especie, tamaño, desafío, CA, PG actuales/máximos, velocidad, competencia, seis características y modificadores, iniciativa, salvaciones, habilidades, sentidos, idiomas, defensas, ataques (nombre, bono, daño, notas), rasgos, acciones/reacciones, equipo y notas. Hay tiradas d20 para características, iniciativa y ataques; no se automatizan órdenes del compañero ni combate.
 
 Almacenamiento: `input.companions` **opcional** en `GuidedFighterInput`, `GuidedWizardInput`, `GuidedWarlockInput`. Se valida en el motor, admite hasta 20 registros y se conserva en el snapshot existente; guardados anteriores sin `companions` siguen siendo válidos. Las fichas se crean y editan localmente; persisten en la base de datos **cuando el usuario pulsa «Guardar personaje» o «Guardar cambios»**.
 
 Las criaturas concedidas por rasgos no se mezclan con estas fichas manuales. Ejemplo: `WarlockCompanionsPanel.tsx` del Pacto de la Cadena es una extensión **posterior** al editor universal.
+
+## Progresión del Brujo: implementación actual
+
+`WarlockLevelUpWizard.tsx` captura todas las decisiones **solo al subir del nivel 1 al 2**. La validación de transición reside en `packages/rules-engine/src/warlock-level-up.ts`; `warlock.ts` sigue siendo el único responsable de validar el snapshot, HP, invocaciones, ranuras, descansos y Astucia mágica. Cada nueva subida usa esta separación de responsabilidades y mantiene exactamente las siete pestañas anteriores. La progresión de nivel 2 admite 3 invocaciones, 2 trucos, 3 conjuros preparados y 2 ranuras de nivel 1. Las decisiones activas se resuelven por el jugador.
+
+No crear vistas de biblioteca diferentes para Brujo ni reescribir conjuros que ya existan en el Mago. Las invocaciones que alteran directamente Descarga sobrenatural añaden bonificadores al módulo exclusivo sin cambiar los demás módulos compartidos.
 
 ## Creación de características
 
@@ -88,10 +95,11 @@ Selector único: `AbilityScoreMethodPicker.tsx`, motor `ability-generation.ts`.
 - [ ] Usa exactamente `CharacterTabs` y sus siete pestañas en el mismo orden.
 - [ ] Usa `SharedPrincipalSheet` y controles de salud, muerte e inspiración con mismos estilos y posición.
 - [ ] Presenta Percepción pasiva, Movimiento y origen, Salvaciones de muerte e Inspiración, aunque la clase no tenga magia.
-- [ ] Usa `TraitsPanel`, `EquipmentPanel` y `CharacterProfilePanel`; extensiones identificadas después.
+- [ ] Usa `TraitsPanel`, `EquipmentPanel` y `CharacterProfilePanel`; este último recibe `characterClass` con la clase real, nunca un literal fijo.
 - [ ] Usa `SharedSpellsLayout` + `SpellLibraryPanel` y todo `SHARED_SPELL_RULES`, incluso si la clase no puede lanzar conjuros.
 - [ ] Filtros por clase y nivel funcionales; aprende/prepara solo con permisos legales.
-- [ ] Usa `SharedCompanionsPanel` y persiste `input.companions`, sin mezclar invocaciones automáticas.
+- [ ] Usa `SharedCompanionsPanel` con crear/editar/eliminar confirmando y persiste `input.companions`, sin mezclar invocaciones automáticas.
+- [ ] La lista de carga permite abrir y eliminar personajes por controles distintos y exige confirmación/revisión antes de borrar.
 - [ ] Revisa editor de creación, guardado antiguo, guardado nuevo, subida/bajada de nivel y restauración.
 - [ ] Pruebas del motor, lint, compilación y comparación visual de las tres clases antes del empaquetado.
 
