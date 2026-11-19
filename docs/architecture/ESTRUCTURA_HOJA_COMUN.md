@@ -1,4 +1,4 @@
-# Contrato de arquitectura visual: hoja de personaje CRÓNICAS (actualización 70)
+# Contrato de arquitectura visual: hoja de personaje CRÓNICAS (actualización 71)
 
 > **DOCUMENTO NORMATIVO PARA TODAS LAS CLASES.** Antes de implementar otra clase o subclase, mantener este contrato. Si un módulo cambia, actualizar el componente común, sus adaptadores y este documento en el mismo cambio. Nunca reproducir bloques JSX específicos de otra clase mediante copia de código.
 
@@ -73,7 +73,9 @@ Interacciones: selector **Compañero visible**; **Crear compañero** (abre ficha
 
 Almacenamiento: `input.companions` **opcional** en `GuidedFighterInput`, `GuidedWizardInput`, `GuidedWarlockInput`. Se valida en el motor, admite hasta 20 registros y se conserva en el snapshot existente; guardados anteriores sin `companions` siguen siendo válidos. Las fichas se crean y editan localmente; persisten en la base de datos **cuando el usuario pulsa «Guardar personaje» o «Guardar cambios»**.
 
-Las criaturas concedidas por rasgos no se mezclan con estas fichas manuales. Ejemplo: `WarlockCompanionsPanel.tsx` del Pacto de la Cadena es una extensión **posterior** al editor universal.
+Las criaturas concedidas por rasgos no se mezclan con estas fichas manuales. Ejemplo: `WarlockCompanionsPanel.tsx` del Pacto de la Cadena es una extensión **posterior** al editor universal. Desde el paso 71, **todas las fichas visuales de criatura** se presentan mediante `CreatureStatBlock.tsx`: las manuales admiten edición en `SharedCompanionsPanel`, mientras las de Bestiario y de familiar son **referencias no editables** derivadas de una sola ficha de origen.
+
+**Bestiario transversal:** el menú principal añade «Bestiario» (`/bestiary`). Toda clase futura que conceda una criatura deberá consultar `packages/rules-engine/src/bestiary.ts` en lugar de copiar estadísticas. En el Brujo, la forma registrada en `state.familiarForm` proyecta la ficha del catálogo sin ocupar un compañero manual. Contrato obligatorio de catálogo, persistencia y procedencia: [`ARQUITECTURA_BESTIARIO.md`](ARQUITECTURA_BESTIARIO.md).
 
 ## Progresión del Brujo: implementación actual
 
@@ -101,6 +103,7 @@ Selector único: `AbilityScoreMethodPicker.tsx`, motor `ability-generation.ts`.
 - [ ] Usa `SharedSpellsLayout` + `SpellLibraryPanel` y todo `SHARED_SPELL_RULES`, incluso si la clase no puede lanzar conjuros.
 - [ ] Filtros por clase y nivel funcionales; aprende/prepara solo con permisos legales.
 - [ ] Usa `SharedCompanionsPanel` con crear/editar/eliminar confirmando y persiste `input.companions`, sin mezclar invocaciones automáticas.
+- [ ] Para cualquier familiar o aliado concedido por rasgo, consulta el **Bestiario central** y usa `CreatureStatBlock`; no crees otra fuente de estadísticas ni dupliques las fichas manuales.
 - [ ] La lista de carga permite abrir y eliminar personajes por controles distintos y exige confirmación/revisión antes de borrar.
 - [ ] Revisa editor de creación, guardado antiguo, guardado nuevo, subida/bajada de nivel y restauración.
 - [ ] Reutiliza `LevelUpDialogFrame`, `LevelDownDialog`, `LevelUpHitPointsPicker` y las mismas fichas con buscador de conjuros; respeta el contrato de `ARQUITECTURA_PROGRESION_NIVELES.md`.
