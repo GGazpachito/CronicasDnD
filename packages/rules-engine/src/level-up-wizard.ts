@@ -8,6 +8,7 @@ import {type FighterAbilityImprovement} from './progression';
 import {type FightingStyleId,type WeaponId} from './martial';
 import {type EpicBoonChoice} from './epic-boons';
 import {explainFighterFeature} from './rules-explanations';
+import {appendLevelHitPointRoll} from './level-hit-points';
 
 /** Las novedades y los desplegables comparten el mismo catálogo de explicaciones de Rasgos. */
 const MILESTONE_FEATURE_IDS:Readonly<Record<string,string>>={
@@ -35,6 +36,8 @@ export const FIGHTER_IMPROVEMENT_LEVELS=[4,6,8,12,14,16] as const;
 export type FighterImprovementLevel=typeof FIGHTER_IMPROVEMENT_LEVELS[number];
 
 export type FighterLevelUpChoices=Readonly<{
+  /** 6 para promedio, 1..10 para tirada de dado; opcional para llamadas antiguas. */
+  hitDieRoll?:number;
   improvement?: FighterAbilityImprovement;
   newMastery?: WeaponId;
   additionalFightingStyle?: FightingStyleId;
@@ -116,6 +119,7 @@ export function buildFighterLevelUpCandidate(current:GuidedFighterInput,choices:
   const next:GuidedFighterInput={
     ...current,
     level:target as GuidedFighterInput['level'],
+    levelHitPointRolls:appendLevelHitPointRoll(current.level,current.levelHitPointRolls,10,6,choices.hitDieRoll??6),
     ...(requirement.improvement?{[improvementKey]:choices.improvement}:{}),
     ...(requirement.epicBoon?{epicBoon:choices.epicBoon}:{}),
     martial:{...current.martial,

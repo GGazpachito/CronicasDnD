@@ -1,4 +1,4 @@
-# Contrato de arquitectura visual: hoja de personaje CRÓNICAS (actualización 69)
+# Contrato de arquitectura visual: hoja de personaje CRÓNICAS (actualización 70)
 
 > **DOCUMENTO NORMATIVO PARA TODAS LAS CLASES.** Antes de implementar otra clase o subclase, mantener este contrato. Si un módulo cambia, actualizar el componente común, sus adaptadores y este documento en el mismo cambio. Nunca reproducir bloques JSX específicos de otra clase mediante copia de código.
 
@@ -77,7 +77,9 @@ Las criaturas concedidas por rasgos no se mezclan con estas fichas manuales. Eje
 
 ## Progresión del Brujo: implementación actual
 
-`WarlockLevelUpWizard.tsx` captura todas las decisiones **solo al subir del nivel 1 al 2**. La validación de transición reside en `packages/rules-engine/src/warlock-level-up.ts`; `warlock.ts` sigue siendo el único responsable de validar el snapshot, HP, invocaciones, ranuras, descansos y Astucia mágica. Cada nueva subida usa esta separación de responsabilidades y mantiene exactamente las siete pestañas anteriores. La progresión de nivel 2 admite 3 invocaciones, 2 trucos, 3 conjuros preparados y 2 ranuras de nivel 1. Las decisiones activas se resuelven por el jugador.
+**Contrato normativo obligatorio de ventanas de subida y bajada:** consultar [`ARQUITECTURA_PROGRESION_NIVELES.md`](ARQUITECTURA_PROGRESION_NIVELES.md) ANTES de crear una progresión de cualquier clase. `LevelUpDialogFrame` es el único asistente de tres pasos; `LevelDownDialog` es la única ventana de bajada con confirmación; `LevelUpHitPointsPicker` se utiliza en todas las clases (Guerrero d10/6, Mago d6/4, Brujo d8/5). Los nuevos asistentes de magia reutilizan el buscador, `wizard-spell-choice-list` y `WizardSpellDetails`; no deben tener diálogos ni selecciones estilísticas propias.
+
+`WarlockLevelUpWizard.tsx` captura todas las decisiones **solo al subir del nivel 1 al 2**, pero utiliza el mismo `LevelUpDialogFrame` que Guerrero y Mago. La validación de transición y bajada 2→1 reside en `packages/rules-engine/src/warlock-level-up.ts`; `warlock.ts` sigue siendo el único responsable de validar el snapshot, HP, invocaciones, ranuras, descansos y Astucia mágica. Cada nueva subida usa esta separación de responsabilidades y mantiene exactamente las siete pestañas anteriores. La progresión de nivel 2 admite 3 invocaciones, 2 trucos, 3 conjuros preparados y 2 ranuras de nivel 1. Las decisiones activas se resuelven por el jugador.
 
 No crear vistas de biblioteca diferentes para Brujo ni reescribir conjuros que ya existan en el Mago. Las invocaciones que alteran directamente Descarga sobrenatural añaden bonificadores al módulo exclusivo sin cambiar los demás módulos compartidos.
 
@@ -101,6 +103,7 @@ Selector único: `AbilityScoreMethodPicker.tsx`, motor `ability-generation.ts`.
 - [ ] Usa `SharedCompanionsPanel` con crear/editar/eliminar confirmando y persiste `input.companions`, sin mezclar invocaciones automáticas.
 - [ ] La lista de carga permite abrir y eliminar personajes por controles distintos y exige confirmación/revisión antes de borrar.
 - [ ] Revisa editor de creación, guardado antiguo, guardado nuevo, subida/bajada de nivel y restauración.
+- [ ] Reutiliza `LevelUpDialogFrame`, `LevelDownDialog`, `LevelUpHitPointsPicker` y las mismas fichas con buscador de conjuros; respeta el contrato de `ARQUITECTURA_PROGRESION_NIVELES.md`.
 - [ ] Pruebas del motor, lint, compilación y comparación visual de las tres clases antes del empaquetado.
 
 **Para el TFG:** esta decisión minimiza deriva visual y duplicación, separa presentación (`components`), reglas (`rules-engine`) y estado persistente (`input`/`state`), y favorece pruebas regresivas por contrato.

@@ -10,6 +10,7 @@ import {WIZARD_EPIC_BOONS,WIZARD_EPIC_BOON_DESCRIPTIONS,type WizardEpicBoonId} f
 import type {Skill} from '../../../../packages/rules-engine/src/proficiencies';
 import type {D20Mode} from '../../../../packages/rules-engine/src/d20';
 import LevelUpDialogFrame from './LevelUpDialogFrame';
+import LevelUpHitPointsPicker from './LevelUpHitPointsPicker';
 import WizardSpellDetails from './WizardSpellDetails';
 const SKILL_NAMES:Record<string,string>={arcana:'Arcanos',history:'Historia',investigation:'Investigación',medicine:'Medicina',nature:'Naturaleza',religion:'Religión'};
 const ABILITY_NAMES:Record<Ability,string>={strength:'Fuerza',dexterity:'Destreza',constitution:'Constitución',intelligence:'Inteligencia',wisdom:'Sabiduría',charisma:'Carisma'};
@@ -18,6 +19,7 @@ function toggle(ids:readonly string[],id:string,max:number){return ids.includes(
 export default function WizardLevelUpWizard({input,state,mode,onConfirm,onCancel}:Props){
  const next=input.level+1;
  const [stage,setStage]=useState<0|1|2>(0);
+ const [hitDieRoll,setHitDieRoll]=useState(4);
  const current=useMemo(()=>calculateGuidedWizard(input),[input]);
  const availableSkills=useMemo(()=>WIZARD_SCHOLAR_OPTIONS.filter(skill=>current.skillProficiencies.includes(skill as Skill)),[current]);
  const [scholarSkill,setScholarSkill]=useState<WizardScholarSkill>(availableSkills[0]);
@@ -45,14 +47,14 @@ export default function WizardLevelUpWizard({input,state,mode,onConfirm,onCancel
  const plan=wizardLevelUpChoicesPreview(input);
  const spellLevel=plan?.progression.highestSlotLevel??1;
  const choices=useMemo(()=>{
-  try{return {result:prepareWizardLevelUp(input,state,{newSpellIds:newSpells as unknown as [string,string],preparedIds:prepared,
+  try{return {result:prepareWizardLevelUp(input,state,{newSpellIds:newSpells as unknown as [string,string],preparedIds:prepared,hitDieRoll,
    ...(next===2?{scholarSkill}:{}),...(next===3?{evokerBonusSpellIds:bonusSpells as [string,string]}:{}),
    ...(next===4?{newCantripId:newCantrip,level4Improvement:improvement}:{}),
    ...(next===10?{newCantripId:newCantrip}:{}),
      ...(next===8?{level8Improvement:improvement}:{}),...(next===12?{level12Improvement:improvement}:{}),...(next===16?{level16Improvement:improvement}:{}),
    ...(next===5?{evokerLevelThreeSpellId:bonusFive}:{}),...(next===7?{evokerLevelFourSpellId:bonusSeven}:{}),...(next===9?{evokerLevelFiveSpellId:bonusNine}:{}),...(next===11?{evokerLevelSixSpellId:bonusEleven}:{}),...(next===13?{evokerLevelSevenSpellId:bonusThirteen}:{}),...(next===15?{evokerLevelEightSpellId:bonusFifteen}:{}),...(next===17?{evokerLevelNineSpellId:bonusSeventeen}:{}),...(next===18?{spellMasteryIds:[masteryOne,masteryTwo] as [string,string]}:{}),...(next===19?{epicBoon:{id:epicBoonId,ability:epicAbility}}:{}),...(next===20?{signatureSpellIds:[signatureOne,signatureTwo] as [string,string]}:{})}),error:''};}
   catch(e){return {result:null,error:e instanceof Error?e.message:'Elecciones incompletas'};}
- },[input,state,newSpells,prepared,next,scholarSkill,bonusSpells,newCantrip,improvement,bonusFive,bonusSeven,bonusNine,bonusEleven,bonusThirteen,bonusFifteen,bonusSeventeen,masteryOne,masteryTwo,signatureOne,signatureTwo,epicBoonId,epicAbility]);
+ },[input,state,newSpells,prepared,next,scholarSkill,bonusSpells,newCantrip,improvement,bonusFive,bonusSeven,bonusNine,bonusEleven,bonusThirteen,bonusFifteen,bonusSeventeen,masteryOne,masteryTwo,signatureOne,signatureTwo,epicBoonId,epicAbility,hitDieRoll]);
  if(!plan)return null;
  const alreadyKnown=new Set([...input.spellbookIds,...input.evokerBonusSpellIds??[],...(input.evokerLevelThreeSpellId?[input.evokerLevelThreeSpellId]:[]),...(input.evokerLevelFourSpellId?[input.evokerLevelFourSpellId]:[]),...(input.evokerLevelFiveSpellId?[input.evokerLevelFiveSpellId]:[]),...(input.evokerLevelSixSpellId?[input.evokerLevelSixSpellId]:[]),...(input.evokerLevelSevenSpellId?[input.evokerLevelSevenSpellId]:[]),...(input.evokerLevelEightSpellId?[input.evokerLevelEightSpellId]:[]),...(input.evokerLevelNineSpellId?[input.evokerLevelNineSpellId]:[])]);
  const search=spellFilter.trim().toLocaleLowerCase('es');
@@ -119,14 +121,15 @@ export default function WizardLevelUpWizard({input,state,mode,onConfirm,onCancel
      {next===7&&<li><strong>Experto en Evocación: conjuro gratuito</strong><p className="level-wizard-explanation">Al adquirir ranuras de nivel 4 añades un conjuro gratuito de Evocación de nivel 1 a 4, distinto de los ya conocidos.</p></li>}
     {next===5&&<li><strong>Experto en Evocación: conjuro gratuito</strong><p className="level-wizard-explanation">Al acceder a ranuras de nivel 3 añades gratuitamente un conjuro de Evocación válido a tu libro, además de los dos de la progresión.</p></li>}
     <li><strong>Libro de conjuros</strong><p className="level-wizard-explanation">Añades dos conjuros nuevos a tu libro{next===3?', más dos Evocaciones gratuitas':next===5||next===7||next===9||next===11||next===13||next===15||next===17?', más una Evocación gratuita':''}. Todos tendrán su ficha y tiradas disponibles.</p></li>
-     <li><strong>Puntos de golpe y espacios</strong><p className="level-wizard-explanation">Tus PG máximos aumentan al menos en {estimatedHpGain} con las características actuales. {next===4||next===8||next===12||next===16?'La mejora de Constitución puede modificar también los PG de niveles anteriores. ':''}Conservas daño y ranuras gastadas; las nuevas empiezan disponibles.</p></li>
+<li><strong>Puntos de golpe y espacios</strong><p className="level-wizard-explanation">Si eliges el promedio, tus PG máximos aumentan en {estimatedHpGain} con las características actuales. Una tirada puede cambiar esta cifra. {next===4||next===8||next===12||next===16?'La mejora de Constitución puede modificar también los PG de niveles anteriores. ':''}Conservas daño y ranuras gastadas; las nuevas empiezan disponibles.</p></li>
    </ul>
-   <div className="level-wizard-stats"><div className="level-wizard-stat"><span>PG máximos (sin nuevas elecciones)</span><strong>{current.maximumHitPoints} → {current.maximumHitPoints+estimatedHpGain}</strong></div><div className="level-wizard-stat"><span>Competencia</span><strong>+{previousCore.proficiencyBonus} → +{nextCore.proficiencyBonus}</strong></div><div className="level-wizard-stat"><span>Preparados reglamentarios</span><strong>{input.preparedIds.length} → {plan.progression.preparedSpellCount}</strong></div><div className="level-wizard-stat"><span>Trucos conocidos</span><strong>{input.cantripIds.length} → {plan.progression.cantripsKnown}</strong></div>{[1,2,3,4,5,6,7,8,9].map(l=><div className="level-wizard-stat" key={l}><span>Ranuras nivel {l}</span><strong>{state.magic.slots.maximum[l-1]} → {plan.progression.spellSlots[l-1]}</strong></div>)}<div className="level-wizard-stat"><span>Competencias nuevas</span><strong>{next===2?'Pericia Erudito':'Ninguna'}</strong></div></div>
+   <div className="level-wizard-stats"><div className="level-wizard-stat"><span>PG máximos (promedio, sin nuevas elecciones)</span><strong>{current.maximumHitPoints} → {current.maximumHitPoints+estimatedHpGain}</strong></div><div className="level-wizard-stat"><span>Competencia</span><strong>+{previousCore.proficiencyBonus} → +{nextCore.proficiencyBonus}</strong></div><div className="level-wizard-stat"><span>Preparados reglamentarios</span><strong>{input.preparedIds.length} → {plan.progression.preparedSpellCount}</strong></div><div className="level-wizard-stat"><span>Trucos conocidos</span><strong>{input.cantripIds.length} → {plan.progression.cantripsKnown}</strong></div>{[1,2,3,4,5,6,7,8,9].map(l=><div className="level-wizard-stat" key={l}><span>Ranuras nivel {l}</span><strong>{state.magic.slots.maximum[l-1]} → {plan.progression.spellSlots[l-1]}</strong></div>)}<div className="level-wizard-stat"><span>Competencias nuevas</span><strong>{next===2?'Pericia Erudito':'Ninguna'}</strong></div></div>
     {(next===4||next===8||next===12||next===16)&&<p className="level-wizard-note">El manual permite elegir dotes alternativas si cumples sus requisitos. El motor solo tiene implementada la dote Mejora de característica para esta subida.</p>}
    <p className="level-wizard-note">Los conjuros se explican en sus desplegables. El jugador decide cuándo lanzar, recuperar ranuras y aplicar los efectos.</p>
   </div>}
   {stage===1&&<div className="level-wizard-section">
    <h3>Decisiones de este nivel</h3>
+   <LevelUpHitPointsPicker characterClass="wizard" value={hitDieRoll} onChange={setHitDieRoll}/>
    {next===2&&<fieldset className="level-wizard-fieldset"><legend>Erudito: una pericia académica</legend><label className="field"><span>Habilidad en la que ya tienes competencia</span><select value={scholarSkill} onChange={e=>setScholarSkill(e.target.value as WizardScholarSkill)}>{availableSkills.map(skill=><option value={skill} key={skill}>{SKILL_NAMES[skill]}</option>)}</select></label><p className="level-wizard-explanation">La pericia duplica el bonificador de competencia para la habilidad elegida.</p></fieldset>}
     {(next===4||next===8||next===12||next===16)&&<fieldset className="level-wizard-fieldset"><legend>Dote Mejora de característica</legend>
     <label className="field"><span>Distribución</span><select value={improvement.mode} onChange={e=>setMode(e.target.value as WizardLevel4Improvement['mode'])}><option value="plus_two">+2 en una característica</option><option value="two_ones">+1 en dos características</option></select></label>

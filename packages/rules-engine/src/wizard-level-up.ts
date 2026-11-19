@@ -8,8 +8,11 @@ import {wizardAllSlotMarks} from './wizard-slot-marks';
 import {mergeWizardLevelSpells} from './wizard-spell-library';
 import {wizardMasteryCastingTime} from './wizard-mastery';
 import {applyWizardEpicBoon,type WizardEpicBoonChoice} from './wizard-epic-boons';
+import {appendLevelHitPointRoll} from './level-hit-points';
 
 export type WizardLevelUpChoices=Readonly<{
+ /** 4 para promedio, 1..6 para tirada de dado; opcional para mantener la API antigua. */
+ hitDieRoll?:number;
  newSpellIds:readonly [string,string];
  preparedIds:readonly string[];
  scholarSkill?:WizardScholarSkill;
@@ -155,6 +158,7 @@ export function prepareWizardLevelUp(input:GuidedWizardInput,state:WizardLevelOn
   throw new RangeError('Los conjuros preparados anteriores se conservan hasta completar un descanso largo');
  const gained=[...newIds,...(choices.evokerBonusSpellIds??[]),...(choices.evokerLevelThreeSpellId?[choices.evokerLevelThreeSpellId]:[]),...(choices.evokerLevelFourSpellId?[choices.evokerLevelFourSpellId]:[]),...(choices.evokerLevelFiveSpellId?[choices.evokerLevelFiveSpellId]:[]),...(choices.evokerLevelSixSpellId?[choices.evokerLevelSixSpellId]:[]),...(choices.evokerLevelSevenSpellId?[choices.evokerLevelSevenSpellId]:[]),...(choices.evokerLevelEightSpellId?[choices.evokerLevelEightSpellId]:[]),...(choices.evokerLevelNineSpellId?[choices.evokerLevelNineSpellId]:[]),...(choices.newCantripId?[choices.newCantripId]:[])];
  const nextInput:GuidedWizardInput={...input,level:nextLevel,
+  levelHitPointRolls:appendLevelHitPointRoll(input.level,input.levelHitPointRolls,6,4,choices.hitDieRoll??4),
   spellbookIds:[...input.spellbookIds,...newIds],
   cantripIds:[...input.cantripIds,...(choices.newCantripId?[choices.newCantripId]:[])],
   preparedIds:[...choices.preparedIds],

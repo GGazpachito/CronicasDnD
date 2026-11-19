@@ -45,6 +45,8 @@ export type GuidedFighterInput = Readonly<{
   /** Datos narrativos y retrato; no intervienen en los cálculos de reglas. */
   profile?: CharacterProfile;
   level: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20;
+  /** Resultados naturales d10 de niveles 2..actual; 6 cuando se elige promedio. Compatible con guardados previos. */
+  levelHitPointRolls?: readonly number[];
   /** Solo desde el nivel 4; otras dotes generales quedan fuera de este incremento. */
   level4Improvement?: FighterLevel4Improvement;
   /** Segunda mejora independiente desde nivel 6. */
@@ -247,7 +249,8 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
   const character: FighterCharacterInput = {
     id:'guided-preview',name:input.name.trim(),ruleset:'dnd-2024',fighterLevel:input.level,
     baseAbilities:improvedScores,baseProficiencies:{skills:[...skills],savingThrows:['strength','constitution']},
-    modifiers:[...modifiers,...fightingStyleModifiers,...magicModifiers],hpMethod:'fixed',equipment:{armor:input.armor,shieldEquipped:input.shield,shieldTrained:true},
+    modifiers:[...modifiers,...fightingStyleModifiers,...magicModifiers],hpMethod:input.levelHitPointRolls?'rolled':'fixed',
+    ...(input.levelHitPointRolls?{hpRolls:input.levelHitPointRolls}:{}),equipment:{armor:input.armor,shieldEquipped:input.shield,shieldTrained:true},
     bonusHitPointsPerLevel,bonusHitPointsFlat:input.level>=19&&input.epicBoon?.id==='fortitude'?40:0,
     ...(input.level>=3?{subclass:'champion' as const}:{})
   };

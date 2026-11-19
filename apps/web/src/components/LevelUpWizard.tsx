@@ -2,6 +2,7 @@
 
 import {useMemo,useRef,useState} from 'react';
 import LevelUpDialogFrame from './LevelUpDialogFrame';
+import LevelUpHitPointsPicker from './LevelUpHitPointsPicker';
 import {ABILITIES,type Ability} from '../../../../packages/rules-engine/src/abilities';
 import {EPIC_BOONS,type EpicBoonId} from '../../../../packages/rules-engine/src/epic-boons';
 import {type GuidedFighterInput} from '../../../../packages/rules-engine/src/guided';
@@ -34,6 +35,7 @@ type Props={
 /** Las elecciones viven aquí hasta el botón final. No se escriben en React padre. */
 export default function LevelUpWizard({input,adventure,outOfSync,onClose,onConfirmed}:Props){
   const [stage,setStage]=useState<0|1|2>(0);
+  const [hitDieRoll,setHitDieRoll]=useState(6);
   const [improvement,setImprovement]=useState<FighterAbilityImprovement>({mode:'plus_two',first:'strength'});
   const [mastery,setMastery]=useState<WeaponId|''>('');
   const [style,setStyle]=useState<FightingStyleId|''>('');
@@ -47,11 +49,12 @@ export default function LevelUpWizard({input,adventure,outOfSync,onClose,onConfi
   const target=input.level+1;
   const requirements=fighterLevelUpRequirements(target);
   const choices=useMemo<FighterLevelUpChoices>(()=>({
+    hitDieRoll,
     ...(requirements.improvement?{improvement}:{}),
     ...(requirements.mastery&&mastery?{newMastery:mastery}:{}),
     ...(requirements.additionalStyle&&style?{additionalFightingStyle:style}:{}),
     ...(requirements.epicBoon&&boon?{epicBoon:{id:boon,ability:boonAbility}}:{}),
-  }),[requirements.improvement,requirements.mastery,requirements.additionalStyle,requirements.epicBoon,improvement,mastery,style,boon,boonAbility]);
+  }),[requirements.improvement,requirements.mastery,requirements.additionalStyle,requirements.epicBoon,improvement,mastery,style,boon,boonAbility,hitDieRoll]);
   const assessment=useMemo(()=>{
     try{return {preview:previewFighterLevelUp(input,choices),error:''};}
     catch(e){return {preview:null,error:e instanceof Error?e.message:'Elecciones inválidas'};}
@@ -113,6 +116,7 @@ export default function LevelUpWizard({input,adventure,outOfSync,onClose,onConfi
         </div>}
         {stage===1&&<div className="level-wizard-section">
           <h3>Decisiones de este nivel</h3>
+          <LevelUpHitPointsPicker characterClass="fighter" value={hitDieRoll} onChange={setHitDieRoll}/>
           {!requirements.improvement&&!requirements.mastery&&!requirements.additionalStyle&&!requirements.epicBoon&&<p className="level-wizard-note">Este nivel no necesita elecciones adicionales en el sistema implementado.</p>}
           {requirements.improvement&&<fieldset className="level-wizard-fieldset">
             <legend>Mejora de característica</legend>

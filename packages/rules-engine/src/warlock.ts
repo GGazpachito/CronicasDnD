@@ -152,7 +152,7 @@ export function calculateWarlockOne(input:GuidedWarlockInput,state?:Pick<Warlock
  const ac=calculateArmorClass({strengthScore:scores.strength,dexterityScore:scores.dexterity,armor,
   shieldEquipped:inventory.equipped.shield,shieldTrained:false,
   ...(mageArmor?{alternateFormula:{id:'warlock-mage-armor',base:13,addDexterity:true,dexterityCap:null}}:{})});
- const hp=8+mods.constitution+(input.level===2?(input.level2HitDieRoll??5)+mods.constitution:0)+
+ const hp=8+mods.constitution+(input.level===2?Math.max(1,(input.level2HitDieRoll??5)+mods.constitution):0)+
   (input.species==='dwarf'?input.level:0)+(input.humanFeat==='tough'||input.lessonsFeat==='tough'?2*input.level:0);
  return {
   level:input.level,name:input.name.trim(),abilityScores:scores,abilityModifiers:mods,proficiencyBonus:2,

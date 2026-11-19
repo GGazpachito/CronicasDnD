@@ -98,6 +98,8 @@ export const WIZARD_LEVEL_ONE_DEFAULTS={cantrips:['light','mage_hand','ray_of_fr
 
 export type GuidedWizardInput=Readonly<{
  classId:'wizard';level:1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20;name:string;profile?:CharacterProfile;
+ /** Resultados naturales d6 de niveles 2..actual; 4 cuando se elige promedio. */
+ levelHitPointRolls?:readonly number[];
  background:BackgroundId;species:SpeciesId;
  assignedAbilities:AbilityScores;
  abilityGenerationMethod?:AbilityGenerationMethod;
@@ -286,7 +288,7 @@ export function calculateGuidedWizard(input:GuidedWizardInput):WizardLevelOneVie
  const armorClass=calculateArmorClass({dexterityScore:finalScores.dexterity,strengthScore:finalScores.strength,armor:equippedArmor(inventory),shieldEquipped:inventory.equipped.shield,shieldTrained:false}).value;
  const hpBonus=(input.species==='dwarf'?1:0)+(input.humanFeat==='tough'?2:0);
  if(input.level>=2&&!proficiency.includes(input.scholarSkill!))throw new RangeError('Erudito requiere competencia previa en la habilidad');
- const core=wizardCoreStatistics(input.level,finalScores);
+ const core=wizardCoreStatistics(input.level,finalScores,input.levelHitPointRolls);
  return {classId:'wizard',level:input.level,name:input.name.trim(),abilityScores:finalScores,abilityModifiers:bonuses,
   skillBonuses:calculateSkillBonuses(finalScores,input.level,{skills:proficiency,expertiseSkills:input.scholarSkill?[input.scholarSkill]:[]}),skillProficiencies:proficiency,
   savingThrowBonuses:calculateSavingThrows(finalScores,input.level,{savingThrows:['intelligence','wisdom']}),
@@ -349,7 +351,7 @@ export function validateWizardCharacterSnapshot(raw:unknown):WizardCharacterSnap
  if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new RangeError('Guardado de Mago inválido');
  const value=raw as Record<string,unknown>;
  if(value.schemaVersion!==3||value.ruleset!=='dnd-2024'||Object.keys(value).some(k=>!['schemaVersion','ruleset','input','wizardState'].includes(k)))throw new RangeError('Versión o estructura de Mago incorrectas');
- const permitted=['companions','abilityGenerationMethod','spellSelection','scholarSkill','subclass','evokerBonusSpellIds','level4Improvement','evokerLevelThreeSpellId','evokerLevelFourSpellId','level8Improvement','level12Improvement','level16Improvement','evokerLevelFiveSpellId','evokerLevelSixSpellId','evokerLevelSevenSpellId','evokerLevelEightSpellId','evokerLevelNineSpellId','spellMasteryIds','epicBoon','signatureSpellIds','classId','level','name','profile','background','species','assignedAbilities','increaseMode','plusTwoAbility','plusOneAbility','wizardSkills','humanSkill','humanFeat','humanSize','elfLineage','equipmentChoice','backgroundEquipment','inventoryActions','cantripIds','spellbookIds','preparedIds'];
+const permitted=['levelHitPointRolls','companions','abilityGenerationMethod','spellSelection','scholarSkill','subclass','evokerBonusSpellIds','level4Improvement','evokerLevelThreeSpellId','evokerLevelFourSpellId','level8Improvement','level12Improvement','level16Improvement','evokerLevelFiveSpellId','evokerLevelSixSpellId','evokerLevelSevenSpellId','evokerLevelEightSpellId','evokerLevelNineSpellId','spellMasteryIds','epicBoon','signatureSpellIds','classId','level','name','profile','background','species','assignedAbilities','increaseMode','plusTwoAbility','plusOneAbility','wizardSkills','humanSkill','humanFeat','humanSize','elfLineage','equipmentChoice','backgroundEquipment','inventoryActions','cantripIds','spellbookIds','preparedIds'];
  if(!value.input||typeof value.input!=='object'||Array.isArray(value.input)||Object.keys(value.input as Record<string,unknown>).some(key=>!permitted.includes(key)))throw new RangeError('La creación de Mago incluye campos desconocidos');
  let clean:GuidedWizardInput;
  try{const json=JSON.stringify(value.input);if(json.length>120_000)throw new Error();clean=JSON.parse(json) as GuidedWizardInput;}catch{throw new RangeError('Datos de Mago demasiado grandes o no serializables');}

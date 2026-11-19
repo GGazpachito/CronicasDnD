@@ -23,6 +23,7 @@ import SpellLibraryPanel from '../../components/SpellLibraryPanel';
 import SharedSpellsLayout from '../../components/SharedSpellsLayout';
 import WarlockCompanionsPanel from '../../components/WarlockCompanionsPanel';
 import WarlockLevelUpWizard from '../../components/WarlockLevelUpWizard';
+import LevelDownDialog from '../../components/LevelDownDialog';
 import {WarlockWeaponAttacks,WarlockEldritchBlast} from '../../components/WarlockAttacks';
 import SheetPlaceholder from '../../components/SheetPlaceholder';
 import {type Ability} from '../../../../../packages/rules-engine/src/abilities';
@@ -35,6 +36,7 @@ import {WARLOCK_EQUIPMENT_OPTIONS} from '../../../../../packages/rules-engine/sr
 import {WARLOCK_LEVEL_ONE_CANTRIPS,WARLOCK_LEVEL_ONE_SPELLS,TOME_CANTRIP_OPTIONS,TOME_RITUAL_OPTIONS,warlockSpellRule} from '../../../../../packages/rules-engine/src/warlock-spells';
 import {type InventoryAction} from '../../../../../packages/rules-engine/src/inventory';
 import {type D20Mode} from '../../../../../packages/rules-engine/src/d20';
+import {previewWarlockLevelDown} from '../../../../../packages/rules-engine/src/warlock-level-up';
 import {
  WARLOCK_INVOCATIONS,WARLOCK_LEVEL_ONE_INVOCATIONS,WARLOCK_SKILL_OPTIONS,
  calculateWarlockOne,initialWarlockOneState,makeWarlockCharacterSnapshot,warlockShortRest,warlockLongRest,warlockMagicalCunning,warlockPactSlots,toggleWarlockPactSlot,
@@ -63,6 +65,7 @@ export default function WarlockPage(){
  const [feedback,setFeedback]=useState('');
  const [profileRevision,setProfileRevision]=useState(0);
  const [levelUpOpen,setLevelUpOpen]=useState(false);
+ const [levelDownOpen,setLevelDownOpen]=useState(false);
  const calculated=useMemo(()=>{
   try{return {sheet:calculateWarlockOne(warlockInputForPreview(input),state),error:''};}
   catch(e){return {sheet:null,error:e instanceof Error?e.message:'Elecciones no válidas'};}
@@ -72,6 +75,11 @@ export default function WarlockPage(){
   if(!sheet)return null;
   try{return makeWarlockCharacterSnapshot(input,state);}catch{return null;}
  },[input,state,sheet]);
+ const levelDownAssessment=useMemo(()=>{
+  if(input.level!==2||!snapshot)return {preview:null,error:'No hay una bajada de nivel válida'};
+  try{return {preview:previewWarlockLevelDown(input,state),error:''};}
+  catch(error){return {preview:null,error:error instanceof Error?error.message:'No se puede bajar de nivel'};}
+ },[input,state,snapshot]);
  const background=BACKGROUNDS[input.background];
  const invocation=input.invocations[0];
  const hasBlade=input.invocations.includes('pact_of_blade');
@@ -164,7 +172,7 @@ export default function WarlockPage(){
  }
  function togglePactSlot(index:number){setState(previous=>toggleWarlockPactSlot(previous,input.level,index));}
  function restore(saved:ReturnType<typeof makeWarlockCharacterSnapshot>){
-  setInput(saved.input);setState(saved.warlockState);setEditing(false);setLevelUpOpen(false);setTab('principal');setFeedback('');setProfileRevision(n=>n+1);
+  setInput(saved.input);setState(saved.warlockState);setEditing(false);setLevelUpOpen(false);setLevelDownOpen(false);setTab('principal');setFeedback('');setProfileRevision(n=>n+1);
  }
  const tomeCantrips=hasTome&&state.tomePresent?(input.tomeCantripIds??[]).map(id=>warlockSpellRule(id)).filter(x=>x!==undefined):[];
  const tomeRituals=hasTome&&state.tomePresent?(input.tomeRitualIds??[]).map(id=>warlockSpellRule(id)).filter(x=>x!==undefined):[];
@@ -180,10 +188,16 @@ export default function WarlockPage(){
   <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Brujo · D&D 2024</span></div></div><Link href="/" className="wizard-class-link">Menú de personajes</Link></header>
   <div className="content">
    <p className="sheet-release-note">CLASE · BRUJO NIVEL {input.level} · PHB 2024</p>
-   <CharacterHeader name={input.name} portraitDataUrl={input.profile?.portraitDataUrl} level={input.level} background={background.name} species={SPECIES_NAMES[input.species]} className="Brujo" valid={Boolean(snapshot)} onEdit={()=>setEditing(true)}/>
+   <CharacterHeader name={input.name} portraitDataUrl={input.profile?.portraitDataUrl} level={input.level} background={background.name} species={SPECIES_NAMES[input.species]} className="Brujo" valid={Boolean(snapshot)} onEdit={()=>setEditing(true)}
+    onLevelUp={input.level===1&&snapshot?()=>{setLevelUpOpen(true);setEditing(false);}:undefined}
+    onLevelDown={input.level===2&&levelDownAssessment.preview?()=>setLevelDownOpen(true):undefined}/>
    <p className="wizard-progression-hint">{input.level===1?'Siguiente desbloqueo: Astucia mágica, nuevas invocaciones y segunda ranura de Magia de Pacto.':'Nivel 2 completado. La subclase Patrón Infernal comienza en nivel 3; todavía no concede sus rasgos.'}</p>
-   {input.level===1&&<div className="wizard-level-controls"><button type="button" disabled={!snapshot} onClick={()=>{setLevelUpOpen(true);setEditing(false);}}>↑ Subir al nivel 2</button><span>Elige invocaciones y conjuros en la ventana de subida.</span></div>}
-   {levelUpOpen&&<div className="warlock-level-up-overlay"><WarlockLevelUpWizard input={input} state={state} onAdvance={(nextInput,nextState)=>{setInput(nextInput);setState(nextState);setLevelUpOpen(false);setEditing(false);setFeedback('¡Brujo nivel 2! Astucia mágica disponible y ranuras ampliadas. Guarda los cambios para conservar el progreso.');}} onCancel={()=>setLevelUpOpen(false)}/></div>}
+   {levelUpOpen&&<WarlockLevelUpWizard input={input} state={state} mode={mode} onAdvance={(nextInput,nextState)=>{setInput(nextInput);setState(nextState);setLevelUpOpen(false);setEditing(false);setFeedback('¡Brujo nivel 2! Astucia mágica disponible y ranuras ampliadas. Guarda los cambios para conservar el progreso.');}} onCancel={()=>setLevelUpOpen(false)}/>}
+   {levelDownOpen&&<LevelDownDialog preview={levelDownAssessment.preview} error={levelDownAssessment.error} onClose={()=>setLevelDownOpen(false)} onConfirm={()=>{
+    if(!levelDownAssessment.preview)throw new RangeError('La bajada de Brujo no es válida');
+    setInput(levelDownAssessment.preview.snapshot.input);setState(levelDownAssessment.preview.snapshot.warlockState);
+    setLevelDownOpen(false);setEditing(false);setTab('principal');setFeedback('Brujo nivel 1. Se han actualizado invocaciones, conjuros, PG y ranuras. Guarda los cambios.');
+   }}/>}
    <SaveLoadPanel characterClass="warlock" snapshot={snapshot} validate={validateWarlockCharacterSnapshot} onLoad={restore} normalize={saved=>makeWarlockCharacterSnapshot(saved.input,saved.warlockState)}/>
    {editing&&<section className="wizard-editor panel" aria-label="Creación de Brujo">
     <div className="panel-heading"><div><span className="eyebrow">PERSONAJE · NIVEL {input.level}</span><h2>Opciones de Brujo</h2><p>{input.level===1?'Selecciona origen, Carisma, invocación y dos conjuros preparados. No necesitas libro de conjuros.':'Identidad, origen, equipo y ajustes del personaje. Las invocaciones y los conjuros se escogieron en la subida de nivel.'}</p></div></div>

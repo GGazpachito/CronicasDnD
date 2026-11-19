@@ -3,6 +3,7 @@
  * No añade todavía la clase al creador ni modifica los guardados del Guerrero.
  */
 import {abilityModifier,proficiencyBonus,validateAbilityScores,type AbilityScores} from './abilities';
+import {validateLevelHitPointRolls} from './level-hit-points';
 import {createSlotPool,longRestSpellSlots,restoreSpellSlots,useSpellSlot,type SpellSlotPool} from './spellcasting-core';
 
 export type WizardLevel=1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20;
@@ -259,18 +260,20 @@ export type WizardCoreStatistics=Readonly<{
   spellcastingAbility:'intelligence';spellAttackBonus:number;spellSaveDC:number;
   proficiencyBonus:number;intelligenceModifier:number;constitutionModifier:number;
 }>;
-/** PG con valores fijos oficiales (6 en primer nivel; 4 a partir del segundo).
+/** PG con valor fijo oficial (6 en primer nivel; 4 a partir del segundo) o
+ * resultados naturales de d6 registrados por nivel en `levelHitPointRolls`.
  * Las bonificaciones por especie/dotes y CA con efectos no se suman en esta
  * proyección: el sistema principal de efectos las aplicará al integrarlo.
  */
-export function wizardCoreStatistics(level:number,abilityScores:AbilityScores):WizardCoreStatistics{
+export function wizardCoreStatistics(level:number,abilityScores:AbilityScores,levelHitPointRolls?:readonly number[]):WizardCoreStatistics{
   const progression=wizardProgression(level,level>=3?'evoker':undefined);
   const scores=validateAbilityScores(abilityScores);
   const con=abilityModifier(scores.constitution);
+  validateLevelHitPointRolls(level,levelHitPointRolls,6);
   const intelligence=abilityModifier(scores.intelligence);
   return {
     classId:'wizard',level:progression.level,hitDie:6,hitDiceTotal:level,
-    maximumHitPoints:Math.max(1,6+con)+(level-1)*Math.max(1,4+con),
+    maximumHitPoints:Math.max(1,6+con)+(levelHitPointRolls??Array<number>(level-1).fill(4)).reduce((total,die)=>total+Math.max(1,die+con),0),
     armorClassWithoutArmor:10+abilityModifier(scores.dexterity),
     spellcastingAbility:'intelligence',spellAttackBonus:progression.proficiencyBonus+intelligence,
     spellSaveDC:8+progression.proficiencyBonus+intelligence,

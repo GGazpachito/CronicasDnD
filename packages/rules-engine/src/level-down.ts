@@ -5,6 +5,7 @@
 import {calculateGuidedFighter,type GuidedFighterInput} from './guided';
 import {collectCharacterTraits} from './traits';
 import {type AdventureState,initialAdventureState,validateAdventureState} from './adventure';
+import {trimLevelHitPointRolls} from './level-hit-points';
 import {fighterResourceMaximum,type FighterResourceId} from './resources';
 import {makeCharacterSnapshot,type CharacterSnapshot} from './persistence';
 import {FIGHTER_LEVEL_MILESTONES,explainFighterMilestone} from './level-up-wizard';
@@ -18,7 +19,7 @@ import {SKILLS,type Skill} from './proficiencies';
 
 export type LevelDownNotice=Readonly<{title:string;description:string}>;
 export type LevelDownSummary=Readonly<{
- className:'Guerrero'|'Mago';fromLevel:number;toLevel:number;
+ className:'Guerrero'|'Mago'|'Brujo';fromLevel:number;toLevel:number;
  lost:readonly LevelDownNotice[];changes:readonly LevelDownNotice[];
  preserved:readonly string[];
 }>;
@@ -49,12 +50,13 @@ export function fighterInputAtPreviousLevel(input:GuidedFighterInput):GuidedFigh
  if(!Number.isInteger(input.level)||input.level<=1||input.level>20)throw new RangeError('Guerrero: no se puede bajar del nivel 1');
  calculateGuidedFighter(input);
  const target=input.level-1;
- const {level4Improvement,level6Improvement,level8Improvement,level12Improvement,level14Improvement,level16Improvement,epicBoon,...rest}=input;
+ const {levelHitPointRolls,level4Improvement,level6Improvement,level8Improvement,level12Improvement,level14Improvement,level16Improvement,epicBoon,...rest}=input;
  if(!input.martial)throw new RangeError('Faltan las elecciones de combate');
  const martial={...input.martial,weaponMasteries:[...input.martial.weaponMasteries].slice(0,target>=16?6:target>=10?5:target>=4?4:3),
   ...(target>=7&&input.martial.additionalFightingStyle?{additionalFightingStyle:input.martial.additionalFightingStyle}:{})};
  if(target<7)delete (martial as {additionalFightingStyle?:unknown}).additionalFightingStyle;
  const next:GuidedFighterInput={...rest,level:target as GuidedFighterInput['level'],martial,
+  ...(target>1&&levelHitPointRolls?{levelHitPointRolls:trimLevelHitPointRolls(levelHitPointRolls,target)}:{}),
   ...(target>=4?{level4Improvement}:{}),
    ...(target>=8?{level8Improvement}:{}),...(target>=6?{level6Improvement}:{}),
   ...(target>=8?{level8Improvement}:{}),...(target>=12?{level12Improvement}:{}),
@@ -140,13 +142,14 @@ export function previewWizardLevelDown(input:GuidedWizardInput,state:WizardLevel
  const wanted=wizardProgression(target,target>=3?'evoker':undefined).preparedSpellCount;
  const filtered=input.preparedIds.filter(id=>permitted.has(id));
  const prepared=[...new Set([...filtered,...trimmedBook,...keptExtras])].slice(0,wanted);
- const {scholarSkill,subclass,evokerBonusSpellIds,evokerLevelThreeSpellId,evokerLevelFourSpellId,evokerLevelFiveSpellId,evokerLevelSixSpellId,evokerLevelSevenSpellId,evokerLevelEightSpellId,evokerLevelNineSpellId,spellMasteryIds,epicBoon,signatureSpellIds,level4Improvement,level8Improvement,level12Improvement,level16Improvement,spellSelection,...other}=input;
+ const {levelHitPointRolls,scholarSkill,subclass,evokerBonusSpellIds,evokerLevelThreeSpellId,evokerLevelFourSpellId,evokerLevelFiveSpellId,evokerLevelSixSpellId,evokerLevelSevenSpellId,evokerLevelEightSpellId,evokerLevelNineSpellId,spellMasteryIds,epicBoon,signatureSpellIds,level4Improvement,level8Improvement,level12Improvement,level16Improvement,spellSelection,...other}=input;
  void signatureSpellIds; // Al bajar del 20 se pierden Conjuros de firma.
  const selection=spellSelection===undefined?undefined:validateWizardSpellSelection({
   learnedIds:spellSelection.learnedIds.filter(id=>!lostSpellIds.includes(id)),
   preparedIds:spellSelection.preparedIds.filter(id=>!lostSpellIds.includes(id)),
  });
  const nextInput:GuidedWizardInput={...other,level:target,spellbookIds:trimmedBook,preparedIds:prepared,
+  ...(target>1&&levelHitPointRolls?{levelHitPointRolls:trimLevelHitPointRolls(levelHitPointRolls,target)}:{}),
   cantripIds:target<4?input.cantripIds.slice(0,3):target<10?input.cantripIds.slice(0,4):input.cantripIds,
   ...(target>=2?{scholarSkill}:{}),
   ...(target>=3?{subclass,evokerBonusSpellIds}:{}),

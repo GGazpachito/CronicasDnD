@@ -1,0 +1,80 @@
+# Arquitectura normativa: ventanas de subida y bajada de nivel (paso 70)
+
+> **CONTRATO OBLIGATORIO DE UI Y REGLAS PARA TODAS LAS CLASES.** Este documento complementa `ESTRUCTURA_HOJA_COMUN.md`. Ninguna clase nueva debe fabricar sus propios contenedores de progreso, pasos, botones ni estilos. Debe integrar componentes compartidos con un adaptador de reglas de clase.
+
+## A. Subida de nivel: estructura exacta
+
+**Único marco visual y accesible:** `apps/web/src/components/LevelUpDialogFrame.tsx`.
+
+| Parte | Contrato estable | Clases CSS compartidas |
+| --- | --- | --- |
+| Fondo y ventana | Diálogo modal centrado, foco inicial, cierre con Escape/cerrar/cancelar | `level-wizard-backdrop`, `level-wizard` |
+| Cabecera | «PROGRESIÓN · [CLASE] / [SUBCLASE]», «Subir del nivel N al N+1», descripción de confirmación diferida | `level-wizard-top`, `eyebrow`, `level-wizard-close` |
+| Paso 0 | **Novedades**: capacidades que se adquieren, explicación, avance de estadísticas y recursos; no aplicar cambios | `level-wizard-section`, `level-wizard-milestones`, `level-wizard-stats`, `level-wizard-explanation` |
+| Paso 1 | **Elecciones**: selección de todas las decisiones reglamentarias; incluir SIEMPRE `LevelUpHitPointsPicker`; dar explicaciones y validación inmediata | `level-wizard-section`, `level-wizard-fieldset`, `field`, `level-wizard-ok`, `level-wizard-error` |
+| Paso 2 | **Confirmación**: antes/después numérico, nuevos rasgos y elecciones, nota sobre persistencia | `level-wizard-stats`, `level-wizard-choice-info`, `level-wizard-small-list` |
+| Pie fijo | Botón Cancelar a la izquierda, Atrás y Siguiente/Confirmar a la derecha; desactivar avance ante elecciones inválidas | `level-wizard-actions`, `level-wizard-cancel`, `level-wizard-back`, `level-wizard-actions-right` |
+
+**Prohibido** usar componentes con `<section role="dialog">` particulares y fondos `.warlock-level-up-overlay`, `.fighter-level-up-overlay`, etc. `LevelUpDialogFrame` recibe `stage` (0, 1, 2), `onClose`, `footer`, y renderiza los hijos de la clase en las tres posiciones. Las únicas diferencias legítimas son `eyebrow`, descripción de rasgos, elecciones reglamentarias y datos. Evitar la duplicación de cabeceras y controles.
+
+**Implementaciones de referencia:** `LevelUpWizard.tsx` (Guerrero), `WizardLevelUpWizard.tsx` (Mago) y `WarlockLevelUpWizard.tsx` (Brujo). Las tres deben utilizar el **mismo** `LevelUpDialogFrame`, botones, clases de estilos y estructura de etapas. La entrada a progresión se presenta desde `CharacterHeader.tsx` mediante `onLevelUp`, nunca con una segunda botonera específica en medio de la página.
+
+## B. Elección de magia durante la subida
+
+La pestaña `Hechizos` de la ficha continúa siendo única e independiente: `SharedSpellsLayout` + `SpellLibraryPanel` + `SHARED_SPELL_RULES`. El asistente de nivel no duplica el catálogo: ofrece únicamente las opciones que **esa clase puede aprender en ese nivel**.
+
+El mismo patrón visual debe aparecer siempre que haya magia para elegir:
+
+1. Campo de **búsqueda por nombre/escuela** (y ampliar a nivel cuando corresponda) dentro de `level-wizard-section`.
+2. `fieldset` con título y contador visible, ejemplo «Conjuros preparados (3/3)».
+3. `wizard-spell-picker wizard-spell-choice-list` con tarjetas `wizard-spell-option`, selección por casilla/radio y nombre/nivel.
+4. Cada hechizo usa el **mismo `WizardSpellDetails`** con texto, datos de reglas y botones de tirada, también si proviene de Brujo.
+5. Validación **en el motor de reglas**: no basta bloquear botones. El resultado se calcula antes de entrar en Confirmación.
+
+Ejemplos: Mago aprende dos conjuros de libro por nivel y prepara conforme a progresión; Brujo de 1 a 2 conserva dos trucos (puede sustituir uno), pasa de dos a tres preparados (puede sustituir uno anterior) y escoge tres invocaciones distintas. Estas restricciones no alteran el aspecto común.
+
+## C. Puntos de golpe: promedio o dado para todas las clases
+
+**Componente único obligatorio** en paso 1: `apps/web/src/components/LevelUpHitPointsPicker.tsx`, configurado por `characterClass`. **Catálogo y validación:** `packages/rules-engine/src/level-hit-points.ts`.
+
+| Clase | Dado | Promedio oficial | Valor que se guarda |
+| --- | --- | --- | --- |
+| Guerrero | d10 | 6 | `levelHitPointRolls` (array de d10 naturales, uno por nivel 2..N) |
+| Mago | d6 | 4 | `levelHitPointRolls` (array de d6 naturales, uno por nivel 2..N) |
+| Brujo | d8 | 5 | `level2HitDieRoll` (progresión implementada actualmente hasta nivel 2) |
+
+El selector muestra «Promedio» o «Tirada 1dX». Al elegir la segunda opción se lanza el dado; es posible repetir hasta confirmar. Cuando se elige promedio se almacena el valor fijo equivalente. No guardar la cadena de modo visual como sustituto del resultado; en ambos casos se guarda el **número de dado elegido**. No aplicar el dado dos veces al confirmar. No modificar el valor al cambiar de pestaña ni al restaurar el guardado.
+
+PG ganados por nivel posterior al 1: **máximo de 1 y (resultado del dado + modificador de Constitución)**, más los efectos pasivos por nivel (Enano, Duro, etc.) según el motor. La Constitución modificada a posteriori recalcula el máximo de todos los niveles anteriores. Cada transición conserva el daño acumulado tanto como lo permitan los nuevos máximos. Las elecciones no se aplican al estado principal hasta Confirmar.
+
+**Compatibilidad:** las entradas antiguas de Guerrero/Mago sin `levelHitPointRolls` continúan usando el promedio fijo. La primera subida nueva crea un historial completo rellenando los niveles anteriores con su media (6 o 4), después añade el dado actual. Se valida `length === level-1` y rango de cada dado. El descenso elimina el último dado del historial (`trimLevelHitPointRolls`), sin volver a tirar; **al regresar al nivel 1 se omite por completo `levelHitPointRolls`**, en vez de guardar una lista vacía, para recuperar exactamente el esquema anterior y superar las auditorías de igualdad de instantáneas. El esquema de guardados anterior se conserva (campo opcional y aceptado por sus validadores). Brujo mantiene `level2HitDieRoll` para la versión 4.
+
+## D. Bajada de nivel: estructura exacta
+
+**Único diálogo:** `apps/web/src/components/LevelDownDialog.tsx`. Las tres clases deben pasar un objeto compatible con `LevelDownSummary` (`packages/rules-engine/src/level-down.ts`) y `onConfirm`. No crear otro modal ni una bajada silenciosa.
+
+Orden fijo de la ventana:
+
+1. Encabezado con clase, nivel de origen y destino, y cierre de diálogo.
+2. «Rasgos y elecciones que se pierden»: lista de novedades retiradas.
+3. «Estadísticas y recursos que cambiarán»: PG, ranuras, competencias, etc.
+4. «Información que se conserva»: identidad, perfil, equipo, daño compatible y marcadores.
+5. Casilla de reconocimiento explícita; «Confirmar bajada al nivel N» solo se habilita al marcarla. Cancelar jamás muta.
+
+Las reglas de **Guerrero/Mago** están en `level-down.ts`; las de **Brujo 2→1** en `warlock-level-up.ts` (`previewWarlockLevelDown`). Los adaptadores construyen una vista previa y una instantánea validada **antes** de abrir la confirmación. El diálogo no conoce reglas de clases.
+
+Importante para Brujo: en guardados antiguos de nivel 2 no existe un historial de qué invocación/conjuros eran los originales en nivel 1. El retroceso conserva una invocación legal de nivel 1 (o Pacto de la Hoja si ninguna lo es), los dos primeros trucos y los dos primeros preparados. **Debe avisar** de esta política antes de confirmar; se pierden las elecciones restantes. Una futura arquitectura de historial puede evitar esta limitación sin cambiar el diálogo.
+
+## E. Checklist obligatorio antes de entregar una nueva clase/subclase
+
+- [ ] Usa `CharacterHeader` con `onLevelUp` / `onLevelDown` y no crea controles duplicados.
+- [ ] La subida se representa con `LevelUpDialogFrame` en **tres pasos y el mismo pie**.
+- [ ] La bajada usa `LevelDownDialog`, `LevelDownSummary`, confirmación y cancelación segura.
+- [ ] `LevelUpHitPointsPicker` con dX, promedio y resultado persiste y recalcula PG correctamente.
+- [ ] Los conjuros se seleccionan con `wizard-spell-choice-list`, buscador, `WizardSpellDetails` y solo de la lista reglamentaria.
+- [ ] Motor puro valida todas las elecciones y construye vista previa; estado principal cambia solo al confirmar.
+- [ ] Guardados antiguos sin tiradas registradas continúan cargando; al subir se rellenan las medias anteriores.
+- [ ] Al bajar se recorta el historial de PG y se ajustan recursos conservando daño y usos compatibles.
+- [ ] Comparación visual con Guerrero/Mago/Brujo, ratón, teclado, móvil; pruebas de progresión, lint y build.
+
+**Para el TFG:** decisión deliberada de separar componentes compartidos de presentación, políticas de cada clase (motor) y datos históricos persistidos. La uniformidad se consigue por reutilización de código, no intentando igualar capturas con CSS separado.
