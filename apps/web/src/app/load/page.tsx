@@ -4,7 +4,7 @@ import {useEffect,useState} from "react";
 import Link from "next/link";
 import Image from "next/image";
 
-type Summary={id:string;name:string;level:number;characterClass:"fighter"|"wizard";species?:string;subclass?:string|null;portraitDataUrl?:string;updatedAt:string};
+type Summary={id:string;name:string;level:number;characterClass:"fighter"|"wizard"|"warlock";species?:string;subclass?:string|null;portraitDataUrl?:string;updatedAt:string};
 
 // Consulta reutilizable: no modifica el estado de React.
 async function fetchCharacters(signal?:AbortSignal):Promise<Summary[]>{
@@ -58,9 +58,9 @@ export default function LoadPage(){
    {error&&<div className="front-error" role="alert"><p>{error}</p><p>Comprueba que PostgreSQL y la web estén iniciados.</p></div>}
    {!loading&&!error&&items.length===0&&<div className="panel front-empty"><h2>No hay personajes guardados</h2><p>Crea uno y utiliza el botón «Guardar como nuevo» para que aparezca aquí.</p></div>}
    {!loading&&!error&&items.length>0&&<div className="front-character-grid">
-    {items.map(item=><Link key={item.id} className="front-character-card" href={`${item.characterClass==='wizard'?'/wizard':'/fighter'}?character=${encodeURIComponent(item.id)}`} aria-label={`Abrir ${item.name}, ${item.characterClass==='wizard'?'Mago':'Guerrero'} nivel ${item.level}`}>
+    {items.map(item=><Link key={item.id} className="front-character-card" href={`${item.characterClass==='wizard'?'/wizard':item.characterClass==='warlock'?'/warlock':'/fighter'}?character=${encodeURIComponent(item.id)}`} aria-label={`Abrir ${item.name}, ${item.characterClass==='wizard'?'Mago':item.characterClass==='warlock'?'Brujo':'Guerrero'} nivel ${item.level}`}>
      <div className="front-character-portrait">{item.portraitDataUrl?<Image src={item.portraitDataUrl} alt={`Retrato de ${item.name}`} fill sizes="(max-width: 700px) 90vw, 250px" unoptimized/>:<span aria-hidden="true">{item.name.trim().slice(0,1).toLocaleUpperCase('es')||'?'}</span>}</div>
-     <div className="front-character-details"><h2>{item.name}</h2><p><strong>{item.characterClass==='wizard'?'Mago':'Guerrero'} · Nivel {item.level}</strong></p><p>{item.species||'Especie no disponible'}</p><p>{item.subclass||'Sin subclase'}</p><small>Actualizado: {new Date(item.updatedAt).toLocaleDateString('es-ES')}</small></div>
+     <div className="front-character-details"><h2>{item.name}</h2><p><strong>{item.characterClass==='wizard'?'Mago':item.characterClass==='warlock'?'Brujo':'Guerrero'} · Nivel {item.level}</strong></p><p>{item.species||'Especie no disponible'}</p><p>{item.subclass||'Sin subclase'}</p><small>Actualizado: {new Date(item.updatedAt).toLocaleDateString('es-ES')}</small></div>
     </Link>)}
    </div>}
   </div>

@@ -1,8 +1,11 @@
 import { validateCharacterSnapshot, type CharacterSnapshot } from '../../../../packages/rules-engine/src/persistence';
 import { validateWizardCharacterSnapshot, type WizardCharacterSnapshot } from '../../../../packages/rules-engine/src/wizard-creation';
+import { validateWarlockCharacterSnapshot, type WarlockCharacterSnapshot } from '../../../../packages/rules-engine/src/warlock';
 
-export type StoredCharacterSnapshot=CharacterSnapshot|WizardCharacterSnapshot;
+export type StoredCharacterSnapshot=CharacterSnapshot|WizardCharacterSnapshot|WarlockCharacterSnapshot;
 export function validateStoredSnapshot(value:unknown):StoredCharacterSnapshot {
+  if(value&&typeof value==='object'&&!Array.isArray(value)&&(value as {schemaVersion?:unknown}).schemaVersion===4)
+    return validateWarlockCharacterSnapshot(value);
   if(value&&typeof value==='object'&&!Array.isArray(value)&&(value as {schemaVersion?:unknown}).schemaVersion===3)
     return validateWizardCharacterSnapshot(value);
   return validateCharacterSnapshot(value);

@@ -566,6 +566,9 @@ export default function Home(){
           species={SPECIES_NAMES[species]}
           background={bg.name} level={level} onEditIdentity={()=>openEditorAt(0)}/>
       </section>
+      <section id="sheet-panel-companions" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-companions" hidden={activeTab!=='companions'}>
+        <SheetPlaceholder eyebrow="COMPAÑEROS · HOJA COMÚN" title="Compañeros" description="Esta clase no dispone todavía de un compañero gestionado por la hoja. El módulo compartido está preparado para familiares, monturas y aliados futuros."/>
+      </section>
       <section id="sheet-panel-combate" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-combate" hidden={activeTab!=='combate'}>
         <SheetPlaceholder eyebrow="COMBATE · DESARROLLO FUTURO" title="Coming Soon"
           description="La nueva interfaz de combate todavía no está diseñada. Los módulos de combate ya existentes se conservan en Principal, bajo «Herramientas existentes de partida y combate»."

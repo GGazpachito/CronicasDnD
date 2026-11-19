@@ -24,7 +24,7 @@ export type CatalogItemId =
   'scimitar'|'shortsword'|'longbow'|'arrow'|'quiver'|'calligraphers_supplies'|
   'book_prayers'|'holy_symbol'|'parchment'|'robe'|'dagger'|'thieves_tools'|
   'crowbar'|'pouch'|'travelers_clothes'|'quarterstaff'|'book_history'|
-  'spear'|'shortbow'|'healers_kit'|'spellbook'|'scholars_pack'|GamingSetId;
+  'spear'|'shortbow'|'healers_kit'|'spellbook'|'scholars_pack'|'arcane_focus_orb'|'occult_book'|'leather'|'sickle'|GamingSetId;
 export const ITEM_NAMES: Readonly<Record<CatalogItemId, string>> = {
   chain_mail:'Cota de malla',greatsword:'Espadón',flail:'Mayal',javelin:'Jabalina',
   dungeoneers_pack:'Equipo de exploración de mazmorras',studded_leather:'Cuero tachonado',
@@ -35,6 +35,8 @@ export const ITEM_NAMES: Readonly<Record<CatalogItemId, string>> = {
   pouch:'Bolsa',travelers_clothes:'Ropa de viaje',quarterstaff:'Bastón',
   book_history:'Libro de historia',spear:'Lanza',shortbow:'Arco corto',
   healers_kit:'Botiquín de sanador',spellbook:'Libro de conjuros',scholars_pack:'Equipo de erudito',
+  arcane_focus_orb:'Foco arcano (orbe)',occult_book:'Libro de saber oculto',
+  leather:'Armadura de cuero',sickle:'Hoz',
   ...GAMING_SETS,
 };
 type ItemSpec = Readonly<{id:CatalogItemId; quantity:number}>;

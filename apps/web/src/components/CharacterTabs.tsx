@@ -8,7 +8,8 @@ export const SHEET_TABS = [
   { id: "equipo", label: "Equipo", shortLabel: "Equipo", number: "03" },
   { id: "hechizos", label: "Hechizos", shortLabel: "Hechizos", number: "04" },
   { id: "personaje", label: "Personaje", shortLabel: "Historia", number: "05" },
-  { id: "combate", label: "Combate", shortLabel: "Combate", number: "06" },
+  { id: "companions", label: "Compañeros", shortLabel: "Compañeros", number: "06" },
+  { id: "combate", label: "Combate", shortLabel: "Combate", number: "07" },
 ] as const;
 
 export type SheetTab = (typeof SHEET_TABS)[number]["id"];
@@ -19,7 +20,7 @@ type CharacterTabsProps = {
 };
 
 /**
- * Navegación de la hoja. La página padre conserva montados los seis paneles
+ * Navegación de la hoja. La página padre conserva montados los siete paneles
  * para no reiniciar formularios ni estados de los módulos al cambiar de pestaña.
  */
 export default function CharacterTabs({ activeTab, onChange }: CharacterTabsProps) {

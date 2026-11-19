@@ -6,7 +6,7 @@ import {useEffect,useRef,useState} from "react";
  * Cada hoja recibe su validador de guardado y su adaptador de estado: nunca se
  * interpreta la sesión de un Mago como la de un Guerrero.
  */
-type CharacterClass="fighter"|"wizard";
+type CharacterClass="fighter"|"wizard"|"warlock";
 type SnapshotLike={readonly input:{readonly level:number;readonly name:string}};
 type SaveProps<T extends SnapshotLike>={
   snapshot:T|null;
