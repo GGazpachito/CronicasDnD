@@ -9,7 +9,7 @@ export function collectWarlockTraits(input:GuidedWarlockInput,sheet:CalculatedWa
  const traits:CharacterTrait[]=[];
  function add(trait:CharacterTrait){traits.push(trait);}
  add({id:'warlock:pact_magic',title:'Magia de Pacto',group:'class',source:'Brujo',level:1,
-  summary:`${input.level>=4?'Tres':'Dos'} trucos, ${input.level===1?'dos':input.level===2?'tres':input.level===3?'cuatro':input.level===4?'cinco':'seis'} conjuros preparados ordinarios y ${input.level===1?'una':'dos'} ranuras de nivel ${input.level>=5?3:input.level>=3?2:1} recargables tras descansar.`,
+  summary:`${input.level>=4?'Tres':'Dos'} trucos, ${input.level===1?'dos':input.level===2?'tres':input.level===3?'cuatro':input.level===4?'cinco':input.level===5?'seis':'siete'} conjuros preparados ordinarios y ${input.level===1?'una':'dos'} ranuras de nivel ${input.level>=5?3:input.level>=3?2:1} recargables tras descansar.`,
   explanation:'Las ranuras se marcan manualmente en Hechizos; los conjuros no se lanzan automáticamente.',automation:'calculated',
   details:[`CD de salvación ${sheet.spellSaveDC}. Ataque mágico ${sheet.spellAttackBonus>=0?'+':''}${sheet.spellAttackBonus}.`,
    'El Brujo recupera todas sus ranuras de Magia de Pacto al terminar un descanso corto o largo.']});
@@ -19,12 +19,16 @@ export function collectWarlockTraits(input:GuidedWarlockInput,sheet:CalculatedWa
  if(input.level>=3&&input.subclassId==='fiend'){
   add({id:'warlock:fiend_patron',title:'Patrón Infernal',group:'class',source:'Patrón Infernal',level:3,
    summary:`Subclase que concede Bendición del Oscuro y ${input.level>=5?'seis':'cuatro'} conjuros siempre preparados.`,
-   explanation:`Los conjuros del patrón no consumen ninguna de las ${input.level>=5?'seis':input.level>=4?'cinco':'cuatro'} elecciones ordinarias de Magia de Pacto.`,automation:'calculated',
+   explanation:`Los conjuros del patrón no consumen ninguna de las ${input.level>=6?'siete':input.level>=5?'seis':input.level>=4?'cinco':'cuatro'} elecciones ordinarias de Magia de Pacto.`,automation:'calculated',
    details:['Manos ardientes (nivel 1)','Orden imperiosa (nivel 1)','Rayo abrasador (nivel 2)','Sugestión (nivel 2)',...(input.level>=5?['Bola de fuego (nivel 3)','Nube apestosa (nivel 3)']:[])]});
   add({id:'warlock:dark_ones_blessing',title:'Bendición del Oscuro',group:'class',source:'Patrón Infernal',level:3,
    summary:`Al reducir a un enemigo a 0 PG, o al hacerlo otra criatura a 10 pies de ti, puedes recibir ${Math.max(1,sheet.abilityModifiers.charisma+input.level)} PG temporales.`,
    explanation:'La condición la confirma el jugador. Solo se aplica si decides pulsar el botón del rasgo; los PG temporales no se acumulan.',automation:'partial',
    details:['PG temporales = máximo entre 1 y tu modificador de Carisma + nivel de Brujo.','Se conserva la cantidad mayor entre los PG temporales anteriores y los nuevos; no se suman.']});
+  if(input.level>=6)add({id:'warlock:dark_ones_own_luck',title:'Suerte del Oscuro',group:'class',source:'Patrón Infernal',level:6,
+   summary:'Después de ver un d20 de prueba de característica o salvación, puedes sumar 1d10 antes de resolver sus efectos.',
+   explanation:'Pulsa la tirada opcional cuando decidas usar este rasgo. Cada activación consume un uso; los recuperas únicamente tras un descanso largo.',automation:'partial',
+   details:['Usos por descanso largo: modificador de Carisma (mínimo uno).','Nunca más de una vez en una misma tirada; no se aplica a ataques ni tiradas de daño.']});
  }
  if(input.level>=4&&input.level4Improvement){
   const choice=input.level4Improvement;
