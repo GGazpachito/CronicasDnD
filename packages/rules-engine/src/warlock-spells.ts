@@ -1,6 +1,6 @@
-/** Pasos 66–74. La lista del Brujo enlaza directamente con las fichas existentes del Mago.
+/** Pasos 66–76. La lista del Brujo enlaza directamente con las fichas existentes del Mago.
  * Solo se declaran reglas nuevas para conjuros que no están en ese catálogo.
- * Fuente: PHB 2024, lista de conjuros del Brujo, niveles de conjuro 0–3 y Patrón Infernal 3–5.
+ * Fuente: PHB 2024, lista de conjuros del Brujo, niveles de conjuro 0–4 y Patrón Infernal 3–7.
  */
 import {wizardSpellRule,type WizardSpellRule} from './wizard-spell-details';
 
@@ -28,7 +28,13 @@ export const WARLOCK_THIRD_LEVEL_IDS=[
  'summon_undead','tongues','vampiric_touch'
 ] as const;
 export const WARLOCK_FIEND_LEVEL_FIVE_IDS=['fireball','stinking_cloud'] as const;
-export const WARLOCK_FIEND_ALWAYS_PREPARED_IDS=[...WARLOCK_FIEND_LEVEL_THREE_IDS,...WARLOCK_FIEND_LEVEL_FIVE_IDS] as const;
+/** Nivel de Brujo 7: todos los conjuros ya tienen ficha compartida con Mago. */
+export const WARLOCK_FOURTH_LEVEL_IDS=[
+ 'banishment','blight','charm_monster','dimension_door','hallucinatory_terrain','summon_aberration'
+] as const;
+export const WARLOCK_FIEND_LEVEL_SEVEN_IDS=['fire_shield','wall_of_fire'] as const;
+export const WARLOCK_FIEND_THROUGH_LEVEL_FIVE_IDS=[...WARLOCK_FIEND_LEVEL_THREE_IDS,...WARLOCK_FIEND_LEVEL_FIVE_IDS] as const;
+export const WARLOCK_FIEND_ALWAYS_PREPARED_IDS=[...WARLOCK_FIEND_THROUGH_LEVEL_FIVE_IDS,...WARLOCK_FIEND_LEVEL_SEVEN_IDS] as const;
 
 /** Metadatos de conjuros exclusivos o ajenos al listado del Mago; resúmenes originales. */
 export const WARLOCK_UNIQUE_SPELL_RULES:readonly WizardSpellRule[]=[
@@ -59,8 +65,11 @@ export const WARLOCK_LEVEL_TWO_SPELLS:readonly WizardSpellRule[]=WARLOCK_SECOND_
 export const WARLOCK_FIEND_LEVEL_THREE_SPELLS:readonly WizardSpellRule[]=WARLOCK_FIEND_LEVEL_THREE_IDS.map(required);
 export const WARLOCK_LEVEL_THREE_SPELLS:readonly WizardSpellRule[]=WARLOCK_THIRD_LEVEL_IDS.map(required);
 export const WARLOCK_FIEND_LEVEL_FIVE_SPELLS:readonly WizardSpellRule[]=WARLOCK_FIEND_LEVEL_FIVE_IDS.map(required);
+export const WARLOCK_LEVEL_FOUR_SPELLS:readonly WizardSpellRule[]=WARLOCK_FOURTH_LEVEL_IDS.map(required);
+export const WARLOCK_FIEND_LEVEL_SEVEN_SPELLS:readonly WizardSpellRule[]=WARLOCK_FIEND_LEVEL_SEVEN_IDS.map(required);
 export const WARLOCK_SPELLS_THROUGH_LEVEL_TWO:readonly WizardSpellRule[]=[...WARLOCK_LEVEL_ONE_SPELLS,...WARLOCK_LEVEL_TWO_SPELLS];
 export const WARLOCK_SPELLS_THROUGH_LEVEL_THREE:readonly WizardSpellRule[]=[...WARLOCK_SPELLS_THROUGH_LEVEL_TWO,...WARLOCK_LEVEL_THREE_SPELLS];
+export const WARLOCK_SPELLS_THROUGH_LEVEL_FOUR:readonly WizardSpellRule[]=[...WARLOCK_SPELLS_THROUGH_LEVEL_THREE,...WARLOCK_LEVEL_FOUR_SPELLS];
 
 /** Futuro Pacto del Tomo: los conjuros de las otras listas se añadirán al catálogo compartido. */
 export const TOME_CANTRIP_OPTIONS:readonly WizardSpellRule[]=[

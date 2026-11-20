@@ -1,4 +1,4 @@
-# Arquitectura normativa: ventanas de subida y bajada de nivel (actualizada en paso 75)
+# Arquitectura normativa: ventanas de subida y bajada de nivel (actualizada en paso 76)
 
 > **CONTRATO OBLIGATORIO DE UI Y REGLAS PARA TODAS LAS CLASES.** Este documento complementa `ESTRUCTURA_HOJA_COMUN.md`. Ninguna clase nueva debe fabricar sus propios contenedores de progreso, pasos, botones ni estilos. Debe integrar componentes compartidos con un adaptador de reglas de clase.
 
@@ -35,6 +35,8 @@ Ejemplos: Mago aprende dos conjuros de libro por nivel y prepara conforme a prog
 
 **Brujo 5→6 (paso 75):** exactamente el mismo asistente visual; mantiene tres trucos y cinco invocaciones (se puede sustituir como máximo uno de cada grupo), añade un séptimo preparado ordinario (retiene al menos cinco de los seis existentes), conserva los seis gratuitos del patrón y dos ranuras de nivel 3, y desbloquea el recurso manual Suerte del Oscuro. El nuevo nivel no cambia la ficha común ni introduce una lista paralela de conjuros.
 
+**Brujo 6→7 (paso 76):** el mismo diálogo `LevelUpDialogFrame` con sus tres etapas, búsqueda y fichas `WizardSpellDetails`. Elige seis invocaciones (cinco anteriores más una, con sustitución opcional de una), tres trucos (sustitución opcional de uno) y ocho preparados ordinarios (conserva al menos seis de los siete). Las dos ranuras de Pacto ascienden a nivel 4; seis conjuros ordinarios de nivel 4 ya existentes en Mago pasan a ser opciones de Brujo. Escudo de fuego y Muro de fuego son dos preparaciones adicionales del patrón, en total ocho, que no ocupan plazas ordinarias. `Susurros de la tumba` desbloquea Hablar con los muertos sin ranura como invocación opcional. Ninguna novedad modifica la arquitectura de las demás clases.
+
 ## C. Puntos de golpe: promedio o dado para todas las clases
 
 **Componente único obligatorio** en paso 1: `apps/web/src/components/LevelUpHitPointsPicker.tsx`, configurado por `characterClass`. **Catálogo y validación:** `packages/rules-engine/src/level-hit-points.ts`.
@@ -43,7 +45,7 @@ Ejemplos: Mago aprende dos conjuros de libro por nivel y prepara conforme a prog
 | --- | --- | --- | --- |
 | Guerrero | d10 | 6 | `levelHitPointRolls` (array de d10 naturales, uno por nivel 2..N) |
 | Mago | d6 | 4 | `levelHitPointRolls` (array de d6 naturales, uno por nivel 2..N) |
-| Brujo | d8 | 5 | `level2HitDieRoll`, `level3HitDieRoll`, `level4HitDieRoll`, `level5HitDieRoll` y `level6HitDieRoll` (hasta nivel 6) |
+| Brujo | d8 | 5 | `level2HitDieRoll` a `level7HitDieRoll` (hasta nivel 7), uno por nivel adicional |
 
 El selector muestra «Promedio» o «Tirada 1dX». Al elegir la segunda opción se lanza el dado; es posible repetir hasta confirmar. Cuando se elige promedio se almacena el valor fijo equivalente. No guardar la cadena de modo visual como sustituto del resultado; en ambos casos se guarda el **número de dado elegido**. No aplicar el dado dos veces al confirmar. No modificar el valor al cambiar de pestaña ni al restaurar el guardado.
 
@@ -72,6 +74,8 @@ Importante para Brujo: en guardados antiguos de nivel 2 no existe un historial d
 **Desde 4→5**, `level5History` guarda las elecciones originales de nivel 4; el descenso 5→4 elimina el dado adicional, las invocaciones del quinto nivel, la nueva magia de patrón y los beneficios de Investidura/Don de las profundidades. Conserva `level4History`, el daño acumulado compatible y los dos indicadores de ranuras de Pacto, que regresan de nivel 3 a nivel 2 sin alterar su gasto. Las nuevas invocaciones con prerrequisito deben elegirse junto al Pacto de la Hoja o de la Cadena correspondiente: no se puede retirar ese pacto si con ello queda otra invocación dependiente sin soporte.
 
 **Desde 5→6**, `level6History` conserva las cinco invocaciones, tres trucos, seis preparados, vínculos del Tomo/Hoja, familiar y demás elecciones del nivel 5. El descenso 6→5 retira el d8 y Suerte del Oscuro, restaura las elecciones anteriores y conserva daño compatible, ranuras gastadas, inspiración, compañeros y los historiales previos. El contador `darkOnesOwnLuckUsed` solo existe desde nivel 6; se limita a máximo (1, modificador de Carisma), se recarga únicamente tras descanso largo y nunca suma automáticamente el resultado del d10 a un d20. La ficha presenta el lanzamiento usando el mismo estilo de resultados que las demás tiradas.
+
+**Desde 6→7**, `level7History` almacena las elecciones anteriores y los vínculos y recursos de nivel 6; el descenso 7→6 quita el d8 y la sexta invocación, devuelve las elecciones originales y la ranura de Pacto al nivel 3, retira los dos conjuros gratuitos de nivel 4 y conserva gasto de ranuras, daño acumulado compatible, compañeros e historial 6→5. El estado de Suerte del Oscuro se restaura del historial anterior a la subida. El snapshot continúa con `schemaVersion: 4`, ampliando únicamente campos opcionales.
 
 ## E. Checklist obligatorio antes de entregar una nueva clase/subclase
 

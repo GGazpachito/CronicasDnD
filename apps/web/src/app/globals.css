@@ -980,8 +980,9 @@
 .level-wizard-hit-points .level-wizard-choice-info{margin-top:10px}
 .level-wizard-hit-points .level-wizard-choice-info strong{color:#ffdc98}
 .level-wizard-hit-points .overview-quick-actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:9px 0}
-.warlock-blast-results{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));margin-top:12px}
-.warlock-blast-result{margin-top:0}.warlock-blast-result .overview-roll-dice{flex-wrap:wrap}.warlock-blast-result .overview-roll-formula{display:flex;align-items:baseline;gap:8px}
+.warlock-blast-results,.overview-roll-cards{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));margin-top:12px}
+.warlock-blast-result,.overview-dice-card{margin-top:0}.warlock-blast-result .overview-roll-dice,.overview-dice-card .overview-roll-dice{flex-wrap:wrap}.warlock-blast-result .overview-roll-formula,.overview-dice-card .overview-roll-formula{display:flex;align-items:baseline;gap:8px}
+.overview-roll-fixed{display:inline-grid;place-items:center;min-height:36px;padding:5px 9px;border:1px solid #688196;border-radius:7px;color:#ffe1ac}
 .front-character-entry{min-width:0}.front-character-entry .front-character-card{height:auto}.front-character-delete{padding:10px 13px;background:#1a2734;border:1px solid #526074;border-top:0;border-radius:0 0 15px 15px}
 .front-character-entry .front-character-card{border-radius:16px 16px 0 0}
 .front-character-delete-confirm p{font-size:13px;color:#f0d6c5}.front-character-delete-confirm .overview-quick-actions{margin-top:6px}
@@ -989,7 +990,7 @@
 .danger-action:disabled{opacity:.45;cursor:not-allowed}
 .shared-companion-delete-confirm{margin:14px 0;padding:15px 18px;border:1px solid #a96b68;background:#392b30;border-radius:11px}
 .shared-companion-delete-confirm p{margin:0 0 10px}.shared-companion-delete-confirm small{display:block;color:#d8c4b7;margin-top:8px}
-@media(max-width:620px){.warlock-blast-results{grid-template-columns:1fr}}
+@media(max-width:620px){.warlock-blast-results,.overview-roll-cards{grid-template-columns:1fr}}
 .shared-spells-layout .wizard-spell-library{min-width:0}
 @media(max-width:700px){.ability-method-die{flex-wrap:wrap}.ability-method-die button{width:100%}.shared-spells-layout .sheet-section-heading{flex-wrap:wrap}}
 

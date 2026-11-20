@@ -6,12 +6,14 @@ import {WEAPONS,type WeaponId} from '../../../../packages/rules-engine/src/marti
 import type {InventoryState} from '../../../../packages/rules-engine/src/inventory';
 import type {AbilityScores} from '../../../../packages/rules-engine/src/abilities';
 import {warlockWeaponProfile,type WarlockInvocationId} from '../../../../packages/rules-engine/src/warlock';
+import {WeaponRollCards,weaponAttackCard,type WeaponRollCard} from './WeaponRollCards';
 const signed=(n:number)=>n>=0?'+'+n:String(n);
 
-export function WarlockWeaponAttacks({inventory,scores,proficiency,mode,pactWeaponId,invocations}:{
- inventory:InventoryState;scores:AbilityScores;proficiency:number;mode:D20Mode;pactWeaponId?:WeaponId;invocations:readonly WarlockInvocationId[];
+export function WarlockWeaponAttacks({inventory,scores,proficiency,mode,pactWeaponId,invocations,pactSlotLevel=3}:{
+ inventory:InventoryState;scores:AbilityScores;proficiency:number;mode:D20Mode;pactWeaponId?:WeaponId;invocations:readonly WarlockInvocationId[];pactSlotLevel?:number;
 }){
- const [result,setResult]=useState('');
+ const [results,setResults]=useState<WeaponRollCard[]>([]);
+ const [error,setError]=useState('');
  const [critical,setCritical]=useState(false);
  const [useCharisma,setUseCharisma]=useState(true);
  return <section className="overview-panel panel" aria-label="Ataques con armas de Brujo">
@@ -26,20 +28,21 @@ export function WarlockWeaponAttacks({inventory,scores,proficiency,mode,pactWeap
    const damage=attack.damageDice?String(attack.damageDice.count)+'d'+attack.damageDice.sides:String(attack.fixedDamage);
    return <div className="overview-record" key={id}><span><strong>{name}</strong><small> Ataque {signed(attack.attackBonus)} · {damage} {signed(attack.damageBonus)}{attack.pactActive?' · Pacto activo':''}</small></span>
     <span className="overview-roll-actions"><button type="button" className="overview-roll-button" onClick={()=>{
-      try{const r=rollD20(attack.attackBonus,'normal',mode);setResult(name+': ataque '+r.total+' (d20 '+r.chosen+' '+signed(attack.attackBonus)+').');}
-      catch(e){setResult(e instanceof Error?e.message:'Error al atacar');}
+      try{setResults([weaponAttackCard(`${name} · Ataque`,rollD20(attack.attackBonus,'normal',mode))]);setError('');}
+      catch(e){setResults([]);setError(e instanceof Error?e.message:'Error al atacar');}
     }}>Atacar</button>{attack.pactActive&&invocations.includes('thirsting_blade')&&<button type="button" className="overview-roll-button" onClick={()=>{
-      try{const rolls=Array.from({length:2},()=>rollD20(attack.attackBonus,'normal',mode));setResult(`${name} · Hoja sedienta: ataque 1 ${rolls[0].total} (d20 ${rolls[0].chosen} ${signed(attack.attackBonus)}) · ataque 2 ${rolls[1].total} (d20 ${rolls[1].chosen} ${signed(attack.attackBonus)}).`);}
-      catch(e){setResult(e instanceof Error?e.message:'Error en los ataques');}
+      try{setResults(Array.from({length:2},(_,index)=>weaponAttackCard(`${name} · Ataque ${index+1}`,rollD20(attack.attackBonus,'normal',mode))));setError('');}
+      catch(e){setResults([]);setError(e instanceof Error?e.message:'Error en los ataques');}
     }}>Atacar ×2</button>}{attack.pactActive&&invocations.includes('eldritch_smite')&&<button type="button" className="overview-roll-button" onClick={()=>{
-      try{const dice=Array.from({length:4*(critical?2:1)},()=>rollDie(8));setResult(`${name} · Castigo sobrenatural: ${dice.reduce((sum,die)=>sum+die,0)} de fuerza (${dice.join(' + ')}). Consume una ranura de Pacto de nivel 3; márcala en Magia de Pacto. Una vez por turno.`);}
-      catch(e){setResult(e instanceof Error?e.message:'Error en Castigo sobrenatural');}
-    }}>Castigo · {critical?'8d8':'4d8'}</button>}<button type="button" className="overview-roll-button" onClick={()=>{
-      try{const dice=attack.damageDice?Array.from({length:attack.damageDice.count*(critical?2:1)},()=>rollDie(attack.damageDice!.sides)):[];setResult(name+': daño '+Math.max(0,dice.reduce((a,b)=>a+b,attack.fixedDamage)+attack.damageBonus)+' ('+(dice.join('+')||attack.fixedDamage)+' '+signed(attack.damageBonus)+').');}
-      catch(e){setResult(e instanceof Error?e.message:'Error de daño');}
+      try{const count=(pactSlotLevel+1)*(critical?2:1),dice=Array.from({length:count},()=>rollDie(8));setResults([{label:`${name} · Castigo sobrenatural`,kind:'damage',dice,bonus:0,total:dice.reduce((sum,die)=>sum+die,0),formula:`${count}d8 · fuerza${critical?' · crítico':''}`,critical,note:`Ranura de nivel ${pactSlotLevel}: marca el gasto manualmente; una vez por turno.`}]);setError('');}
+      catch(e){setResults([]);setError(e instanceof Error?e.message:'Error en Castigo sobrenatural');}
+    }}>Castigo · {(pactSlotLevel+1)*(critical?2:1)}d8</button>}<button type="button" className="overview-roll-button" onClick={()=>{
+      try{const dice=attack.damageDice?Array.from({length:attack.damageDice.count*(critical?2:1)},()=>rollDie(attack.damageDice!.sides)):[];const fixed=attack.fixedDamage;setResults([{label:`${name} · Daño`,kind:'damage',dice,bonus:attack.damageBonus,fixedDamage:fixed,total:Math.max(0,dice.reduce((a,b)=>a+b,fixed)+attack.damageBonus),formula:`${dice.length?`${dice.length}d${attack.damageDice!.sides}`:'Fijo'}${critical?' · crítico':''}`,critical}]);setError('');}
+      catch(e){setResults([]);setError(e instanceof Error?e.message:'Error de daño');}
     }}>Daño</button></span></div>;
   })}
-  {result&&<output role="status" className="overview-roll-result"><div className="overview-roll-result-heading"><strong>Última tirada con arma</strong><span>Resultado</span></div><div className="overview-roll-equation"><div className="overview-roll-formula"><strong>{result}</strong></div></div></output>}
+  {error&&<p className="overview-dice-error" role="alert">{error}</p>}
+  <WeaponRollCards rolls={results}/>
   <p className="overview-panel-note">Solo las armas simples suman competencia normalmente; el arma vinculada también la suma. Hoja sedienta y Castigo sobrenatural solo se muestran en el arma del pacto equipada. Las ranuras y la condición Derribado se gestionan manualmente.</p>
  </section>;
 }
