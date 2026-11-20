@@ -1,4 +1,4 @@
-# Contrato de arquitectura visual: hoja de personaje CRÓNICAS (actualización 71)
+# Contrato de arquitectura visual: hoja de personaje CRÓNICAS (actualización 72)
 
 > **DOCUMENTO NORMATIVO PARA TODAS LAS CLASES.** Antes de implementar otra clase o subclase, mantener este contrato. Si un módulo cambia, actualizar el componente común, sus adaptadores y este documento en el mismo cambio. Nunca reproducir bloques JSX específicos de otra clase mediante copia de código.
 
@@ -53,9 +53,9 @@ Marcadores: `SharedDeathSavePanel.tsx` para Mago/Brujo, el control equivalente d
 
 ## Hechizos: contrato de biblioteca única
 
-**Una sola biblioteca**: `SpellLibraryPanel.tsx` con pestañas Preparados/Disponibles, Aprendidos/Conocidos y **Todos los conjuros**. Todos reciben `SHARED_SPELL_RULES` (`packages/rules-engine/src/shared-spell-catalog.ts`), unión deduplicada de **242 fichas de Mago y 27 de Brujo = 249 fichas únicas** en la actualización 68.
+**Una sola biblioteca**: `SpellLibraryPanel.tsx` con pestañas Preparados/Disponibles, Aprendidos/Conocidos y **Todos los conjuros**. Todos reciben `SHARED_SPELL_RULES` (`packages/rules-engine/src/shared-spell-catalog.ts`), unión deduplicada del catálogo completo del Mago y del Brujo: **251 fichas únicas** tras el paso 72, con **39 conjuros normales de Brujo** y **cuatro del Patrón Infernal**. Los conjuros compartidos mantienen la ficha única del Mago; se agregan fichas nuevas únicamente para `enthrall` y `command`.
 
-1. En **todas las clases**, «Todos los conjuros» permite buscar por nombre/escuela/descripción y filtrar por **lista Mago**, **lista Brujo** y nivel 0–9. Por defecto, las listas están marcadas y se ve la unión.
+1. En **todas las clases**, «Todos los conjuros» permite buscar por nombre/escuela/descripción y filtrar por **lista Mago**, **lista Brujo**, **Patrón Infernal** y nivel 0–9. Por defecto, las listas están marcadas y se ve la unión.
 2. El selector de filtros y el detalle del conjuro (`WizardSpellDetails.tsx`) son compartidos, sin variantes visuales por clase.
 3. **Ver un conjuro no equivale a poder aprenderlo.** La lista de clase determina permisos; Mago solo puede editar fichas de su lista mediante `editableForSpell`; Brujo nivel 1 elige conjuros en la creación y en el nivel 2 modifica las preparaciones solo durante la subida de nivel; Guerrero consulta hechizos otorgados por origen. No conceder conjuros o ranuras indebidos mediante el catálogo.
 4. Las ranuras, descansos, Recuperación arcana, Magia de Pacto y rasgos relacionados van en módulos separados de `SharedSpellsLayout.tsx`, sin reemplazar filtros ni fichas.
@@ -81,7 +81,7 @@ Las criaturas concedidas por rasgos no se mezclan con estas fichas manuales. Eje
 
 **Contrato normativo obligatorio de ventanas de subida y bajada:** consultar [`ARQUITECTURA_PROGRESION_NIVELES.md`](ARQUITECTURA_PROGRESION_NIVELES.md) ANTES de crear una progresión de cualquier clase. `LevelUpDialogFrame` es el único asistente de tres pasos; `LevelDownDialog` es la única ventana de bajada con confirmación; `LevelUpHitPointsPicker` se utiliza en todas las clases (Guerrero d10/6, Mago d6/4, Brujo d8/5). Los nuevos asistentes de magia reutilizan el buscador, `wizard-spell-choice-list` y `WizardSpellDetails`; no deben tener diálogos ni selecciones estilísticas propias.
 
-`WarlockLevelUpWizard.tsx` captura todas las decisiones **solo al subir del nivel 1 al 2**, pero utiliza el mismo `LevelUpDialogFrame` que Guerrero y Mago. La validación de transición y bajada 2→1 reside en `packages/rules-engine/src/warlock-level-up.ts`; `warlock.ts` sigue siendo el único responsable de validar el snapshot, HP, invocaciones, ranuras, descansos y Astucia mágica. Cada nueva subida usa esta separación de responsabilidades y mantiene exactamente las siete pestañas anteriores. La progresión de nivel 2 admite 3 invocaciones, 2 trucos, 3 conjuros preparados y 2 ranuras de nivel 1. Las decisiones activas se resuelven por el jugador.
+`WarlockLevelUpWizard.tsx` captura las decisiones de **1→2 y 2→3** mediante el mismo `LevelUpDialogFrame` que Guerrero y Mago. La validación de transición y bajada reside en `packages/rules-engine/src/warlock-level-up.ts`; `warlock.ts` sigue siendo responsable de validar el snapshot, PG, invocaciones, ranuras, descansos y Astucia mágica. Cada nueva subida usa esta separación de responsabilidades y mantiene exactamente las siete pestañas anteriores. La progresión de nivel 2 admite 3 invocaciones, 2 trucos, 3 conjuros preparados y 2 ranuras de nivel 1. La de nivel 3 conserva 3 invocaciones y 2 trucos, admite 4 preparados ordinarios, 2 ranuras de **nivel de conjuro 2** y concede el Patrón Infernal con **4 conjuros siempre preparados aparte** y **Bendición del Oscuro** (activación manual; valor calculado). `level3History` permite retroceder a nivel 2 conservando elecciones. Las decisiones activas se resuelven por el jugador.
 
 No crear vistas de biblioteca diferentes para Brujo ni reescribir conjuros que ya existan en el Mago. Las invocaciones que alteran directamente Descarga sobrenatural añaden bonificadores al módulo exclusivo sin cambiar los demás módulos compartidos.
 

@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest';
 import {WIZARD_SPELL_RULES} from '../src/wizard-spell-details';
-import {WARLOCK_LEVEL_ONE_CANTRIPS,WARLOCK_LEVEL_ONE_SPELLS} from '../src/warlock-spells';
+import {WARLOCK_LEVEL_ONE_CANTRIPS,WARLOCK_LEVEL_ONE_SPELLS,WARLOCK_LEVEL_TWO_SPELLS,WARLOCK_FIEND_LEVEL_THREE_SPELLS} from '../src/warlock-spells';
 import {SHARED_SPELL_RULES,SHARED_CLASS_SPELL_LISTS,WIZARD_SPELL_IDS,WARLOCK_SPELL_IDS} from '../src/shared-spell-catalog';
 import {EMPTY_COMPANION,validateCompanionSheets} from '../src/companions';
 import {rollAbilityScore4d6,DEFAULT_POINT_BUY,POINT_BUY_EXAMPLE,pointBuySpent} from '../src/ability-generation';
@@ -16,10 +16,10 @@ describe('Paso 68: hoja común, biblioteca y compañeros',()=>{
   const ids=SHARED_SPELL_RULES.map(spell=>spell.id);
   expect(ids.length).toBe(new Set(ids).size);
   for(const spell of WIZARD_SPELL_RULES)expect(ids).toContain(spell.id);
-  for(const spell of [...WARLOCK_LEVEL_ONE_CANTRIPS,...WARLOCK_LEVEL_ONE_SPELLS])expect(ids).toContain(spell.id);
-  expect(SHARED_CLASS_SPELL_LISTS.map(list=>list.id)).toEqual(['wizard','warlock']);
+  for(const spell of [...WARLOCK_LEVEL_ONE_CANTRIPS,...WARLOCK_LEVEL_ONE_SPELLS,...WARLOCK_LEVEL_TWO_SPELLS,...WARLOCK_FIEND_LEVEL_THREE_SPELLS])expect(ids).toContain(spell.id);
+  expect(SHARED_CLASS_SPELL_LISTS.map(list=>list.id)).toEqual(['wizard','warlock','fiend']);
   expect(WIZARD_SPELL_IDS.size).toBe(WIZARD_SPELL_RULES.length);
-  expect(WARLOCK_SPELL_IDS.size).toBe(27);
+  expect(WARLOCK_SPELL_IDS.size).toBe(39);
  });
  it('compra de puntos comienza en 8, respeta presupuesto y 4d6 descarta el menor',()=>{
   expect(Object.values(DEFAULT_POINT_BUY)).toEqual([8,8,8,8,8,8]);

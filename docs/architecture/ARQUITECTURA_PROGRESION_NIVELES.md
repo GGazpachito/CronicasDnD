@@ -1,4 +1,4 @@
-# Arquitectura normativa: ventanas de subida y bajada de nivel (paso 70)
+# Arquitectura normativa: ventanas de subida y bajada de nivel (actualizada en paso 72)
 
 > **CONTRATO OBLIGATORIO DE UI Y REGLAS PARA TODAS LAS CLASES.** Este documento complementa `ESTRUCTURA_HOJA_COMUN.md`. Ninguna clase nueva debe fabricar sus propios contenedores de progreso, pasos, botones ni estilos. Debe integrar componentes compartidos con un adaptador de reglas de clase.
 
@@ -31,7 +31,7 @@ El mismo patrón visual debe aparecer siempre que haya magia para elegir:
 4. Cada hechizo usa el **mismo `WizardSpellDetails`** con texto, datos de reglas y botones de tirada, también si proviene de Brujo.
 5. Validación **en el motor de reglas**: no basta bloquear botones. El resultado se calcula antes de entrar en Confirmación.
 
-Ejemplos: Mago aprende dos conjuros de libro por nivel y prepara conforme a progresión; Brujo de 1 a 2 conserva dos trucos (puede sustituir uno), pasa de dos a tres preparados (puede sustituir uno anterior) y escoge tres invocaciones distintas. Estas restricciones no alteran el aspecto común.
+Ejemplos: Mago aprende dos conjuros de libro por nivel y prepara conforme a progresión; Brujo de 1 a 2 conserva dos trucos (puede sustituir uno), pasa de dos a tres preparados (puede sustituir uno anterior) y escoge tres invocaciones distintas. **Brujo 2→3** conserva tres invocaciones (puede sustituir una), conserva dos trucos (puede sustituir uno), elige cuatro preparados ordinarios (conserva al menos dos de los anteriores), elige Patrón Infernal y ve las cuatro fichas gratuitas de patrón en el mismo asistente. Estas restricciones no alteran el aspecto común.
 
 ## C. Puntos de golpe: promedio o dado para todas las clases
 
@@ -41,13 +41,13 @@ Ejemplos: Mago aprende dos conjuros de libro por nivel y prepara conforme a prog
 | --- | --- | --- | --- |
 | Guerrero | d10 | 6 | `levelHitPointRolls` (array de d10 naturales, uno por nivel 2..N) |
 | Mago | d6 | 4 | `levelHitPointRolls` (array de d6 naturales, uno por nivel 2..N) |
-| Brujo | d8 | 5 | `level2HitDieRoll` (progresión implementada actualmente hasta nivel 2) |
+| Brujo | d8 | 5 | `level2HitDieRoll` y `level3HitDieRoll` (niveles implementados hasta 3) |
 
 El selector muestra «Promedio» o «Tirada 1dX». Al elegir la segunda opción se lanza el dado; es posible repetir hasta confirmar. Cuando se elige promedio se almacena el valor fijo equivalente. No guardar la cadena de modo visual como sustituto del resultado; en ambos casos se guarda el **número de dado elegido**. No aplicar el dado dos veces al confirmar. No modificar el valor al cambiar de pestaña ni al restaurar el guardado.
 
 PG ganados por nivel posterior al 1: **máximo de 1 y (resultado del dado + modificador de Constitución)**, más los efectos pasivos por nivel (Enano, Duro, etc.) según el motor. La Constitución modificada a posteriori recalcula el máximo de todos los niveles anteriores. Cada transición conserva el daño acumulado tanto como lo permitan los nuevos máximos. Las elecciones no se aplican al estado principal hasta Confirmar.
 
-**Compatibilidad:** las entradas antiguas de Guerrero/Mago sin `levelHitPointRolls` continúan usando el promedio fijo. La primera subida nueva crea un historial completo rellenando los niveles anteriores con su media (6 o 4), después añade el dado actual. Se valida `length === level-1` y rango de cada dado. El descenso elimina el último dado del historial (`trimLevelHitPointRolls`), sin volver a tirar; **al regresar al nivel 1 se omite por completo `levelHitPointRolls`**, en vez de guardar una lista vacía, para recuperar exactamente el esquema anterior y superar las auditorías de igualdad de instantáneas. El esquema de guardados anterior se conserva (campo opcional y aceptado por sus validadores). Brujo mantiene `level2HitDieRoll` para la versión 4.
+**Compatibilidad:** las entradas antiguas de Guerrero/Mago sin `levelHitPointRolls` continúan usando el promedio fijo. La primera subida nueva crea un historial completo rellenando los niveles anteriores con su media (6 o 4), después añade el dado actual. Se valida `length === level-1` y rango de cada dado. El descenso elimina el último dado del historial (`trimLevelHitPointRolls`), sin volver a tirar; **al regresar al nivel 1 se omite por completo `levelHitPointRolls`**, en vez de guardar una lista vacía, para recuperar exactamente el esquema anterior y superar las auditorías de igualdad de instantáneas. El esquema de guardados anterior se conserva (campo opcional y aceptado por sus validadores). Brujo mantiene `level2HitDieRoll` y añade `level3HitDieRoll` opcional, ambos en snapshot versión 4.
 
 ## D. Bajada de nivel: estructura exacta
 
@@ -61,9 +61,9 @@ Orden fijo de la ventana:
 4. «Información que se conserva»: identidad, perfil, equipo, daño compatible y marcadores.
 5. Casilla de reconocimiento explícita; «Confirmar bajada al nivel N» solo se habilita al marcarla. Cancelar jamás muta.
 
-Las reglas de **Guerrero/Mago** están en `level-down.ts`; las de **Brujo 2→1** en `warlock-level-up.ts` (`previewWarlockLevelDown`). Los adaptadores construyen una vista previa y una instantánea validada **antes** de abrir la confirmación. El diálogo no conoce reglas de clases.
+Las reglas de **Guerrero/Mago** están en `level-down.ts`; las de **Brujo 3→2 y 2→1** en `warlock-level-up.ts` (`previewWarlockLevelDown`). Los adaptadores construyen una vista previa y una instantánea validada **antes** de abrir la confirmación. El diálogo no conoce reglas de clases.
 
-Importante para Brujo: en guardados antiguos de nivel 2 no existe un historial de qué invocación/conjuros eran los originales en nivel 1. El retroceso conserva una invocación legal de nivel 1 (o Pacto de la Hoja si ninguna lo es), los dos primeros trucos y los dos primeros preparados. **Debe avisar** de esta política antes de confirmar; se pierden las elecciones restantes. Una futura arquitectura de historial puede evitar esta limitación sin cambiar el diálogo.
+Importante para Brujo: en guardados antiguos de nivel 2 no existe un historial de qué invocación/conjuros eran los originales en nivel 1. El retroceso conserva una invocación legal de nivel 1 (o Pacto de la Hoja si ninguna lo es), los dos primeros trucos y los dos primeros preparados. **Debe avisar** de esta política antes de confirmar; se pierden las elecciones restantes. **Desde 2→3** se persiste `level3History` con invocaciones, preparados, trucos, dotes, vínculos y efectos seleccionados en nivel 2. Un descenso 3→2 los restaura, sin copiar estados de combate ni duplicar compañeros.
 
 ## E. Checklist obligatorio antes de entregar una nueva clase/subclase
 

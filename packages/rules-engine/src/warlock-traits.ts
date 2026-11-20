@@ -9,13 +9,23 @@ export function collectWarlockTraits(input:GuidedWarlockInput,sheet:CalculatedWa
  const traits:CharacterTrait[]=[];
  function add(trait:CharacterTrait){traits.push(trait);}
  add({id:'warlock:pact_magic',title:'Magia de Pacto',group:'class',source:'Brujo',level:1,
-  summary:`Dos trucos, ${input.level===1?'dos':'tres'} conjuros preparados y ${input.level===1?'una':'dos'} ranuras de nivel 1 recargables tras descansar.`,
+  summary:`Dos trucos, ${input.level===1?'dos':input.level===2?'tres':'cuatro'} conjuros preparados ordinarios y ${input.level===1?'una':'dos'} ranuras de nivel ${input.level>=3?2:1} recargables tras descansar.`,
   explanation:'Las ranuras se marcan manualmente en Hechizos; los conjuros no se lanzan automáticamente.',automation:'calculated',
   details:[`CD de salvación ${sheet.spellSaveDC}. Ataque mágico ${sheet.spellAttackBonus>=0?'+':''}${sheet.spellAttackBonus}.`,
    'El Brujo recupera todas sus ranuras de Magia de Pacto al terminar un descanso corto o largo.']});
  if(input.level>=2)add({id:'warlock:magical_cunning',title:'Astucia mágica',group:'class',source:'Brujo',level:2,
   summary:'Tras un rito de un minuto, recuperas una ranura de pacto gastada; una vez por descanso largo.',
   explanation:'La recuperación se ejecuta solo cuando el jugador confirma el rito desde Principal, Rasgos o Hechizos.',automation:'partial',details:['En nivel 2 recupera una de las dos ranuras, si está gastada.','Un descanso corto no restablece el uso de Astucia mágica.']});
+ if(input.level>=3&&input.subclassId==='fiend'){
+  add({id:'warlock:fiend_patron',title:'Patrón Infernal',group:'class',source:'Patrón Infernal',level:3,
+   summary:'Subclase que concede Bendición del Oscuro y cuatro conjuros siempre preparados.',
+   explanation:'Los conjuros del patrón no consumen ninguna de las cuatro elecciones ordinarias de Magia de Pacto.',automation:'calculated',
+   details:['Manos ardientes (nivel 1)','Orden imperiosa (nivel 1)','Rayo abrasador (nivel 2)','Sugestión (nivel 2)']});
+  add({id:'warlock:dark_ones_blessing',title:'Bendición del Oscuro',group:'class',source:'Patrón Infernal',level:3,
+   summary:`Al reducir a un enemigo a 0 PG, o al hacerlo otra criatura a 10 pies de ti, puedes recibir ${Math.max(1,sheet.abilityModifiers.charisma+input.level)} PG temporales.`,
+   explanation:'La condición la confirma el jugador. Solo se aplica si decides pulsar el botón del rasgo; los PG temporales no se acumulan.',automation:'partial',
+   details:['PG temporales = máximo entre 1 y tu modificador de Carisma + nivel de Brujo.','Se conserva la cantidad mayor entre los PG temporales anteriores y los nuevos; no se suman.']});
+ }
  for(const invocation of input.invocations){
   const info=WARLOCK_INVOCATIONS[invocation];
   add({id:`warlock:invocation:${invocation}`,title:info.name,group:'class',source:'Invocación sobrenatural',level:info.minLevel,
@@ -50,5 +60,5 @@ export function collectWarlockTraits(input:GuidedWarlockInput,sheet:CalculatedWa
  feat(BACKGROUNDS[input.background].feat,`Trasfondo: ${BACKGROUNDS[input.background].name}`);
  if(input.species==='human'&&input.humanFeat)feat(input.humanFeat,'Humano');
  if(input.lessonsFeat)feat(input.lessonsFeat,'Lecciones de los Primeros');
- return {traits,pendingAutomation:['La activación de invocaciones y los usos de conjuros siguen bajo control del jugador.','El Patrón Infernal comienza en nivel 3; no concede rasgos antes.']};
+ return {traits,pendingAutomation:['La activación de invocaciones, rasgos y usos de conjuros sigue bajo control del jugador.',...(input.level<3?['El Patrón Infernal comienza en nivel 3; no concede rasgos antes.']:[])]};
 }
