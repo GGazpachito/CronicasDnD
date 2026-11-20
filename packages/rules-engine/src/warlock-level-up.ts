@@ -1,7 +1,7 @@
-/** Pasos 69, 72 y 73: transiciones explícitas de Brujo 1→2→3→4 (D&D 2024).
+/** Pasos 69, 72, 73 y 74: transiciones explícitas de Brujo 1→2→3→4→5 (D&D 2024).
  * Las elecciones se validan aquí, no únicamente en los controles React.
  */
-import {calculateWarlockOne,makeWarlockCharacterSnapshot,WARLOCK_INVOCATIONS,WARLOCK_LEVEL_ONE_INVOCATIONS,type GuidedWarlockInput,type WarlockOneState,type WarlockInvocationId,type WarlockLevelTwoHistory,type WarlockLevelThreeHistory} from './warlock';
+import {calculateWarlockOne,makeWarlockCharacterSnapshot,WARLOCK_INVOCATIONS,WARLOCK_INVOCATION_PREREQUISITES,WARLOCK_LEVEL_ONE_INVOCATIONS,type GuidedWarlockInput,type WarlockOneState,type WarlockInvocationId,type WarlockLevelTwoHistory,type WarlockLevelThreeHistory,type WarlockLevelFourHistory} from './warlock';
 import type {FighterAbilityImprovement} from './progression';
 import {TOME_CANTRIP_OPTIONS,TOME_RITUAL_OPTIONS} from './warlock-spells';
 import type {LevelDownSummary} from './level-down';
@@ -154,12 +154,98 @@ export function advanceWarlockToLevelFour(input:GuidedWarlockInput,state:Warlock
  return {input:nextInput,state:makeWarlockCharacterSnapshot(nextInput,nextState).warlockState};
 }
 
+export type WarlockLevelFiveChoices=Readonly<{
+ invocations:readonly WarlockInvocationId[];cantripIds:readonly string[];preparedIds:readonly string[];
+ level5HitDieRoll:number;lessonsFeat?:'alert'|'tough';tomeCantripIds?:readonly string[];tomeRitualIds?:readonly string[];
+}>;
+
+/** Nivel 5: +3 competencia, dos invocaciones nuevas, 6 preparados y dos ranuras de nivel 3. */
+export function advanceWarlockToLevelFive(input:GuidedWarlockInput,state:WarlockOneState,choices:WarlockLevelFiveChoices):{
+ input:GuidedWarlockInput;state:WarlockOneState;
+}{
+ if(input.level!==4)throw new RangeError('Solo se puede subir de nivel 4 a nivel 5');
+ const previous=makeWarlockCharacterSnapshot(input,state);
+ if(!Array.isArray(choices.invocations)||choices.invocations.length!==5||new Set(choices.invocations).size!==5||choices.invocations.filter(id=>input.invocations.includes(id)).length<2)
+  throw new RangeError('Debes elegir cinco invocaciones diferentes y conservar al menos dos de las tres anteriores');
+ const selectedInvocations:readonly WarlockInvocationId[]=choices.invocations;
+ if(selectedInvocations.some(id=>{
+  const requiredPact=WARLOCK_INVOCATION_PREREQUISITES[id];
+  return requiredPact!==undefined&&!selectedInvocations.includes(requiredPact);
+ }))
+  throw new RangeError('Hoja sedienta y Castigo sobrenatural requieren Pacto de la Hoja; Investidura requiere Pacto de la Cadena');
+ if(!Array.isArray(choices.cantripIds)||choices.cantripIds.length!==3||choices.cantripIds.filter(id=>input.cantripIds.includes(id)).length<2)
+  throw new RangeError('Mantén tres trucos, pudiendo sustituir solamente uno');
+ if(!Array.isArray(choices.preparedIds)||choices.preparedIds.length!==6||choices.preparedIds.filter(id=>input.preparedIds.includes(id)).length<4)
+  throw new RangeError('Elige seis preparados ordinarios y conserva al menos cuatro de los cinco anteriores');
+ const history:WarlockLevelFourHistory={
+  invocations:[...input.invocations],cantripIds:[...input.cantripIds],preparedIds:[...input.preparedIds],
+  lessonsFeat:input.lessonsFeat,pactWeaponId:input.pactWeaponId,tomeCantripIds:input.tomeCantripIds,tomeRitualIds:input.tomeRitualIds,
+  mageArmorActive:previous.warlockState.mageArmorActive,tomePresent:previous.warlockState.tomePresent,
+  familiarForm:previous.warlockState.familiarForm,familiarName:previous.warlockState.familiarName,
+ };
+ const blade=choices.invocations.includes('pact_of_blade'),tome=choices.invocations.includes('pact_of_tome');
+ const chooseTome=(options:readonly {id:string}[],selected:readonly string[]|undefined,existing:readonly string[]|undefined,count:number,forbidden:readonly string[])=>
+  selected??existing??options.filter(option=>!forbidden.includes(option.id)).slice(0,count).map(option=>option.id);
+ const nextInput:GuidedWarlockInput={...input,level:5,level5HitDieRoll:choices.level5HitDieRoll,level5History:history,
+  invocations:choices.invocations,cantripIds:choices.cantripIds,preparedIds:choices.preparedIds,
+  lessonsFeat:choices.invocations.includes('lessons_of_the_first_ones')?choices.lessonsFeat:undefined,
+  pactWeaponId:blade?input.pactWeaponId:undefined,
+  tomeCantripIds:tome?chooseTome(TOME_CANTRIP_OPTIONS,choices.tomeCantripIds,input.tomeCantripIds,3,choices.cantripIds):undefined,
+  tomeRitualIds:tome?chooseTome(TOME_RITUAL_OPTIONS,choices.tomeRitualIds,input.tomeRitualIds,2,choices.preparedIds):undefined,
+ };
+ const nextSheet=calculateWarlockOne(nextInput,state),before=calculateWarlockOne(input,state);
+ const damage=before.maximumHitPoints-previous.warlockState.hitPointsCurrent;
+ const nextState:WarlockOneState={...previous.warlockState,
+  hitPointsCurrent:Math.max(0,Math.min(nextSheet.maximumHitPoints,nextSheet.maximumHitPoints-damage)),
+  mageArmorActive:choices.invocations.includes('armor_of_shadows')?state.mageArmorActive:false,
+  tomePresent:tome&&input.invocations.includes('pact_of_tome')?state.tomePresent:false,
+  familiarForm:choices.invocations.includes('pact_of_chain')?state.familiarForm:null,
+  familiarName:choices.invocations.includes('pact_of_chain')?state.familiarName:'',
+  familiarInvestmentMovement:choices.invocations.includes('investment_of_the_chain_master')?'fly':undefined,
+  giftOfDepthsUsed:choices.invocations.includes('gift_of_the_depths')?false:undefined,
+ };
+ return {input:nextInput,state:makeWarlockCharacterSnapshot(nextInput,nextState).warlockState};
+}
+
 /** El descenso comparte el mismo LevelDownDialog de Guerrero/Mago.
  * Como la lista histórica del nivel 1 no se guardaba en los snapshots previos,
  * retiene la primera invocación legal y los dos primeros conjuros/trucos.
  * La vista previa lo explica ANTES de confirmar; nunca muta el origen.
  */
 export function previewWarlockLevelDown(input:GuidedWarlockInput,state:WarlockOneState){
+ if(input.level===5){
+  const previous=makeWarlockCharacterSnapshot(input,state);
+  const history=input.level5History;
+  if(!history)throw new RangeError('No existe historial para regresar al nivel 4');
+  const {level5HitDieRoll,level5History,invocations,cantripIds,preparedIds,lessonsFeat,pactWeaponId,tomeCantripIds,tomeRitualIds,...rest}=input;
+  void level5HitDieRoll;void level5History;void invocations;void cantripIds;void preparedIds;void lessonsFeat;void pactWeaponId;void tomeCantripIds;void tomeRitualIds;
+  const nextInput:GuidedWarlockInput={...rest,level:4,
+   invocations:history.invocations,cantripIds:history.cantripIds,preparedIds:history.preparedIds,
+   ...(history.lessonsFeat?{lessonsFeat:history.lessonsFeat}:{}),
+   ...(history.pactWeaponId?{pactWeaponId:history.pactWeaponId}:{}),
+   ...(history.tomeCantripIds?{tomeCantripIds:history.tomeCantripIds}:{}),
+   ...(history.tomeRitualIds?{tomeRitualIds:history.tomeRitualIds}:{}),
+  };
+  const before=calculateWarlockOne(input,state),after=calculateWarlockOne(nextInput,state);
+  const oldState=previous.warlockState;
+  const nextState:WarlockOneState={...oldState,
+   hitPointsCurrent:Math.max(0,Math.min(after.maximumHitPoints,oldState.hitPointsCurrent-(before.maximumHitPoints-after.maximumHitPoints))),
+   mageArmorActive:history.mageArmorActive,tomePresent:history.tomePresent,
+   familiarForm:history.familiarForm,familiarName:history.familiarName,familiarInvestmentMovement:undefined,giftOfDepthsUsed:undefined,
+  };
+  const snapshot=makeWarlockCharacterSnapshot(nextInput,nextState);
+  const summary:LevelDownSummary={className:'Brujo',fromLevel:5,toLevel:4,
+   lost:[
+    {title:'Dos invocaciones sobrenaturales',description:'Se recuperan exactamente las tres invocaciones de nivel 4 y desaparecen las dos adicionales, así como los beneficios que dependan de ellas.'},
+    {title:'Conjuros de nivel 3 y patrón',description:'Las ranuras regresan a nivel 2; se retira el sexto preparado y los conjuros gratuitos Bola de fuego y Nube apestosa.'},
+    {title:'Competencia y trucos',description:'La competencia vuelve de +3 a +2. Se restauran los tres trucos conocidos antes de la subida.'},
+   ],changes:[
+    {title:'Puntos de golpe',description:`PG máximos: ${before.maximumHitPoints} → ${after.maximumHitPoints}. PG actuales: ${oldState.hitPointsCurrent} → ${snapshot.warlockState.hitPointsCurrent}.`},
+    {title:'Magia de Pacto',description:'Mantienes dos ranuras, ahora de nivel 2, y vuelves a cinco preparados ordinarios y cuatro conjuros gratuitos del patrón.'},
+   ],preserved:['Identidad, retrato, equipo y compañeros manuales','Recursos de Pacto gastados, Astucia mágica, inspiración y marcas de muerte','Historial de elecciones de nivel 3 para poder continuar de 4→3'],
+  };
+  return {...summary,snapshot};
+ }
  if(input.level===4){
   const previous=makeWarlockCharacterSnapshot(input,state);
   const history=input.level4History;

@@ -4,8 +4,8 @@ import {familiarSheetFromBestiary,findBestiaryCreature} from '../../../../packag
 import {WARLOCK_FAMILIARS,type FamiliarForm,type WarlockOneState} from '../../../../packages/rules-engine/src/warlock';
 import CreatureStatBlock from './CreatureStatBlock';
 
-export default function WarlockCompanionsPanel({hasChain,state,onChange}:{
- hasChain:boolean;state:WarlockOneState;onChange:(value:Partial<WarlockOneState>)=>void;
+export default function WarlockCompanionsPanel({hasChain,hasInvestment,spellSaveDC,state,onChange}:{
+ hasChain:boolean;hasInvestment:boolean;spellSaveDC:number;state:WarlockOneState;onChange:(value:Partial<WarlockOneState>)=>void;
 }){
  if(!hasChain)return null;
  return <section className="panel wizard-module">
@@ -15,6 +15,11 @@ export default function WarlockCompanionsPanel({hasChain,state,onChange}:{
      <label className="field"><span>Forma actual del familiar</span><select aria-label="Forma actual del familiar" value={state.familiarForm??''} onChange={e=>onChange({familiarForm:e.target.value?e.target.value as FamiliarForm:null})}><option value="">Sin familiar manifestado</option><optgroup label="Formas especiales del Pacto de la Cadena">{(Object.keys(WARLOCK_FAMILIARS) as FamiliarForm[]).filter(id=>findBestiaryCreature(id)?.category==='familiar_especial').map(id=><option key={id} value={id}>{WARLOCK_FAMILIARS[id]}</option>)}</optgroup><optgroup label="Formas comunes y compatibilidad">{(Object.keys(WARLOCK_FAMILIARS) as FamiliarForm[]).filter(id=>findBestiaryCreature(id)?.category==='familiar_comun').map(id=><option key={id} value={id}>{WARLOCK_FAMILIARS[id]}</option>)}</optgroup></select></label>
      <label className="field"><span>Nombre (opcional)</span><input maxLength={120} value={state.familiarName} onChange={e=>onChange({familiarName:e.target.value})} placeholder="Nombre del familiar"/></label>
     </div>
+    {hasInvestment&&<div className="wizard-module"><h3>Investidura del Señor de la Cadena · nivel 5</h3>
+     <label className="field"><span>Velocidad extraordinaria del familiar (40 pies)</span><select value={state.familiarInvestmentMovement??'fly'} onChange={e=>onChange({familiarInvestmentMovement:e.target.value as 'fly'|'swim'})}><option value="fly">Vuelo · 40 pies</option><option value="swim">Nado · 40 pies</option></select></label>
+     <p className="muted-note">CD de salvación del familiar: <strong>{spellSaveDC}</strong> (utiliza tu CD de conjuro cuando el familiar obliga a salvar). Puedes ordenarle Atacar con tu acción adicional; el jugador decide cuándo.</p>
+     <p className="muted-note">El familiar puede convertir daño contundente, perforante o cortante en necrótico o radiante. Cuando reciba daño, puedes usar tu reacción para concederle resistencia a ese daño. Aplica estos beneficios en mesa; la ficha del Bestiario conserva sus valores originales.</p>
+    </div>}
     {state.familiarForm&&findBestiaryCreature(state.familiarForm)&&<div className="bestiary-familiar-sheet"><div className="bestiary-familiar-header"><strong>Compañero vinculado · Ficha de referencia</strong><Link href={`/bestiary?creature=${state.familiarForm}`} className="overview-link">Ver en el Bestiario</Link></div><CreatureStatBlock key={`${state.familiarForm}:${state.familiarName}`} readOnly sheet={familiarSheetFromBestiary(state.familiarForm,state.familiarName)}/></div>}
     {!state.familiarForm&&<p className="muted-note">Selecciona una forma para consultar la ficha de tu familiar. Tus compañeros creados manualmente permanecen independientes.</p>}
     <p className="muted-note">Puedes renunciar a uno de tus ataques durante la acción de Atacar para permitir que tu familiar ataque usando su reacción, si se cumplen las condiciones del pacto. La decisión es manual.</p>

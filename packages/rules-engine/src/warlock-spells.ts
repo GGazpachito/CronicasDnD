@@ -1,6 +1,6 @@
-/** Pasos 66–72. La lista del Brujo enlaza directamente con las fichas existentes del Mago.
+/** Pasos 66–74. La lista del Brujo enlaza directamente con las fichas existentes del Mago.
  * Solo se declaran reglas nuevas para conjuros que no están en ese catálogo.
- * Fuente: PHB 2024, lista de conjuros del Brujo, niveles de conjuro 0–2 y Patrón Infernal 3.
+ * Fuente: PHB 2024, lista de conjuros del Brujo, niveles de conjuro 0–3 y Patrón Infernal 3–5.
  */
 import {wizardSpellRule,type WizardSpellRule} from './wizard-spell-details';
 
@@ -21,6 +21,14 @@ export const WARLOCK_SECOND_LEVEL_IDS=[
 ] as const;
 /** Conjuros siempre preparados del Patrón Infernal al llegar a nivel de Brujo 3. */
 export const WARLOCK_FIEND_LEVEL_THREE_IDS=['burning_hands','command','scorching_ray','suggestion'] as const;
+/** Nivel de Brujo 5: 14 conjuros de nivel 3; los 13 compartidos reutilizan la ficha del Mago. */
+export const WARLOCK_THIRD_LEVEL_IDS=[
+ 'counterspell','dispel_magic','fear','fly','gaseous_form','hunger_of_hadar',
+ 'hypnotic_pattern','magic_circle','major_image','remove_curse','summon_fey',
+ 'summon_undead','tongues','vampiric_touch'
+] as const;
+export const WARLOCK_FIEND_LEVEL_FIVE_IDS=['fireball','stinking_cloud'] as const;
+export const WARLOCK_FIEND_ALWAYS_PREPARED_IDS=[...WARLOCK_FIEND_LEVEL_THREE_IDS,...WARLOCK_FIEND_LEVEL_FIVE_IDS] as const;
 
 /** Metadatos de conjuros exclusivos o ajenos al listado del Mago; resúmenes originales. */
 export const WARLOCK_UNIQUE_SPELL_RULES:readonly WizardSpellRule[]=[
@@ -33,6 +41,7 @@ export const WARLOCK_UNIQUE_SPELL_RULES:readonly WizardSpellRule[]=[
  {id:'hellish_rebuke',name:'Reprensión infernal',level:1,school:'evocation',description:'Reacción al recibir daño de una criatura que veas a distancia. El objetivo realiza salvación de Destreza; recibe 2d10 de fuego si falla, o la mitad si supera. Aumenta 1d10 por nivel adicional de ranura.',castingTime:'Reaction',range:'60 feet',components:'V, S',duration:'Instantaneous',attack:false,rolls:[{label:'Daño de fuego',formula:'2d10'}],cantripScales:false},
  {id:'hex',name:'Maleficio',level:1,school:'enchantment',description:'Marca a una criatura que puedas ver. Mientras dure tu concentración, cada vez que la golpees con un ataque sufre 1d6 adicional de daño necrótico. También eliges una característica para que tenga desventaja en sus pruebas; tú decides cuándo se aplica.',castingTime:'Bonus Action',range:'90 feet',components:'V, S, M',duration:'Concentration, up to 1 hour',attack:false,rolls:[{label:'Daño necrótico por impacto',formula:'1d6'}],cantripScales:false},
  {id:'speak_with_animals',name:'Hablar con los animales',level:1,school:'divination',ritual:true,description:'Durante diez minutos puedes comprender y comunicarte verbalmente con bestias. Sus conocimientos y disposición dependen del animal; la conversación es narrativa.',castingTime:'Action or Ritual',range:'Self',components:'V, S',duration:'10 minutes',attack:false,rolls:[],cantripScales:false},
+ {id:'hunger_of_hadar',name:'Hambre de Hadar',level:3,school:'conjuration',description:'Abres una esfera de oscuridad sobrenatural de 20 pies de radio que ciega a quien esté dentro. Las criaturas que comiencen su turno en la zona reciben 2d6 de frío; quienes lo terminen allí realizan salvación de Destreza para evitar 2d6 de ácido. La ubicación, las salvaciones y las condiciones se gestionan en la mesa.',castingTime:'Action',range:'150 feet',components:'V, S, M',duration:'Concentration, up to 1 minute',attack:false,rolls:[{label:'Frío al comenzar turno',formula:'2d6'},{label:'Ácido al terminar turno',formula:'2d6'}],cantripScales:false},
 ];
 
 const uniques=new Map(WARLOCK_UNIQUE_SPELL_RULES.map(spell=>[spell.id,spell]));
@@ -48,7 +57,10 @@ export const WARLOCK_LEVEL_ONE_CANTRIPS:readonly WizardSpellRule[]=WARLOCK_CANTR
 export const WARLOCK_LEVEL_ONE_SPELLS:readonly WizardSpellRule[]=WARLOCK_FIRST_LEVEL_IDS.map(required);
 export const WARLOCK_LEVEL_TWO_SPELLS:readonly WizardSpellRule[]=WARLOCK_SECOND_LEVEL_IDS.map(required);
 export const WARLOCK_FIEND_LEVEL_THREE_SPELLS:readonly WizardSpellRule[]=WARLOCK_FIEND_LEVEL_THREE_IDS.map(required);
+export const WARLOCK_LEVEL_THREE_SPELLS:readonly WizardSpellRule[]=WARLOCK_THIRD_LEVEL_IDS.map(required);
+export const WARLOCK_FIEND_LEVEL_FIVE_SPELLS:readonly WizardSpellRule[]=WARLOCK_FIEND_LEVEL_FIVE_IDS.map(required);
 export const WARLOCK_SPELLS_THROUGH_LEVEL_TWO:readonly WizardSpellRule[]=[...WARLOCK_LEVEL_ONE_SPELLS,...WARLOCK_LEVEL_TWO_SPELLS];
+export const WARLOCK_SPELLS_THROUGH_LEVEL_THREE:readonly WizardSpellRule[]=[...WARLOCK_SPELLS_THROUGH_LEVEL_TWO,...WARLOCK_LEVEL_THREE_SPELLS];
 
 /** Futuro Pacto del Tomo: los conjuros de las otras listas se añadirán al catálogo compartido. */
 export const TOME_CANTRIP_OPTIONS:readonly WizardSpellRule[]=[

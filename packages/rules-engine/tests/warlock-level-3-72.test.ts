@@ -39,8 +39,9 @@ describe('Paso 72: Brujo nivel 3 y Patrón Infernal',()=>{
   expect(result.input.preparedIds).not.toContain('command');
   expect(WARLOCK_FIEND_LEVEL_THREE_IDS).toEqual(['burning_hands','command','scorching_ray','suggestion']);
   expect(WARLOCK_LEVEL_TWO_SPELLS).toHaveLength(12);
-  expect(WARLOCK_SPELL_IDS.size).toBe(39);
-  expect(SHARED_CLASS_SPELL_LISTS.some(list=>list.id==='fiend'&&list.spellIds.length===4)).toBe(true);
+  // La biblioteca es extensible: al añadir nivel 5 se mantienen todos los hechizos previos.
+  expect(WARLOCK_SPELL_IDS.size).toBeGreaterThanOrEqual(39);
+  expect(SHARED_CLASS_SPELL_LISTS.some(list=>list.id==='fiend'&&WARLOCK_FIEND_LEVEL_THREE_IDS.every(id=>list.spellIds.includes(id)))).toBe(true);
   expect(SHARED_SPELL_RULES.some(spell=>spell.id==='command')).toBe(true);
   expect(warlockSpellRule('enthrall')?.level).toBe(2);
   expect(warlockSpellIsShared('misty_step')).toBe(true);

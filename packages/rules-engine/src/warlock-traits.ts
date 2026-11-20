@@ -9,7 +9,7 @@ export function collectWarlockTraits(input:GuidedWarlockInput,sheet:CalculatedWa
  const traits:CharacterTrait[]=[];
  function add(trait:CharacterTrait){traits.push(trait);}
  add({id:'warlock:pact_magic',title:'Magia de Pacto',group:'class',source:'Brujo',level:1,
-  summary:`${input.level>=4?'Tres':'Dos'} trucos, ${input.level===1?'dos':input.level===2?'tres':input.level===3?'cuatro':'cinco'} conjuros preparados ordinarios y ${input.level===1?'una':'dos'} ranuras de nivel ${input.level>=3?2:1} recargables tras descansar.`,
+  summary:`${input.level>=4?'Tres':'Dos'} trucos, ${input.level===1?'dos':input.level===2?'tres':input.level===3?'cuatro':input.level===4?'cinco':'seis'} conjuros preparados ordinarios y ${input.level===1?'una':'dos'} ranuras de nivel ${input.level>=5?3:input.level>=3?2:1} recargables tras descansar.`,
   explanation:'Las ranuras se marcan manualmente en Hechizos; los conjuros no se lanzan automáticamente.',automation:'calculated',
   details:[`CD de salvación ${sheet.spellSaveDC}. Ataque mágico ${sheet.spellAttackBonus>=0?'+':''}${sheet.spellAttackBonus}.`,
    'El Brujo recupera todas sus ranuras de Magia de Pacto al terminar un descanso corto o largo.']});
@@ -18,9 +18,9 @@ export function collectWarlockTraits(input:GuidedWarlockInput,sheet:CalculatedWa
   explanation:'La recuperación se ejecuta solo cuando el jugador confirma el rito desde Principal, Rasgos o Hechizos.',automation:'partial',details:['En nivel 2 recupera una de las dos ranuras, si está gastada.','Un descanso corto no restablece el uso de Astucia mágica.']});
  if(input.level>=3&&input.subclassId==='fiend'){
   add({id:'warlock:fiend_patron',title:'Patrón Infernal',group:'class',source:'Patrón Infernal',level:3,
-   summary:'Subclase que concede Bendición del Oscuro y cuatro conjuros siempre preparados.',
-   explanation:`Los conjuros del patrón no consumen ninguna de las ${input.level>=4?'cinco':'cuatro'} elecciones ordinarias de Magia de Pacto.`,automation:'calculated',
-   details:['Manos ardientes (nivel 1)','Orden imperiosa (nivel 1)','Rayo abrasador (nivel 2)','Sugestión (nivel 2)']});
+   summary:`Subclase que concede Bendición del Oscuro y ${input.level>=5?'seis':'cuatro'} conjuros siempre preparados.`,
+   explanation:`Los conjuros del patrón no consumen ninguna de las ${input.level>=5?'seis':input.level>=4?'cinco':'cuatro'} elecciones ordinarias de Magia de Pacto.`,automation:'calculated',
+   details:['Manos ardientes (nivel 1)','Orden imperiosa (nivel 1)','Rayo abrasador (nivel 2)','Sugestión (nivel 2)',...(input.level>=5?['Bola de fuego (nivel 3)','Nube apestosa (nivel 3)']:[])]});
   add({id:'warlock:dark_ones_blessing',title:'Bendición del Oscuro',group:'class',source:'Patrón Infernal',level:3,
    summary:`Al reducir a un enemigo a 0 PG, o al hacerlo otra criatura a 10 pies de ti, puedes recibir ${Math.max(1,sheet.abilityModifiers.charisma+input.level)} PG temporales.`,
    explanation:'La condición la confirma el jugador. Solo se aplica si decides pulsar el botón del rasgo; los PG temporales no se acumulan.',automation:'partial',
@@ -37,12 +37,16 @@ export function collectWarlockTraits(input:GuidedWarlockInput,sheet:CalculatedWa
   const info=WARLOCK_INVOCATIONS[invocation];
   add({id:`warlock:invocation:${invocation}`,title:info.name,group:'class',source:'Invocación sobrenatural',level:info.minLevel,
    summary:info.summary,explanation:'Las invocaciones se eligen en creación o en la ventana de subida de nivel.',
-   automation:['pact_of_blade','armor_of_shadows','agonizing_blast','eldritch_spear'].includes(invocation)?'calculated':'partial',details:[
+   automation:['pact_of_blade','armor_of_shadows','agonizing_blast','eldritch_spear','thirsting_blade','gift_of_the_depths'].includes(invocation)?'calculated':'partial',details:[
     invocation==='pact_of_blade'?'Los beneficios se aplican al arma vinculada solo cuando esté equipada.':
     invocation==='pact_of_chain'?'El familiar se gestiona en la pestaña Compañeros.':
     invocation==='pact_of_tome'?'Los conjuros adicionales aparecen en Hechizos mientras lleves el Libro de las Sombras.':
     invocation==='armor_of_shadows'?'La CA alternativa se aplica cuando activas el efecto y no llevas armadura.':
     invocation==='eldritch_mind'?'La ventaja se aplica solo a salvaciones para mantener la concentración.':
+    invocation==='thirsting_blade'?'Se habilitan dos ataques independientes solo con el arma de pacto equipada.':
+    invocation==='eldritch_smite'?'Al gastar una ranura de nivel 3 con un impacto del arma del pacto, añade 4d8 de fuerza; marca el gasto de ranura manualmente.':
+    invocation==='investment_of_the_chain_master'?'En Compañeros se elige velocidad de vuelo o nado 40 pies; tu CD de conjuro sustituye la de sus salvaciones.':
+    invocation==='gift_of_the_depths'?'La velocidad de nado pasa a ser igual a la velocidad normal; Respirar bajo el agua es una vez por descanso largo.':
     invocation==='agonizing_blast'||invocation==='eldritch_spear'?'Se muestra el efecto al tirar Descarga sobrenatural.':'La activación y los efectos narrativos los resuelve el jugador.',
    ]});
  }

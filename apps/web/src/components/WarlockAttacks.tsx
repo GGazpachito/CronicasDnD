@@ -28,13 +28,19 @@ export function WarlockWeaponAttacks({inventory,scores,proficiency,mode,pactWeap
     <span className="overview-roll-actions"><button type="button" className="overview-roll-button" onClick={()=>{
       try{const r=rollD20(attack.attackBonus,'normal',mode);setResult(name+': ataque '+r.total+' (d20 '+r.chosen+' '+signed(attack.attackBonus)+').');}
       catch(e){setResult(e instanceof Error?e.message:'Error al atacar');}
-    }}>Atacar</button><button type="button" className="overview-roll-button" onClick={()=>{
+    }}>Atacar</button>{attack.pactActive&&invocations.includes('thirsting_blade')&&<button type="button" className="overview-roll-button" onClick={()=>{
+      try{const rolls=Array.from({length:2},()=>rollD20(attack.attackBonus,'normal',mode));setResult(`${name} · Hoja sedienta: ataque 1 ${rolls[0].total} (d20 ${rolls[0].chosen} ${signed(attack.attackBonus)}) · ataque 2 ${rolls[1].total} (d20 ${rolls[1].chosen} ${signed(attack.attackBonus)}).`);}
+      catch(e){setResult(e instanceof Error?e.message:'Error en los ataques');}
+    }}>Atacar ×2</button>}{attack.pactActive&&invocations.includes('eldritch_smite')&&<button type="button" className="overview-roll-button" onClick={()=>{
+      try{const dice=Array.from({length:4*(critical?2:1)},()=>rollDie(8));setResult(`${name} · Castigo sobrenatural: ${dice.reduce((sum,die)=>sum+die,0)} de fuerza (${dice.join(' + ')}). Consume una ranura de Pacto de nivel 3; márcala en Magia de Pacto. Una vez por turno.`);}
+      catch(e){setResult(e instanceof Error?e.message:'Error en Castigo sobrenatural');}
+    }}>Castigo · {critical?'8d8':'4d8'}</button>}<button type="button" className="overview-roll-button" onClick={()=>{
       try{const dice=attack.damageDice?Array.from({length:attack.damageDice.count*(critical?2:1)},()=>rollDie(attack.damageDice!.sides)):[];setResult(name+': daño '+Math.max(0,dice.reduce((a,b)=>a+b,attack.fixedDamage)+attack.damageBonus)+' ('+(dice.join('+')||attack.fixedDamage)+' '+signed(attack.damageBonus)+').');}
       catch(e){setResult(e instanceof Error?e.message:'Error de daño');}
     }}>Daño</button></span></div>;
   })}
-  {result&&<p role="status" className="overview-panel-note">{result}</p>}
-  <p className="overview-panel-note">Solo las armas simples suman competencia normalmente; el arma vinculada también la suma. El tipo de daño alternativo del pacto lo decide el jugador.</p>
+  {result&&<output role="status" className="overview-roll-result"><div className="overview-roll-result-heading"><strong>Última tirada con arma</strong><span>Resultado</span></div><div className="overview-roll-equation"><div className="overview-roll-formula"><strong>{result}</strong></div></div></output>}
+  <p className="overview-panel-note">Solo las armas simples suman competencia normalmente; el arma vinculada también la suma. Hoja sedienta y Castigo sobrenatural solo se muestran en el arma del pacto equipada. Las ranuras y la condición Derribado se gestionan manualmente.</p>
  </section>;
 }
 
@@ -66,6 +72,6 @@ export function WarlockEldritchBlast({known,level,spellAttackBonus,charismaModif
   {error&&<p className="error" role="alert">{error}</p>}
   {results.length>0&&<output className="warlock-blast-results" aria-live="polite">{results.map((roll,index)=><article key={`${roll.kind}-${index}`} className="overview-roll-result warlock-blast-result"><div className="overview-roll-result-heading"><strong>{roll.label} · {roll.kind==='attack'?'Ataque':'Daño de fuerza'}</strong><span>{roll.kind==='attack'?'d20':roll.critical?'Crítico · 2d10':'1d10'}</span></div><div className="overview-roll-equation"><div className="overview-roll-dice">{roll.dice.map((die,dieIndex)=><span key={dieIndex} className="overview-die is-chosen">{die}</span>)}</div><div className="overview-roll-formula">{signed(roll.bonus)} <span aria-hidden="true">=</span> <strong>{roll.total}</strong></div></div><small>{roll.dice.join(' + ')} {signed(roll.bonus)} = {roll.total}</small></article>)}</output>}
   {invocations.includes('repelling_blast')&&<p className="overview-panel-note">Descarga repelente: al impactar puedes empujar al objetivo hasta 10 pies; el desplazamiento lo decides manualmente.</p>}
-  <p className="overview-panel-note">No consume ranuras. El jugador elige los objetivos, verifica impactos y decide cuándo tirar daño. Los rayos adicionales se desbloquean en niveles posteriores.</p>
+  <p className="overview-panel-note">No consume ranuras. El jugador elige los objetivos, verifica impactos y decide cuándo tirar daño. Los rayos son ataques independientes; el segundo se desbloquea en el nivel 5, el tercero en el 11 y el cuarto en el 17.</p>
  </section>;
 }
