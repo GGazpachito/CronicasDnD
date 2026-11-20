@@ -9,7 +9,7 @@ export function collectWarlockTraits(input:GuidedWarlockInput,sheet:CalculatedWa
  const traits:CharacterTrait[]=[];
  function add(trait:CharacterTrait){traits.push(trait);}
  add({id:'warlock:pact_magic',title:'Magia de Pacto',group:'class',source:'Brujo',level:1,
-  summary:`${input.level>=4?'Tres':'Dos'} trucos, ${input.level===1?'dos':input.level===2?'tres':input.level===3?'cuatro':input.level===4?'cinco':input.level===5?'seis':input.level===6?'siete':'ocho'} conjuros preparados ordinarios y ${input.level===1?'una':'dos'} ranuras de nivel ${input.level>=7?4:input.level>=5?3:input.level>=3?2:1} recargables tras descansar.`,
+  summary:`${input.level>=4?'Tres':'Dos'} trucos, ${input.level===1?'dos':input.level===2?'tres':input.level===3?'cuatro':input.level===4?'cinco':input.level===5?'seis':input.level===6?'siete':input.level===7?'ocho':'nueve'} conjuros preparados ordinarios y ${input.level===1?'una':'dos'} ranuras de nivel ${input.level>=7?4:input.level>=5?3:input.level>=3?2:1} recargables tras descansar.`,
   explanation:'Las ranuras se marcan manualmente en Hechizos; los conjuros no se lanzan automáticamente.',automation:'calculated',
   details:[`CD de salvación ${sheet.spellSaveDC}. Ataque mágico ${sheet.spellAttackBonus>=0?'+':''}${sheet.spellAttackBonus}.`,
    'El Brujo recupera todas sus ranuras de Magia de Pacto al terminar un descanso corto o largo.']});
@@ -19,7 +19,7 @@ export function collectWarlockTraits(input:GuidedWarlockInput,sheet:CalculatedWa
  if(input.level>=3&&input.subclassId==='fiend'){
   add({id:'warlock:fiend_patron',title:'Patrón Infernal',group:'class',source:'Patrón Infernal',level:3,
    summary:`Subclase que concede Bendición del Oscuro y ${input.level>=7?'ocho':input.level>=5?'seis':'cuatro'} conjuros siempre preparados.`,
-   explanation:`Los conjuros del patrón no consumen ninguna de las ${input.level>=7?'ocho':input.level>=6?'siete':input.level>=5?'seis':input.level>=4?'cinco':'cuatro'} elecciones ordinarias de Magia de Pacto.`,automation:'calculated',
+   explanation:`Los conjuros del patrón no consumen ninguna de las ${input.level>=8?'nueve':input.level>=7?'ocho':input.level>=6?'siete':input.level>=5?'seis':input.level>=4?'cinco':'cuatro'} elecciones ordinarias de Magia de Pacto.`,automation:'calculated',
    details:['Manos ardientes (nivel 1)','Orden imperiosa (nivel 1)','Rayo abrasador (nivel 2)','Sugestión (nivel 2)',...(input.level>=5?['Bola de fuego (nivel 3)','Nube apestosa (nivel 3)']:[]),...(input.level>=7?['Escudo de fuego (nivel 4)','Muro de fuego (nivel 4)']:[])]});
   add({id:'warlock:dark_ones_blessing',title:'Bendición del Oscuro',group:'class',source:'Patrón Infernal',level:3,
    summary:`Al reducir a un enemigo a 0 PG, o al hacerlo otra criatura a 10 pies de ti, puedes recibir ${Math.max(1,sheet.abilityModifiers.charisma+input.level)} PG temporales.`,
@@ -36,6 +36,13 @@ export function collectWarlockTraits(input:GuidedWarlockInput,sheet:CalculatedWa
   add({id:'warlock:ability_score_improvement_4',title:'Mejora de característica',group:'feats',source:'Brujo · nivel 4',level:4,
    summary:choice.mode==='plus_two'?`+2 a ${names[choice.first]}`:`+1 a ${names[choice.first]} y +1 a ${names[choice.second??choice.first]}`,
    explanation:'La mejora aplica automáticamente a las características, sus modificadores, tiradas, CD y PG cuando corresponda.',automation:'calculated',details:['Dote Mejora de característica; otras dotes de nivel 4 se incorporarán en fases posteriores.']});
+ }
+ if(input.level>=8&&input.level8Improvement){
+  const choice=input.level8Improvement;
+  const names:Record<string,string>={strength:'Fuerza',dexterity:'Destreza',constitution:'Constitución',intelligence:'Inteligencia',wisdom:'Sabiduría',charisma:'Carisma'};
+  add({id:'warlock:ability_score_improvement_8',title:'Mejora de característica',group:'feats',source:'Brujo · nivel 8',level:8,
+   summary:choice.mode==='plus_two'?`+2 a ${names[choice.first]}`:`+1 a ${names[choice.first]} y +1 a ${names[choice.second??choice.first]}`,
+   explanation:'Esta segunda mejora se acumula con la de nivel 4; la hoja recalcula modificadores, habilidades, CD y puntos de golpe automáticamente.',automation:'calculated',details:['Dote Mejora de característica; otras dotes de nivel 8 se incorporarán en fases posteriores.']});
  }
  for(const invocation of input.invocations){
   const info=WARLOCK_INVOCATIONS[invocation];

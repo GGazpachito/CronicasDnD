@@ -1,4 +1,4 @@
-# Arquitectura normativa: ventanas de subida y bajada de nivel (actualizada en paso 76)
+# Arquitectura normativa: ventanas de subida y bajada de nivel (actualizada en paso 77)
 
 > **CONTRATO OBLIGATORIO DE UI Y REGLAS PARA TODAS LAS CLASES.** Este documento complementa `ESTRUCTURA_HOJA_COMUN.md`. Ninguna clase nueva debe fabricar sus propios contenedores de progreso, pasos, botones ni estilos. Debe integrar componentes compartidos con un adaptador de reglas de clase.
 
@@ -37,6 +37,8 @@ Ejemplos: Mago aprende dos conjuros de libro por nivel y prepara conforme a prog
 
 **Brujo 6→7 (paso 76):** el mismo diálogo `LevelUpDialogFrame` con sus tres etapas, búsqueda y fichas `WizardSpellDetails`. Elige seis invocaciones (cinco anteriores más una, con sustitución opcional de una), tres trucos (sustitución opcional de uno) y ocho preparados ordinarios (conserva al menos seis de los siete). Las dos ranuras de Pacto ascienden a nivel 4; seis conjuros ordinarios de nivel 4 ya existentes en Mago pasan a ser opciones de Brujo. Escudo de fuego y Muro de fuego son dos preparaciones adicionales del patrón, en total ocho, que no ocupan plazas ordinarias. `Susurros de la tumba` desbloquea Hablar con los muertos sin ranura como invocación opcional. Ninguna novedad modifica la arquitectura de las demás clases.
 
+**Brujo 7→8 (paso 77):** se conserva exactamente el diálogo de tres etapas y los selectores compartidos. El jugador elige una segunda **Mejora de característica** (+2 o +1/+1; máximo 20), un noveno conjuro ordinario de niveles 1–4 (retiene al menos siete de los ocho anteriores), mantiene tres trucos y seis invocaciones (puede sustituir una de cada grupo). Las dos ranuras siguen siendo de nivel 4 y el Patrón Infernal conserva ocho conjuros gratuitos. Se reutilizan las fichas y el catálogo de conjuros existentes, sin añadir componentes visuales exclusivos. La mejora de Constitución recalcula retroactivamente los ocho niveles de PG.
+
 ## C. Puntos de golpe: promedio o dado para todas las clases
 
 **Componente único obligatorio** en paso 1: `apps/web/src/components/LevelUpHitPointsPicker.tsx`, configurado por `characterClass`. **Catálogo y validación:** `packages/rules-engine/src/level-hit-points.ts`.
@@ -45,7 +47,7 @@ Ejemplos: Mago aprende dos conjuros de libro por nivel y prepara conforme a prog
 | --- | --- | --- | --- |
 | Guerrero | d10 | 6 | `levelHitPointRolls` (array de d10 naturales, uno por nivel 2..N) |
 | Mago | d6 | 4 | `levelHitPointRolls` (array de d6 naturales, uno por nivel 2..N) |
-| Brujo | d8 | 5 | `level2HitDieRoll` a `level7HitDieRoll` (hasta nivel 7), uno por nivel adicional |
+| Brujo | d8 | 5 | `level2HitDieRoll` a `level8HitDieRoll` (hasta nivel 8), uno por nivel adicional |
 
 El selector muestra «Promedio» o «Tirada 1dX». Al elegir la segunda opción se lanza el dado; es posible repetir hasta confirmar. Cuando se elige promedio se almacena el valor fijo equivalente. No guardar la cadena de modo visual como sustituto del resultado; en ambos casos se guarda el **número de dado elegido**. No aplicar el dado dos veces al confirmar. No modificar el valor al cambiar de pestaña ni al restaurar el guardado.
 
@@ -54,6 +56,8 @@ PG ganados por nivel posterior al 1: **máximo de 1 y (resultado del dado + modi
 **Compatibilidad:** las entradas antiguas de Guerrero/Mago sin `levelHitPointRolls` continúan usando el promedio fijo. La primera subida nueva crea un historial completo rellenando los niveles anteriores con su media (6 o 4), después añade el dado actual. Se valida `length === level-1` y rango de cada dado. El descenso elimina el último dado del historial (`trimLevelHitPointRolls`), sin volver a tirar; **al regresar al nivel 1 se omite por completo `levelHitPointRolls`**, en vez de guardar una lista vacía, para recuperar exactamente el esquema anterior y superar las auditorías de igualdad de instantáneas. El esquema de guardados anterior se conserva (campo opcional y aceptado por sus validadores). Brujo mantiene `level2HitDieRoll` y añade `level3HitDieRoll`/`level4HitDieRoll`/`level5HitDieRoll` opcionales, con snapshot versión 4.
 
 En **Brujo nivel 4**, el asistente presenta la *misma tarjeta de dote Mejora de característica* que Mago/Guerrero: +2 a una o +1/+1 a dos, con máximo 20, usando `applyFighterAbilityImprovement`. Un cambio en Constitución recalcula todos los PG previos. Las otras dotes generales quedan expresamente pendientes; no mostrar elecciones que aún no están implementadas.
+
+En **Brujo nivel 8** se vuelve a utilizar esa misma tarjeta sin duplicar CSS ni diálogos. El campo `level8Improvement` aplica el incremento después de `level4Improvement`, con validación del límite 20; `level8HitDieRoll` guarda el valor concreto elegido en el selector d8 (5 de media). La bajada elimina solo los campos de nivel 8.
 
 ## D. Bajada de nivel: estructura exacta
 
@@ -76,6 +80,8 @@ Importante para Brujo: en guardados antiguos de nivel 2 no existe un historial d
 **Desde 5→6**, `level6History` conserva las cinco invocaciones, tres trucos, seis preparados, vínculos del Tomo/Hoja, familiar y demás elecciones del nivel 5. El descenso 6→5 retira el d8 y Suerte del Oscuro, restaura las elecciones anteriores y conserva daño compatible, ranuras gastadas, inspiración, compañeros y los historiales previos. El contador `darkOnesOwnLuckUsed` solo existe desde nivel 6; se limita a máximo (1, modificador de Carisma), se recarga únicamente tras descanso largo y nunca suma automáticamente el resultado del d10 a un d20. La ficha presenta el lanzamiento usando el mismo estilo de resultados que las demás tiradas.
 
 **Desde 6→7**, `level7History` almacena las elecciones anteriores y los vínculos y recursos de nivel 6; el descenso 7→6 quita el d8 y la sexta invocación, devuelve las elecciones originales y la ranura de Pacto al nivel 3, retira los dos conjuros gratuitos de nivel 4 y conserva gasto de ranuras, daño acumulado compatible, compañeros e historial 6→5. El estado de Suerte del Oscuro se restaura del historial anterior a la subida. El snapshot continúa con `schemaVersion: 4`, ampliando únicamente campos opcionales.
+
+**Desde 7→8**, `level8History` registra exactamente las seis invocaciones, tres trucos, ocho conjuros preparados, dotes opcionales, vínculos de Pacto, familiar, Armadura de sombras, Tomo, Don de las profundidades y usos de Suerte del Oscuro. El descenso **8→7** deshace la Mejora de característica de nivel 8, elimina su d8, restaura las elecciones anteriores y deja intactos los campos de progresión previos, ranuras gastadas y daño compatible. El formato sigue siendo `schemaVersion: 4`.
 
 ## E. Checklist obligatorio antes de entregar una nueva clase/subclase
 
