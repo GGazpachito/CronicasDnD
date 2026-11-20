@@ -9,7 +9,7 @@ export function collectWarlockTraits(input:GuidedWarlockInput,sheet:CalculatedWa
  const traits:CharacterTrait[]=[];
  function add(trait:CharacterTrait){traits.push(trait);}
  add({id:'warlock:pact_magic',title:'Magia de Pacto',group:'class',source:'Brujo',level:1,
-  summary:`Dos trucos, ${input.level===1?'dos':input.level===2?'tres':'cuatro'} conjuros preparados ordinarios y ${input.level===1?'una':'dos'} ranuras de nivel ${input.level>=3?2:1} recargables tras descansar.`,
+  summary:`${input.level>=4?'Tres':'Dos'} trucos, ${input.level===1?'dos':input.level===2?'tres':input.level===3?'cuatro':'cinco'} conjuros preparados ordinarios y ${input.level===1?'una':'dos'} ranuras de nivel ${input.level>=3?2:1} recargables tras descansar.`,
   explanation:'Las ranuras se marcan manualmente en Hechizos; los conjuros no se lanzan automáticamente.',automation:'calculated',
   details:[`CD de salvación ${sheet.spellSaveDC}. Ataque mágico ${sheet.spellAttackBonus>=0?'+':''}${sheet.spellAttackBonus}.`,
    'El Brujo recupera todas sus ranuras de Magia de Pacto al terminar un descanso corto o largo.']});
@@ -19,12 +19,19 @@ export function collectWarlockTraits(input:GuidedWarlockInput,sheet:CalculatedWa
  if(input.level>=3&&input.subclassId==='fiend'){
   add({id:'warlock:fiend_patron',title:'Patrón Infernal',group:'class',source:'Patrón Infernal',level:3,
    summary:'Subclase que concede Bendición del Oscuro y cuatro conjuros siempre preparados.',
-   explanation:'Los conjuros del patrón no consumen ninguna de las cuatro elecciones ordinarias de Magia de Pacto.',automation:'calculated',
+   explanation:`Los conjuros del patrón no consumen ninguna de las ${input.level>=4?'cinco':'cuatro'} elecciones ordinarias de Magia de Pacto.`,automation:'calculated',
    details:['Manos ardientes (nivel 1)','Orden imperiosa (nivel 1)','Rayo abrasador (nivel 2)','Sugestión (nivel 2)']});
   add({id:'warlock:dark_ones_blessing',title:'Bendición del Oscuro',group:'class',source:'Patrón Infernal',level:3,
    summary:`Al reducir a un enemigo a 0 PG, o al hacerlo otra criatura a 10 pies de ti, puedes recibir ${Math.max(1,sheet.abilityModifiers.charisma+input.level)} PG temporales.`,
    explanation:'La condición la confirma el jugador. Solo se aplica si decides pulsar el botón del rasgo; los PG temporales no se acumulan.',automation:'partial',
    details:['PG temporales = máximo entre 1 y tu modificador de Carisma + nivel de Brujo.','Se conserva la cantidad mayor entre los PG temporales anteriores y los nuevos; no se suman.']});
+ }
+ if(input.level>=4&&input.level4Improvement){
+  const choice=input.level4Improvement;
+  const names:Record<string,string>={strength:'Fuerza',dexterity:'Destreza',constitution:'Constitución',intelligence:'Inteligencia',wisdom:'Sabiduría',charisma:'Carisma'};
+  add({id:'warlock:ability_score_improvement_4',title:'Mejora de característica',group:'feats',source:'Brujo · nivel 4',level:4,
+   summary:choice.mode==='plus_two'?`+2 a ${names[choice.first]}`:`+1 a ${names[choice.first]} y +1 a ${names[choice.second??choice.first]}`,
+   explanation:'La mejora aplica automáticamente a las características, sus modificadores, tiradas, CD y PG cuando corresponda.',automation:'calculated',details:['Dote Mejora de característica; otras dotes de nivel 4 se incorporarán en fases posteriores.']});
  }
  for(const invocation of input.invocations){
   const info=WARLOCK_INVOCATIONS[invocation];

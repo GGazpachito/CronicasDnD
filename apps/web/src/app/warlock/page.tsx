@@ -199,9 +199,9 @@ export default function WarlockPage(){
   <div className="content">
    <p className="sheet-release-note">CLASE · BRUJO NIVEL {input.level} · PHB 2024</p>
    <CharacterHeader name={input.name} portraitDataUrl={input.profile?.portraitDataUrl} level={input.level} background={background.name} species={SPECIES_NAMES[input.species]} className="Brujo" valid={Boolean(snapshot)} onEdit={()=>setEditing(true)}
-    onLevelUp={input.level<3&&snapshot?()=>{setLevelUpOpen(true);setEditing(false);}:undefined}
+    onLevelUp={input.level<4&&snapshot?()=>{setLevelUpOpen(true);setEditing(false);}:undefined}
     onLevelDown={input.level>=2&&levelDownAssessment.preview?()=>setLevelDownOpen(true):undefined}/>
-   <p className="wizard-progression-hint">{input.level===1?'Siguiente desbloqueo: Astucia mágica, nuevas invocaciones y segunda ranura de Magia de Pacto.':input.level===2?'Siguiente desbloqueo: Patrón Infernal, Bendición del Oscuro, cuatro conjuros del patrón y ranuras de nivel 2.':'Brujo nivel 3 completado: Patrón Infernal disponible. La progresión del nivel 4 se incorporará en una actualización posterior.'}</p>
+   <p className="wizard-progression-hint">{input.level===1?'Siguiente desbloqueo: Astucia mágica, nuevas invocaciones y segunda ranura de Magia de Pacto.':input.level===2?'Siguiente desbloqueo: Patrón Infernal, Bendición del Oscuro, cuatro conjuros del patrón y ranuras de nivel 2.':input.level===3?'Siguiente desbloqueo: mejora de característica, tercer truco y quinto conjuro preparado.':'Brujo nivel 4 completado. Nivel 5: nuevos conjuros de nivel 3, invocaciones y competencia +3 (pendiente). '}</p>
    {levelUpOpen&&<WarlockLevelUpWizard input={input} state={state} mode={mode} onAdvance={(nextInput,nextState)=>{setInput(nextInput);setState(nextState);setLevelUpOpen(false);setEditing(false);setFeedback(`¡Brujo nivel ${nextInput.level}! Recursos y conjuros actualizados. Guarda los cambios para conservar el progreso.`);}} onCancel={()=>setLevelUpOpen(false)}/>}
    {levelDownOpen&&<LevelDownDialog preview={levelDownAssessment.preview} error={levelDownAssessment.error} onClose={()=>setLevelDownOpen(false)} onConfirm={()=>{
     if(!levelDownAssessment.preview)throw new RangeError('La bajada de Brujo no es válida');
@@ -245,8 +245,8 @@ export default function WarlockPage(){
     </div>
     <div className="divider"/>
     <div className="wizard-editor-grid">
-     <div><h3>Trucos ({input.cantripIds.length}/2)</h3><div className="wizard-spell-picker">{WARLOCK_LEVEL_ONE_CANTRIPS.map(spell=><label className="wizard-spell-option" key={spell.id}><input type="checkbox" disabled={input.level>=2} checked={input.cantripIds.includes(spell.id)} onChange={()=>toggleSpell('cantripIds',spell.id)}/>{spell.name}</label>)}</div></div>
-     <div><h3>Conjuros preparados ({input.preparedIds.length}/{input.level===1?2:input.level===2?3:4})</h3><div className="wizard-spell-picker">{(input.level>=3?WARLOCK_SPELLS_THROUGH_LEVEL_TWO:WARLOCK_LEVEL_ONE_SPELLS).map(spell=><label className="wizard-spell-option" key={spell.id}><input type="checkbox" disabled={input.level>=2} checked={input.preparedIds.includes(spell.id)} onChange={()=>toggleSpell('preparedIds',spell.id)}/>{spell.name}</label>)}</div>{fiendSpellIds.length>0&&<p className="muted-note">+4 conjuros del Patrón Infernal siempre preparados sin consumir estas elecciones.</p>}</div>
+     <div><h3>Trucos ({input.cantripIds.length}/{input.level>=4?3:2})</h3><div className="wizard-spell-picker">{WARLOCK_LEVEL_ONE_CANTRIPS.map(spell=><label className="wizard-spell-option" key={spell.id}><input type="checkbox" disabled={input.level>=2} checked={input.cantripIds.includes(spell.id)} onChange={()=>toggleSpell('cantripIds',spell.id)}/>{spell.name}</label>)}</div></div>
+     <div><h3>Conjuros preparados ({input.preparedIds.length}/{input.level===1?2:input.level===2?3:input.level===3?4:5})</h3><div className="wizard-spell-picker">{(input.level>=3?WARLOCK_SPELLS_THROUGH_LEVEL_TWO:WARLOCK_LEVEL_ONE_SPELLS).map(spell=><label className="wizard-spell-option" key={spell.id}><input type="checkbox" disabled={input.level>=2} checked={input.preparedIds.includes(spell.id)} onChange={()=>toggleSpell('preparedIds',spell.id)}/>{spell.name}</label>)}</div>{fiendSpellIds.length>0&&<p className="muted-note">+4 conjuros del Patrón Infernal siempre preparados sin consumir estas elecciones.</p>}</div>
     </div>
     <div className="overview-quick-actions"><button type="button" onClick={()=>setEditing(false)}>Cerrar editor</button></div>
     {calculated.error&&<p role="alert" className="error">{calculated.error}</p>}
@@ -293,7 +293,7 @@ export default function WarlockPage(){
     <SharedSpellsLayout spellClass="Brujo" description="La biblioteca reutiliza las mismas fichas y filtros que Mago y Guerrero.">
      <SpellLibraryPanel rules={spellRules} classLists={[...SHARED_CLASS_SPELL_LISTS,...(tomeActive?[{id:'tome',label:'Libro de las Sombras',spellIds:[...tomeCantrips,...tomeRituals].map(spell=>spell.id)}]:[])]}
       selection={{learnedIds:activeSpellIds,preparedIds:activeSpellIds}}
-      limits={{cantrips:2+(tomeActive?3:0),learnedMinimum:2,prepared:availablePreparedIds.length}}
+      limits={{cantrips:(input.level>=4?3:2)+(tomeActive?3:0),learnedMinimum:2,prepared:availablePreparedIds.length}}
       characterLevel={input.level} spellAttackBonus={sheet?.spellAttackBonus??2} spellSaveDC={sheet?.spellSaveDC??10} mode={mode}
       maxSlotLevel={pactSlotLevel} editable={false} knownLabel="Conocidos" preparedLabel="Disponibles"
       note="Los trucos no consumen ranura. El Tomo añade tres trucos y dos rituales mientras se lleve. Desde nivel 3, los cuatro conjuros del Patrón Infernal están siempre preparados y no ocupan las cuatro elecciones ordinarias. Los descansos y gastos se marcan manualmente."
