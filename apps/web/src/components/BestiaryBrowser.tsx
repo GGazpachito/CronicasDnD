@@ -22,7 +22,7 @@ export default function BestiaryBrowser({initialId}:Readonly<{initialId?:string}
    <div className="bestiary-page-heading"><div><span className="eyebrow">ARCHIVO DE CRIATURAS · D&D 2024</span><h1>Bestiario</h1><p>La fuente de referencia única para las fichas de familiares y futuras bestias, monstruos y enemigos. Aquí puedes consultar estadísticas y realizar tiradas, sin modificar los datos originales.</p></div><Link href="/" className="overview-link">← Menú principal</Link></div>
    <div className="bestiary-layout">
     <section className="panel bestiary-catalog" aria-label="Catálogo de criaturas">
-     <h2>Catálogo</h2><p className="muted-note">{visible.length} de {BESTIARY_ENTRIES.length} fichas disponibles.</p>
+     <h2>Catálogo</h2><p className="muted-note">{visible.length} de {BESTIARY_ENTRIES.length} fichas disponibles. Orden: desafío ascendente, después nombre A–Z.</p>
      <label className="field"><span>Buscar criatura, tipo o desafío</span><input type="search" aria-label="Buscar criatura" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Ej.: pseudodragón, bestia, 1/4"/></label>
      <label className="field"><span>Grupo</span><select value={filter} onChange={e=>setFilter(e.target.value as Filter)} aria-label="Filtrar criaturas"><option value="todos">Todas las criaturas</option>{AVAILABLE_CATEGORIES.map(category=><option key={category} value={category}>{CATEGORY_LABELS[category]}</option>)}</select></label>
      <div className="bestiary-items" role="group" aria-label="Resultados del Bestiario">

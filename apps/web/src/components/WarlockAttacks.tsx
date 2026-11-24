@@ -36,14 +36,17 @@ export function WarlockWeaponAttacks({inventory,scores,proficiency,mode,pactWeap
     }}>Atacar ×2</button>}{attack.pactActive&&invocations.includes('eldritch_smite')&&<button type="button" className="overview-roll-button" onClick={()=>{
       try{const count=(pactSlotLevel+1)*(critical?2:1),dice=Array.from({length:count},()=>rollDie(8));setResults([{label:`${name} · Castigo sobrenatural`,kind:'damage',dice,bonus:0,total:dice.reduce((sum,die)=>sum+die,0),formula:`${count}d8 · fuerza${critical?' · crítico':''}`,critical,note:`Ranura de nivel ${pactSlotLevel}: marca el gasto manualmente; una vez por turno.`}]);setError('');}
       catch(e){setResults([]);setError(e instanceof Error?e.message:'Error en Castigo sobrenatural');}
-    }}>Castigo · {(pactSlotLevel+1)*(critical?2:1)}d8</button>}<button type="button" className="overview-roll-button" onClick={()=>{
+    }}>Castigo · {(pactSlotLevel+1)*(critical?2:1)}d8</button>}{attack.pactActive&&invocations.includes('lifedrinker')&&<button type="button" className="overview-roll-button" onClick={()=>{
+     try{const count=critical?2:1,dice=Array.from({length:count},()=>rollDie(6));setResults([{label:`${name} · Bebedor de vida`,kind:'damage',dice,bonus:0,total:dice.reduce((sum,die)=>sum+die,0),formula:`${count}d6 · necrótico, psíquico o radiante`,critical,note:'Solo una vez por turno. Elige el daño y gestiona manualmente cualquier gasto de dado de golpe.'}]);setError('');}
+     catch(e){setResults([]);setError(e instanceof Error?e.message:'Error en Bebedor de vida');}
+    }}>Bebedor de vida · {critical?'2d6':'1d6'}</button>}<button type="button" className="overview-roll-button" onClick={()=>{
       try{const dice=attack.damageDice?Array.from({length:attack.damageDice.count*(critical?2:1)},()=>rollDie(attack.damageDice!.sides)):[];const fixed=attack.fixedDamage;setResults([{label:`${name} · Daño`,kind:'damage',dice,bonus:attack.damageBonus,fixedDamage:fixed,total:Math.max(0,dice.reduce((a,b)=>a+b,fixed)+attack.damageBonus),formula:`${dice.length?`${dice.length}d${attack.damageDice!.sides}`:'Fijo'}${critical?' · crítico':''}`,critical}]);setError('');}
       catch(e){setResults([]);setError(e instanceof Error?e.message:'Error de daño');}
     }}>Daño</button></span></div>;
   })}
   {error&&<p className="overview-dice-error" role="alert">{error}</p>}
   <WeaponRollCards rolls={results}/>
-  <p className="overview-panel-note">Solo las armas simples suman competencia normalmente; el arma vinculada también la suma. Hoja sedienta y Castigo sobrenatural solo se muestran en el arma del pacto equipada. Las ranuras y la condición Derribado se gestionan manualmente.</p>
+  <p className="overview-panel-note">Solo las armas simples suman competencia normalmente; el arma vinculada también la suma. Hoja sedienta, Castigo sobrenatural y Bebedor de vida solo se muestran en el arma del pacto equipada. Las ranuras, el gasto de dado de golpe y la condición Derribado se gestionan manualmente.</p>
  </section>;
 }
 

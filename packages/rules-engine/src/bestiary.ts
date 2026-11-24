@@ -69,8 +69,20 @@ function buildEntry(id:string,definition:CreatureSpec):BestiaryEntry{
 }
 
 /** Una única colección consultable por la pantalla de Bestiario y cualquier clase. */
+/** Orden numérico de VD: 1/8 precede a 1/4, que precede a 1/2 y a 1. */
+export function challengeRatingValue(value:string):number{
+ const fraction=/^(\d+)\s*\/\s*(\d+)$/.exec(value.trim());
+ if(fraction){const denominator=Number(fraction[2]);return denominator>0?Number(fraction[1])/denominator:Number.POSITIVE_INFINITY;}
+ const rating=Number(value);
+ return Number.isFinite(rating)&&rating>=0?rating:Number.POSITIVE_INFINITY;
+}
+export function compareBestiaryEntries(a:BestiaryEntry,b:BestiaryEntry):number{
+ const first=challengeRatingValue(a.sheet.challengeRating),second=challengeRatingValue(b.sheet.challengeRating);
+ return (first===second?0:first-second)
+  ||a.name.localeCompare(b.name,'es',{sensitivity:'base'})||a.id.localeCompare(b.id,'es');
+}
 export const BESTIARY_ENTRIES:readonly BestiaryEntry[]=Object.entries(CREATURES)
- .map(([id,definition])=>buildEntry(id,definition));
+ .map(([id,definition])=>buildEntry(id,definition)).sort(compareBestiaryEntries);
 const BY_ID=new Map(BESTIARY_ENTRIES.map(entry=>[entry.id,entry]));
 
 export function findBestiaryCreature(id:string):BestiaryEntry|undefined{return BY_ID.get(id);}

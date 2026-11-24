@@ -1,7 +1,7 @@
 /** Pasos 69, 72–77: transiciones explícitas de Brujo 1→2→3→4→5→6→7→8 (D&D 2024).
  * Las elecciones se validan aquí, no únicamente en los controles React.
  */
-import {calculateWarlockOne,makeWarlockCharacterSnapshot,WARLOCK_INVOCATIONS,WARLOCK_INVOCATION_PREREQUISITES,WARLOCK_LEVEL_ONE_INVOCATIONS,type GuidedWarlockInput,type WarlockOneState,type WarlockInvocationId,type WarlockLevelTwoHistory,type WarlockLevelThreeHistory,type WarlockLevelFourHistory,type WarlockLevelFiveHistory,type WarlockLevelSixHistory,type WarlockLevelSevenHistory} from './warlock';
+import {calculateWarlockOne,makeWarlockCharacterSnapshot,WARLOCK_INVOCATIONS,WARLOCK_INVOCATION_PREREQUISITES,WARLOCK_LEVEL_ONE_INVOCATIONS,type GuidedWarlockInput,type WarlockOneState,type WarlockInvocationId,type WarlockLevelTwoHistory,type WarlockLevelThreeHistory,type WarlockLevelFourHistory,type WarlockLevelFiveHistory,type WarlockLevelSixHistory,type WarlockLevelSevenHistory,type WarlockLevelEightHistory} from './warlock';
 import type {FighterAbilityImprovement} from './progression';
 import {TOME_CANTRIP_OPTIONS,TOME_RITUAL_OPTIONS} from './warlock-spells';
 import type {LevelDownSummary} from './level-down';
@@ -364,12 +364,103 @@ export function advanceWarlockToLevelEight(input:GuidedWarlockInput,state:Warloc
  return {input:nextInput,state:makeWarlockCharacterSnapshot(nextInput,nextState).warlockState};
 }
 
+export type WarlockLevelNineChoices=Readonly<{
+ invocations:readonly WarlockInvocationId[];cantripIds:readonly string[];preparedIds:readonly string[];
+ level9HitDieRoll:number;lessonsFeat?:'alert'|'tough';
+ tomeCantripIds?:readonly string[];tomeRitualIds?:readonly string[];
+}>;
+
+/** 8→9: séptima invocación, +1 preparado, magia nivel 5, Contactar con el patrón y competencia +4. */
+export function advanceWarlockToLevelNine(input:GuidedWarlockInput,state:WarlockOneState,choices:WarlockLevelNineChoices):{
+ input:GuidedWarlockInput;state:WarlockOneState;
+}{
+ if(input.level!==8||input.subclassId!=='fiend')throw new RangeError('Solo se puede subir de Brujo Infernal nivel 8 a nivel 9');
+ const previous=makeWarlockCharacterSnapshot(input,state);
+ if(!Array.isArray(choices.invocations)||choices.invocations.length!==7||new Set(choices.invocations).size!==7||choices.invocations.filter(id=>input.invocations.includes(id)).length<5)
+  throw new RangeError('Elige siete invocaciones distintas; conserva al menos cinco de las seis anteriores');
+ const selectedInvocations:readonly WarlockInvocationId[]=choices.invocations;
+ if(selectedInvocations.some((id:WarlockInvocationId)=>{const prerequisite=WARLOCK_INVOCATION_PREREQUISITES[id];return prerequisite!==undefined&&!selectedInvocations.includes(prerequisite);}))
+  throw new RangeError('Las invocaciones elegidas deben conservar el Pacto requerido');
+ if(!Array.isArray(choices.cantripIds)||choices.cantripIds.length!==3||new Set(choices.cantripIds).size!==3||choices.cantripIds.filter(id=>input.cantripIds.includes(id)).length<2)
+  throw new RangeError('Conserva al menos dos de los tres trucos anteriores');
+ if(!Array.isArray(choices.preparedIds)||choices.preparedIds.length!==10||new Set(choices.preparedIds).size!==10||choices.preparedIds.filter(id=>input.preparedIds.includes(id)).length<8)
+  throw new RangeError('Prepara diez conjuros ordinarios, conserva al menos ocho anteriores');
+ if(choices.preparedIds.includes('contact_other_plane'))throw new RangeError('Contactar con otro plano se concede gratis y no ocupa una elección ordinaria');
+ const history:WarlockLevelEightHistory={
+  invocations:[...input.invocations],cantripIds:[...input.cantripIds],preparedIds:[...input.preparedIds],
+  lessonsFeat:input.lessonsFeat,pactWeaponId:input.pactWeaponId,tomeCantripIds:input.tomeCantripIds,tomeRitualIds:input.tomeRitualIds,
+  mageArmorActive:previous.warlockState.mageArmorActive,tomePresent:previous.warlockState.tomePresent,
+  familiarForm:previous.warlockState.familiarForm,familiarName:previous.warlockState.familiarName,
+  familiarInvestmentMovement:previous.warlockState.familiarInvestmentMovement,giftOfDepthsUsed:previous.warlockState.giftOfDepthsUsed,
+  darkOnesOwnLuckUsed:previous.warlockState.darkOnesOwnLuckUsed,
+ };
+ const blade=selectedInvocations.includes('pact_of_blade'),tome=selectedInvocations.includes('pact_of_tome');
+ const chooseTome=(options:readonly {id:string}[],selected:readonly string[]|undefined,existing:readonly string[]|undefined,count:number,forbidden:readonly string[])=>
+  selected??existing??options.filter(option=>!forbidden.includes(option.id)).slice(0,count).map(option=>option.id);
+ const nextInput:GuidedWarlockInput={...input,level:9,level9HitDieRoll:choices.level9HitDieRoll,level9History:history,
+  invocations:selectedInvocations,cantripIds:choices.cantripIds,preparedIds:choices.preparedIds,
+  lessonsFeat:selectedInvocations.includes('lessons_of_the_first_ones')?choices.lessonsFeat:undefined,
+  pactWeaponId:blade?input.pactWeaponId:undefined,
+  tomeCantripIds:tome?chooseTome(TOME_CANTRIP_OPTIONS,choices.tomeCantripIds,input.tomeCantripIds,3,choices.cantripIds):undefined,
+  tomeRitualIds:tome?chooseTome(TOME_RITUAL_OPTIONS,choices.tomeRitualIds,input.tomeRitualIds,2,choices.preparedIds):undefined,
+ };
+ const before=calculateWarlockOne(input,state),nextSheet=calculateWarlockOne(nextInput,state);
+ const damage=before.maximumHitPoints-previous.warlockState.hitPointsCurrent;
+ const nextState:WarlockOneState={...previous.warlockState,
+  hitPointsCurrent:Math.max(0,Math.min(nextSheet.maximumHitPoints,nextSheet.maximumHitPoints-damage)),
+  mageArmorActive:selectedInvocations.includes('armor_of_shadows')?state.mageArmorActive:false,
+  tomePresent:tome&&input.invocations.includes('pact_of_tome')?state.tomePresent:false,
+  familiarForm:selectedInvocations.includes('pact_of_chain')?state.familiarForm:null,
+  familiarName:selectedInvocations.includes('pact_of_chain')?state.familiarName:'',
+  familiarInvestmentMovement:selectedInvocations.includes('investment_of_the_chain_master')?state.familiarInvestmentMovement??'fly':undefined,
+  giftOfDepthsUsed:selectedInvocations.includes('gift_of_the_depths')?state.giftOfDepthsUsed??false:undefined,
+  contactPatronUsed:false,
+ };
+ return {input:nextInput,state:makeWarlockCharacterSnapshot(nextInput,nextState).warlockState};
+}
+
 /** El descenso comparte el mismo LevelDownDialog de Guerrero/Mago.
  * Como la lista histórica del nivel 1 no se guardaba en los snapshots previos,
  * retiene la primera invocación legal y los dos primeros conjuros/trucos.
  * La vista previa lo explica ANTES de confirmar; nunca muta el origen.
  */
 export function previewWarlockLevelDown(input:GuidedWarlockInput,state:WarlockOneState){
+ if(input.level===9){
+  const previous=makeWarlockCharacterSnapshot(input,state);
+  const history=input.level9History;
+  if(!history)throw new RangeError('No existe historial para regresar al nivel 8');
+  const {level9HitDieRoll,level9History,invocations,cantripIds,preparedIds,lessonsFeat,pactWeaponId,tomeCantripIds,tomeRitualIds,...rest}=input;
+  void level9HitDieRoll;void level9History;void invocations;void cantripIds;void preparedIds;void lessonsFeat;void pactWeaponId;void tomeCantripIds;void tomeRitualIds;
+  const nextInput:GuidedWarlockInput={...rest,level:8,
+   invocations:history.invocations,cantripIds:history.cantripIds,preparedIds:history.preparedIds,
+   ...(history.lessonsFeat?{lessonsFeat:history.lessonsFeat}:{}),
+   ...(history.pactWeaponId?{pactWeaponId:history.pactWeaponId}:{}),
+   ...(history.tomeCantripIds?{tomeCantripIds:history.tomeCantripIds}:{}),
+   ...(history.tomeRitualIds?{tomeRitualIds:history.tomeRitualIds}:{}),
+  };
+  const before=calculateWarlockOne(input,state),after=calculateWarlockOne(nextInput,state),oldState=previous.warlockState;
+  const {contactPatronUsed,...restState}=oldState;
+  void contactPatronUsed;
+  const nextState:WarlockOneState={...restState,
+   hitPointsCurrent:Math.max(0,Math.min(after.maximumHitPoints,oldState.hitPointsCurrent-(before.maximumHitPoints-after.maximumHitPoints))),
+   mageArmorActive:history.mageArmorActive,tomePresent:history.tomePresent,
+   familiarForm:history.familiarForm,familiarName:history.familiarName,
+   familiarInvestmentMovement:history.familiarInvestmentMovement,giftOfDepthsUsed:history.giftOfDepthsUsed,
+   darkOnesOwnLuckUsed:history.darkOnesOwnLuckUsed??0,
+  };
+  const snapshot=makeWarlockCharacterSnapshot(nextInput,nextState);
+  const summary:LevelDownSummary={className:'Brujo',fromLevel:9,toLevel:8,
+   lost:[
+    {title:'Contactar con el patrón',description:'Ya no tienes Contactar con otro plano preparado automáticamente ni el uso gratuito por descanso largo.'},
+    {title:'Séptima invocación',description:'Se restauran las seis elecciones anteriores, incluidas las invocaciones sustituidas; pierdes los beneficios desbloqueados en nivel 9.'},
+    {title:'Conjuros de nivel 5',description:'Se elimina la décima preparación y se recuperan las nueve elecciones de nivel 8.'},
+   ],changes:[
+    {title:'Puntos de golpe',description:`PG máximos: ${before.maximumHitPoints} → ${after.maximumHitPoints}. PG actuales: ${oldState.hitPointsCurrent} → ${snapshot.warlockState.hitPointsCurrent}.`},
+    {title:'Magia de Pacto y competencia',description:'Las dos ranuras vuelven a nivel 4 y la bonificación por competencia baja de +4 a +3.'},
+   ],preserved:['Identidad, inventario, compañeros, inspiración y marcadores de muerte','Gastos de ranuras, Astucia mágica y Suerte del Oscuro','Elecciones, pactos e historial de niveles anteriores'],
+  };
+  return {...summary,snapshot};
+ }
  if(input.level===8){
   const previous=makeWarlockCharacterSnapshot(input,state);
   const history=input.level8History;

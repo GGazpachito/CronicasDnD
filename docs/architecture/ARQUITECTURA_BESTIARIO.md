@@ -1,4 +1,4 @@
-# Contrato del Bestiario y criaturas vinculadas · actualización 71
+# Contrato del Bestiario y criaturas vinculadas · actualizaciones 71 y 78
 
 > **Normativo para cualquier clase, subclase, invocación, montura o enemigo que utilice criaturas.** No introducir una segunda copia de un bloque de estadísticas en el JSX ni en el motor de otra clase.
 
@@ -16,6 +16,16 @@ El menú principal de CRÓNICAS presenta **Crear personaje / Cargar personaje / 
 | Compañeros universales | `apps/web/src/components/SharedCompanionsPanel.tsx` | Hasta 20 fichas manuales persistentes; mantiene selector, editor y borrado con confirmación |
 
 **Invariante:** el bloque de la criatura solo se define una vez en `CREATURES` dentro de `bestiary.ts`; todas las vistas usan `BESTIARY_ENTRIES`, `findBestiaryCreature` y, si necesitan un familiar nominal, `familiarSheetFromBestiary`. Esta función crea una copia independiente con ID `familiar:<forma>` y nombre personalizable, sin tocar la ficha original. Los componentes de presentación comparten `CreatureStatBlock` y clases `.shared-companion-*`.
+
+## Orden obligatorio de consulta · paso 78
+
+El Bestiario **siempre muestra las criaturas en orden ascendente de valor de desafío (VD)**. En cada grupo de desafío idéntico, las fichas se ordenan **alfabéticamente por nombre en español**, ignorando mayúsculas y acentos como criterio principal. Un empate se resuelve por ID estable.
+
+- `challengeRatingValue` convierte etiquetas fraccionarias (`1/8`, `1/4`, `1/2`) a números reales; está prohibido ordenarlas como texto.
+- `compareBestiaryEntries` aplica la ordenación numérica y alfabética con configuración regional española. `BESTIARY_ENTRIES` ya sale ordenado del motor.
+- Búsqueda por nombre, tipo y desafío y filtros de categoría actúan como **subconjuntos ordenados**; no reordenan las fichas después de filtrar.
+- `findBestiaryCreature` y `familiarSheetFromBestiary` conservan ID, estadísticas y guardado del familiar. Cambiar la posición visual no modifica datos.
+- Al añadir criaturas, se comprueban fracciones de VD, orden alfabético, filtros combinados e IDs únicos.
 
 ## Estado, guardado y alcance
 

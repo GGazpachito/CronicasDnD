@@ -32,6 +32,11 @@ export const WARLOCK_FIEND_LEVEL_FIVE_IDS=['fireball','stinking_cloud'] as const
 export const WARLOCK_FOURTH_LEVEL_IDS=[
  'banishment','blight','charm_monster','dimension_door','hallucinatory_terrain','summon_aberration'
 ] as const;
+/** Nivel de Brujo 9: las nueve fichas de nivel 5 ya existen en el catálogo común de Mago. */
+export const WARLOCK_FIFTH_LEVEL_IDS=[
+ 'contact_other_plane','dream','hold_monster','jallarzis_storm_of_radiance','mislead',
+ 'planar_binding','scrying','synaptic_static','teleportation_circle'
+] as const;
 export const WARLOCK_FIEND_LEVEL_SEVEN_IDS=['fire_shield','wall_of_fire'] as const;
 export const WARLOCK_FIEND_THROUGH_LEVEL_FIVE_IDS=[...WARLOCK_FIEND_LEVEL_THREE_IDS,...WARLOCK_FIEND_LEVEL_FIVE_IDS] as const;
 export const WARLOCK_FIEND_ALWAYS_PREPARED_IDS=[...WARLOCK_FIEND_THROUGH_LEVEL_FIVE_IDS,...WARLOCK_FIEND_LEVEL_SEVEN_IDS] as const;
@@ -66,10 +71,12 @@ export const WARLOCK_FIEND_LEVEL_THREE_SPELLS:readonly WizardSpellRule[]=WARLOCK
 export const WARLOCK_LEVEL_THREE_SPELLS:readonly WizardSpellRule[]=WARLOCK_THIRD_LEVEL_IDS.map(required);
 export const WARLOCK_FIEND_LEVEL_FIVE_SPELLS:readonly WizardSpellRule[]=WARLOCK_FIEND_LEVEL_FIVE_IDS.map(required);
 export const WARLOCK_LEVEL_FOUR_SPELLS:readonly WizardSpellRule[]=WARLOCK_FOURTH_LEVEL_IDS.map(required);
+export const WARLOCK_LEVEL_FIVE_SPELLS:readonly WizardSpellRule[]=WARLOCK_FIFTH_LEVEL_IDS.map(required);
 export const WARLOCK_FIEND_LEVEL_SEVEN_SPELLS:readonly WizardSpellRule[]=WARLOCK_FIEND_LEVEL_SEVEN_IDS.map(required);
 export const WARLOCK_SPELLS_THROUGH_LEVEL_TWO:readonly WizardSpellRule[]=[...WARLOCK_LEVEL_ONE_SPELLS,...WARLOCK_LEVEL_TWO_SPELLS];
 export const WARLOCK_SPELLS_THROUGH_LEVEL_THREE:readonly WizardSpellRule[]=[...WARLOCK_SPELLS_THROUGH_LEVEL_TWO,...WARLOCK_LEVEL_THREE_SPELLS];
 export const WARLOCK_SPELLS_THROUGH_LEVEL_FOUR:readonly WizardSpellRule[]=[...WARLOCK_SPELLS_THROUGH_LEVEL_THREE,...WARLOCK_LEVEL_FOUR_SPELLS];
+export const WARLOCK_SPELLS_THROUGH_LEVEL_FIVE:readonly WizardSpellRule[]=[...WARLOCK_SPELLS_THROUGH_LEVEL_FOUR,...WARLOCK_LEVEL_FIVE_SPELLS];
 
 /** Futuro Pacto del Tomo: los conjuros de las otras listas se añadirán al catálogo compartido. */
 export const TOME_CANTRIP_OPTIONS:readonly WizardSpellRule[]=[

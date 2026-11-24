@@ -1,4 +1,4 @@
-# Arquitectura normativa: ventanas de subida y bajada de nivel (actualizada en paso 77)
+# Arquitectura normativa: ventanas de subida y bajada de nivel (actualizada en paso 78)
 
 > **CONTRATO OBLIGATORIO DE UI Y REGLAS PARA TODAS LAS CLASES.** Este documento complementa `ESTRUCTURA_HOJA_COMUN.md`. Ninguna clase nueva debe fabricar sus propios contenedores de progreso, pasos, botones ni estilos. Debe integrar componentes compartidos con un adaptador de reglas de clase.
 
@@ -82,6 +82,8 @@ Importante para Brujo: en guardados antiguos de nivel 2 no existe un historial d
 **Desde 6→7**, `level7History` almacena las elecciones anteriores y los vínculos y recursos de nivel 6; el descenso 7→6 quita el d8 y la sexta invocación, devuelve las elecciones originales y la ranura de Pacto al nivel 3, retira los dos conjuros gratuitos de nivel 4 y conserva gasto de ranuras, daño acumulado compatible, compañeros e historial 6→5. El estado de Suerte del Oscuro se restaura del historial anterior a la subida. El snapshot continúa con `schemaVersion: 4`, ampliando únicamente campos opcionales.
 
 **Desde 7→8**, `level8History` registra exactamente las seis invocaciones, tres trucos, ocho conjuros preparados, dotes opcionales, vínculos de Pacto, familiar, Armadura de sombras, Tomo, Don de las profundidades y usos de Suerte del Oscuro. El descenso **8→7** deshace la Mejora de característica de nivel 8, elimina su d8, restaura las elecciones anteriores y deja intactos los campos de progresión previos, ranuras gastadas y daño compatible. El formato sigue siendo `schemaVersion: 4`.
+
+**Desde 8→9 (paso 78)**: se mantiene el mismo asistente de **tres etapas** y `LevelUpHitPointsPicker` d8 (media 5 o tirada). La competencia pasa a +4; las dos ranuras de Pacto suben a nivel de conjuro 5. Hay **siete invocaciones** (conserva al menos cinco anteriores), tres trucos (conserva dos) y **diez conjuros ordinarios preparados** (conserva ocho de nueve). Contactar con otro plano se prepara automáticamente por Contactar con el patrón, fuera del cupo ordinario, y concede un uso gratuito por descanso largo con salvación de Inteligencia superada automáticamente. Invocaciones nuevas: `gift_of_the_protectors` (Tomo), `lifedrinker` (Hoja), `visions_of_distant_realms`. `level9History` guarda las elecciones exactas para el descenso 9→8; se retira `contactPatronUsed` al bajar pero se conservan daño compatible, equipo, inspiración, uso de Suerte del Oscuro y gastos de ranuras. Se mantiene `schemaVersion: 4`.
 
 ## E. Checklist obligatorio antes de entregar una nueva clase/subclase
 
