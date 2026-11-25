@@ -9,7 +9,7 @@ export function collectWarlockTraits(input:GuidedWarlockInput,sheet:CalculatedWa
  const traits:CharacterTrait[]=[];
  function add(trait:CharacterTrait){traits.push(trait);}
  add({id:'warlock:pact_magic',title:'Magia de Pacto',group:'class',source:'Brujo',level:1,
-  summary:`${input.level>=4?'Tres':'Dos'} trucos, ${input.level===1?'dos':input.level===2?'tres':input.level===3?'cuatro':input.level===4?'cinco':input.level===5?'seis':input.level===6?'siete':input.level===7?'ocho':input.level===8?'nueve':'diez'} conjuros preparados ordinarios y ${input.level===1?'una':'dos'} ranuras de nivel ${input.level>=9?5:input.level>=7?4:input.level>=5?3:input.level>=3?2:1} recargables tras descansar.`,
+  summary:`${input.level>=10?'Cuatro':input.level>=4?'Tres':'Dos'} trucos, ${input.level===1?'dos':input.level===2?'tres':input.level===3?'cuatro':input.level===4?'cinco':input.level===5?'seis':input.level===6?'siete':input.level===7?'ocho':input.level===8?'nueve':'diez'} conjuros preparados ordinarios y ${input.level===1?'una':'dos'} ranuras de nivel ${input.level>=9?5:input.level>=7?4:input.level>=5?3:input.level>=3?2:1} recargables tras descansar.`,
   explanation:'Las ranuras se marcan manualmente en Hechizos; los conjuros no se lanzan automáticamente.',automation:'calculated',
   details:[`CD de salvación ${sheet.spellSaveDC}. Ataque mágico ${sheet.spellAttackBonus>=0?'+':''}${sheet.spellAttackBonus}.`,
    'El Brujo recupera todas sus ranuras de Magia de Pacto al terminar un descanso corto o largo.']});
@@ -33,6 +33,10 @@ export function collectWarlockTraits(input:GuidedWarlockInput,sheet:CalculatedWa
    summary:'Después de ver un d20 de prueba de característica o salvación, puedes sumar 1d10 antes de resolver sus efectos.',
    explanation:'Pulsa la tirada opcional cuando decidas usar este rasgo. Cada activación consume un uso; los recuperas únicamente tras un descanso largo.',automation:'partial',
    details:['Usos por descanso largo: modificador de Carisma (mínimo uno).','Nunca más de una vez en una misma tirada; no se aplica a ataques ni tiradas de daño.']});
+  if(input.level>=10)add({id:'warlock:fiendish_resilience',title:'Resistencia infernal',group:'class',source:'Patrón Infernal',level:10,
+   summary:'Tras terminar un descanso corto o largo, elige un tipo de daño distinto de fuerza: obtienes resistencia a ese daño hasta que elijas otro.',
+   explanation:'La hoja ofrece un selector después del descanso. El jugador decide el tipo; no se reduce automáticamente el daño recibido ni se elige una resistencia sin descanso.',automation:'partial',
+   details:['La resistencia queda activa hasta que la sustituyas en otro descanso corto o largo.','No se puede elegir daño de fuerza.']});
  }
  if(input.level>=4&&input.level4Improvement){
   const choice=input.level4Improvement;

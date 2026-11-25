@@ -1,4 +1,4 @@
-# Arquitectura normativa: ventanas de subida y bajada de nivel (actualizada en paso 78)
+# Arquitectura normativa: ventanas de subida y bajada de nivel (actualizada en paso 79)
 
 > **CONTRATO OBLIGATORIO DE UI Y REGLAS PARA TODAS LAS CLASES.** Este documento complementa `ESTRUCTURA_HOJA_COMUN.md`. Ninguna clase nueva debe fabricar sus propios contenedores de progreso, pasos, botones ni estilos. Debe integrar componentes compartidos con un adaptador de reglas de clase.
 
@@ -47,7 +47,7 @@ Ejemplos: Mago aprende dos conjuros de libro por nivel y prepara conforme a prog
 | --- | --- | --- | --- |
 | Guerrero | d10 | 6 | `levelHitPointRolls` (array de d10 naturales, uno por nivel 2..N) |
 | Mago | d6 | 4 | `levelHitPointRolls` (array de d6 naturales, uno por nivel 2..N) |
-| Brujo | d8 | 5 | `level2HitDieRoll` a `level8HitDieRoll` (hasta nivel 8), uno por nivel adicional |
+| Brujo | d8 | 5 | `level2HitDieRoll` a `level10HitDieRoll` (hasta nivel 10), uno por nivel adicional |
 
 El selector muestra «Promedio» o «Tirada 1dX». Al elegir la segunda opción se lanza el dado; es posible repetir hasta confirmar. Cuando se elige promedio se almacena el valor fijo equivalente. No guardar la cadena de modo visual como sustituto del resultado; en ambos casos se guarda el **número de dado elegido**. No aplicar el dado dos veces al confirmar. No modificar el valor al cambiar de pestaña ni al restaurar el guardado.
 
@@ -84,6 +84,8 @@ Importante para Brujo: en guardados antiguos de nivel 2 no existe un historial d
 **Desde 7→8**, `level8History` registra exactamente las seis invocaciones, tres trucos, ocho conjuros preparados, dotes opcionales, vínculos de Pacto, familiar, Armadura de sombras, Tomo, Don de las profundidades y usos de Suerte del Oscuro. El descenso **8→7** deshace la Mejora de característica de nivel 8, elimina su d8, restaura las elecciones anteriores y deja intactos los campos de progresión previos, ranuras gastadas y daño compatible. El formato sigue siendo `schemaVersion: 4`.
 
 **Desde 8→9 (paso 78)**: se mantiene el mismo asistente de **tres etapas** y `LevelUpHitPointsPicker` d8 (media 5 o tirada). La competencia pasa a +4; las dos ranuras de Pacto suben a nivel de conjuro 5. Hay **siete invocaciones** (conserva al menos cinco anteriores), tres trucos (conserva dos) y **diez conjuros ordinarios preparados** (conserva ocho de nueve). Contactar con otro plano se prepara automáticamente por Contactar con el patrón, fuera del cupo ordinario, y concede un uso gratuito por descanso largo con salvación de Inteligencia superada automáticamente. Invocaciones nuevas: `gift_of_the_protectors` (Tomo), `lifedrinker` (Hoja), `visions_of_distant_realms`. `level9History` guarda las elecciones exactas para el descenso 9→8; se retira `contactPatronUsed` al bajar pero se conservan daño compatible, equipo, inspiración, uso de Suerte del Oscuro y gastos de ranuras. Se mantiene `schemaVersion: 4`.
+
+**Desde 9→10 (paso 79):** `WarlockLevelUpWizard` sigue utilizando el mismo `LevelUpDialogFrame`, el selector compartido de PG (5/1d8), las tarjetas de hechizos `WizardSpellDetails` y las tres etapas. El Brujo adquiere el **cuarto truco**, conservando al menos dos de los tres anteriores (una sustitución opcional); mantiene **siete invocaciones** (una sustitución opcional) y **diez conjuros ordinarios** de nivel 1–5 (una sustitución opcional). Sigue con competencia +4 y dos ranuras de nivel 5. El Patrón Infernal adquiere **Resistencia infernal**: tras descanso corto o largo, el usuario escoge entre los tipos de daño existentes salvo fuerza; la selección persiste hasta el siguiente cambio y no automatiza la mitigación de daño. `level10HitDieRoll` y `level10History` permiten deshacer 10→9 sin pérdida de elecciones. La bajada elimina exclusivamente los campos de nivel 10 y los dos de resistencia (`fiendishResilienceType`, `fiendishResiliencePending`), sin alterar el historial anterior ni el esquema `schemaVersion: 4`. El selector de tipo de daño vive **dentro del módulo específico de Brujo** en la hoja común, nunca en un diálogo de clase diferente. El nivel 11 se aborda por separado: Arcanum místico y tercera ranura implican ampliar el modelo de magia.
 
 ## E. Checklist obligatorio antes de entregar una nueva clase/subclase
 
