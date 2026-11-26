@@ -46,6 +46,10 @@ export function collectWarlockTraits(input:GuidedWarlockInput,sheet:CalculatedWa
    summary:'Tras terminar un descanso corto o largo, elige un tipo de daño distinto de fuerza: obtienes resistencia a ese daño hasta que elijas otro.',
    explanation:'La hoja ofrece un selector después del descanso. El jugador decide el tipo; no se reduce automáticamente el daño recibido ni se elige una resistencia sin descanso.',automation:'partial',
    details:['La resistencia queda activa hasta que la sustituyas en otro descanso corto o largo.','No se puede elegir daño de fuerza.']});
+  if(input.level>=14)add({id:'warlock:fiend:hurl_through_hell',title:'Arrojar al infierno',group:'class',source:'Patrón Infernal',level:14,
+   summary:'Al impactar con un ataque, el objetivo debe superar una salvación de Carisma o desaparece hasta el final de tu siguiente turno, incapacitado; sufre 8d10 psíquicos salvo que sea infernal.',
+   explanation:'El jugador confirma el impacto, el fallo de la salvación y si el objetivo es infernal. El módulo permite tirar 8d10 y gastar el uso, que vuelve tras descanso largo o al gastar una ranura de Pacto; no automatiza la retirada o regreso de criaturas.',automation:'partial',
+   details:[`CD de salvación de Carisma: ${sheet.spellSaveDC}.`,'Si falla, el objetivo recorre los Planos Inferiores, queda incapacitado y regresa a su espacio original o al libre más próximo al final de tu siguiente turno.','El daño psíquico de 8d10 no se aplica a criaturas infernales.','Gastar una ranura de Magia de Pacto recupera el uso sin gastar una acción.']});
  }
  if(input.level>=4&&input.level4Improvement){
   const choice=input.level4Improvement;

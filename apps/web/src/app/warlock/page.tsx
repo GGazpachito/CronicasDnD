@@ -27,6 +27,7 @@ import WizardSpellDetails from '../../components/WizardSpellDetails';
 import LevelDownDialog from '../../components/LevelDownDialog';
 import {WarlockWeaponAttacks,WarlockEldritchBlast} from '../../components/WarlockAttacks';
 import WarlockLuckPanel from '../../components/WarlockLuckPanel';
+import WarlockHurlThroughHellPanel from '../../components/WarlockHurlThroughHellPanel';
 import {rollDie} from '../../../../../packages/rules-engine/src/dice';
 import SheetPlaceholder from '../../components/SheetPlaceholder';
 import {type Ability} from '../../../../../packages/rules-engine/src/abilities';
@@ -42,7 +43,7 @@ import {type D20Mode} from '../../../../../packages/rules-engine/src/d20';
 import {previewWarlockLevelDown} from '../../../../../packages/rules-engine/src/warlock-level-up';
 import {
  WARLOCK_INVOCATIONS,WARLOCK_LEVEL_ONE_INVOCATIONS,WARLOCK_SKILL_OPTIONS,
- calculateWarlockOne,initialWarlockOneState,makeWarlockCharacterSnapshot,warlockShortRest,warlockLongRest,warlockMagicalCunning,warlockDarkOnesBlessing,warlockDarkOnesOwnLuckMaximum,spendWarlockDarkOnesOwnLuck,spendWarlockContactPatron,spendWarlockMysticArcanum6,spendWarlockMysticArcanum7,chooseWarlockFiendishResilience,WARLOCK_FIEND_DAMAGE_TYPES,warlockPactSlots,toggleWarlockPactSlot,
+ calculateWarlockOne,initialWarlockOneState,makeWarlockCharacterSnapshot,warlockShortRest,warlockLongRest,warlockMagicalCunning,warlockDarkOnesBlessing,warlockDarkOnesOwnLuckMaximum,spendWarlockDarkOnesOwnLuck,spendWarlockContactPatron,spendWarlockMysticArcanum6,spendWarlockMysticArcanum7,spendWarlockHurlThroughHell,restoreWarlockHurlThroughHellWithPactSlot,chooseWarlockFiendishResilience,WARLOCK_FIEND_DAMAGE_TYPES,warlockPactSlots,toggleWarlockPactSlot,
  validateWarlockCharacterSnapshot,warlockInputForPreview,
  type GuidedWarlockInput,type WarlockOneState,type WarlockInvocationId,type WarlockFiendDamageType,
 } from '../../../../../packages/rules-engine/src/warlock';
@@ -70,6 +71,7 @@ export default function WarlockPage(){
  const [levelUpOpen,setLevelUpOpen]=useState(false);
  const [levelDownOpen,setLevelDownOpen]=useState(false);
  const [lastLuckRoll,setLastLuckRoll]=useState<number|null>(null);
+ const [lastHurlDamageDice,setLastHurlDamageDice]=useState<readonly number[]|null>(null);
  const [resilienceCandidate,setResilienceCandidate]=useState<WarlockFiendDamageType>('fire');
  const calculated=useMemo(()=>{
   try{return {sheet:calculateWarlockOne(warlockInputForPreview(input),state),error:''};}
@@ -170,6 +172,7 @@ export default function WarlockPage(){
   if(!sheet)return;
   setState(prev=>warlockLongRest(prev,sheet.maximumHitPoints,input.species==='human'));
   setLastLuckRoll(null);
+  setLastHurlDamageDice(null);
   setFeedback(input.level>=10?'Descanso largo: recursos y PG recuperados. Ahora puedes elegir o cambiar tu Resistencia infernal.':'Descanso largo: ranuras, Astucia mágica y PG recuperados. Revisa los efectos temporales.');
  }
  function useMagicalCunning(){
@@ -203,12 +206,24 @@ export default function WarlockPage(){
   try{setState(spendWarlockMysticArcanum7(input,state));setFeedback('Arcanum místico de nivel 7 usado. Lanza el conjuro en mesa; su uso se recupera tras un descanso largo y no gasta ranuras ni el Arcanum de nivel 6.');}
   catch(error){setFeedback(error instanceof Error?error.message:'Arcanum místico de nivel 7 no disponible');}
  }
+ function useHurlThroughHell(){
+  try{setState(spendWarlockHurlThroughHell(input,state));setLastHurlDamageDice(null);setFeedback('Arrojar al infierno activado tras confirmar un impacto. El director resuelve la salvación de Carisma y la condición del objetivo.');}
+  catch(error){setFeedback(error instanceof Error?error.message:'No se puede activar Arrojar al infierno');}
+ }
+ function restoreHurlThroughHell(slotIndex:number){
+  try{setState(restoreWarlockHurlThroughHellWithPactSlot(input,state,slotIndex));setLastHurlDamageDice(null);setFeedback(`Arrojar al infierno recuperado a cambio de la ranura ${slotIndex+1} de Magia de Pacto.`);}
+  catch(error){setFeedback(error instanceof Error?error.message:'No se puede recuperar Arrojar al infierno');}
+ }
+ function rollHurlThroughHellDamage(){
+  setLastHurlDamageDice(Array.from({length:8},()=>rollDie(10)));
+  setFeedback('Tirada de 8d10: solo se aplica si la salvación de Carisma falla y el objetivo no es infernal.');
+ }
  function setFiendishResilience(){
   try{setState(chooseWarlockFiendishResilience(input,state,resilienceCandidate));setFeedback(`Resistencia infernal activa: daño de ${WARLOCK_FIEND_DAMAGE_TYPES[resilienceCandidate].toLowerCase()}. Se conserva hasta que elijas otro tipo tras descansar.`);}
   catch(error){setFeedback(error instanceof Error?error.message:'No se puede elegir Resistencia infernal');}
  }
  function restore(saved:ReturnType<typeof makeWarlockCharacterSnapshot>){
-  setInput(saved.input);setState(saved.warlockState);setEditing(false);setLevelUpOpen(false);setLevelDownOpen(false);setTab('principal');setFeedback('');setLastLuckRoll(null);setProfileRevision(n=>n+1);
+  setInput(saved.input);setState(saved.warlockState);setEditing(false);setLevelUpOpen(false);setLevelDownOpen(false);setTab('principal');setFeedback('');setLastLuckRoll(null);setLastHurlDamageDice(null);setProfileRevision(n=>n+1);
  }
  const tomeCantrips=hasTome&&state.tomePresent?(input.tomeCantripIds??[]).map(id=>warlockSpellRule(id)).filter(x=>x!==undefined):[];
  const tomeRituals=hasTome&&state.tomePresent?(input.tomeRitualIds??[]).map(id=>warlockSpellRule(id)).filter(x=>x!==undefined):[];
@@ -225,6 +240,7 @@ export default function WarlockPage(){
  const inventory=sheet?.inventory;
  const eligiblePactWeapons=inventory?.items.filter(item=>Object.hasOwn(WEAPONS,item.id)&&WEAPON_STATS[item.id as WeaponId].kind==='melee')??[];
  const pactSlots=warlockPactSlots(state,input.level);
+ const hurlThroughHellPanel=input.level>=14&&input.subclassId==='fiend'&&sheet?<WarlockHurlThroughHellPanel used={state.hurlThroughHellUsed??false} spellSaveDC={sheet.spellSaveDC} spentPactSlots={pactSlots} lastDamageDice={lastHurlDamageDice} onUse={useHurlThroughHell} onRestore={restoreHurlThroughHell} onRollDamage={rollHurlThroughHellDamage}/>:null;
  const pactActions=<div className="overview-quick-actions"><button type="button" onClick={shortRest}>Descanso corto</button><button type="button" onClick={longRest}>Descanso largo</button>{input.level>=2&&<button type="button" disabled={Boolean(state.magicalCunningUsed)||pactSlots.every(spent=>!spent)} onClick={useMagicalCunning}>Astucia mágica · {state.magicalCunningUsed?'usada':'1 uso'}</button>}</div>;
  const contactPatronPanel=input.level>=9?<div className="overview-record"><span><strong>Contactar con el patrón</strong><small>Contactar con otro plano: 1 lanzamiento gratis por descanso largo; salvación de Inteligencia superada automáticamente.</small></span><button type="button" disabled={Boolean(state.contactPatronUsed)} onClick={useContactPatron}>{state.contactPatronUsed?'Uso agotado':'Usar contacto gratuito'}</button></div>:null;
  const fiendishResiliencePanel=input.level>=10?<div className="overview-record"><span><strong>Resistencia infernal</strong><small>{state.fiendishResilienceType?`Resistencia activa al daño de ${WARLOCK_FIEND_DAMAGE_TYPES[state.fiendishResilienceType].toLowerCase()}.`:'Sin resistencia elegida todavía.'} {state.fiendishResiliencePending?'Descanso completado: puedes escoger otra resistencia.':'Descansa corto o largo para escoger o cambiarla.'}</small></span>{state.fiendishResiliencePending&&<label className="field"><span>Daño (excepto Fuerza)</span><select value={resilienceCandidate} onChange={event=>setResilienceCandidate(event.target.value as WarlockFiendDamageType)}>{Object.entries(WARLOCK_FIEND_DAMAGE_TYPES).map(([id,name])=><option key={id} value={id}>{name}</option>)}</select><button type="button" onClick={setFiendishResilience}>Confirmar resistencia</button></label>}</div>:null;
@@ -238,14 +254,15 @@ export default function WarlockPage(){
   <div className="content">
    <p className="sheet-release-note">CLASE · BRUJO NIVEL {input.level} · PHB 2024</p>
    <CharacterHeader name={input.name} portraitDataUrl={input.profile?.portraitDataUrl} level={input.level} background={background.name} species={SPECIES_NAMES[input.species]} className="Brujo" valid={Boolean(snapshot)} onEdit={()=>setEditing(true)}
-    onLevelUp={input.level<13&&snapshot?()=>{setLevelUpOpen(true);setEditing(false);}:undefined}
+    onLevelUp={input.level<14&&snapshot?()=>{setLevelUpOpen(true);setEditing(false);}:undefined}
     onLevelDown={input.level>=2&&levelDownAssessment.preview?()=>setLevelDownOpen(true):undefined}/>
-<p className="wizard-progression-hint">{input.level===1?'Siguiente desbloqueo: Astucia mágica, nuevas invocaciones y segunda ranura de Magia de Pacto.':input.level===2?'Siguiente desbloqueo: Patrón Infernal, Bendición del Oscuro, cuatro conjuros del patrón y ranuras de nivel 2.':input.level===3?'Siguiente desbloqueo: mejora de característica, tercer truco y quinto conjuro preparado.':input.level===4?'Siguiente desbloqueo: nivel 5, conjuros de nivel 3, dos invocaciones nuevas y competencia +3.':input.level===5?'Siguiente desbloqueo: Suerte del Oscuro, 1d10 opcional y séptimo conjuro preparado.':input.level===6?'Siguiente desbloqueo: nivel 7, sexta invocación, ranuras de nivel 4 y dos conjuros más del Patrón Infernal.':input.level===7?'Siguiente desbloqueo: nivel 8, Mejora de característica y noveno conjuro preparado.':input.level===8?'Siguiente desbloqueo: nivel 9, competencia +4, séptima invocación, Contactar con el patrón y conjuros de nivel 5.':input.level===9?'Siguiente desbloqueo: nivel 10, cuarto truco y Resistencia infernal tras descanso corto o largo.':input.level===10?'Siguiente desbloqueo: nivel 11, Arcanum místico de nivel 6, tercera ranura de Pacto y un tercer rayo de Descarga sobrenatural.':input.level===11?'Siguiente desbloqueo: nivel 12, octava invocación, Mejora de característica y Hoja devoradora para realizar tres ataques con tu arma del pacto.':input.level===12?'Siguiente desbloqueo: nivel 13, Arcanum místico de nivel 7, competencia +5 y duodécimo conjuro preparado.':'Brujo nivel 13 completado. Próximo paso: nivel 14 y rasgos del Patrón Infernal.'}</p>
-   {levelUpOpen&&<WarlockLevelUpWizard input={input} state={state} mode={mode} onAdvance={(nextInput,nextState)=>{setInput(nextInput);setState(nextState);setLevelUpOpen(false);setEditing(false);setLastLuckRoll(null);setFeedback(`¡Brujo nivel ${nextInput.level}! Recursos y conjuros actualizados. Guarda los cambios para conservar el progreso.`);}} onCancel={()=>setLevelUpOpen(false)}/>} 
+<p className="wizard-progression-hint">{input.level===1?'Siguiente desbloqueo: Astucia mágica, nuevas invocaciones y segunda ranura de Magia de Pacto.':input.level===2?'Siguiente desbloqueo: Patrón Infernal, Bendición del Oscuro, cuatro conjuros del patrón y ranuras de nivel 2.':input.level===3?'Siguiente desbloqueo: mejora de característica, tercer truco y quinto conjuro preparado.':input.level===4?'Siguiente desbloqueo: nivel 5, conjuros de nivel 3, dos invocaciones nuevas y competencia +3.':input.level===5?'Siguiente desbloqueo: Suerte del Oscuro, 1d10 opcional y séptimo conjuro preparado.':input.level===6?'Siguiente desbloqueo: nivel 7, sexta invocación, ranuras de nivel 4 y dos conjuros más del Patrón Infernal.':input.level===7?'Siguiente desbloqueo: nivel 8, Mejora de característica y noveno conjuro preparado.':input.level===8?'Siguiente desbloqueo: nivel 9, competencia +4, séptima invocación, Contactar con el patrón y conjuros de nivel 5.':input.level===9?'Siguiente desbloqueo: nivel 10, cuarto truco y Resistencia infernal tras descanso corto o largo.':input.level===10?'Siguiente desbloqueo: nivel 11, Arcanum místico de nivel 6, tercera ranura de Pacto y un tercer rayo de Descarga sobrenatural.':input.level===11?'Siguiente desbloqueo: nivel 12, octava invocación, Mejora de característica y Hoja devoradora para realizar tres ataques con tu arma del pacto.':input.level===12?'Siguiente desbloqueo: nivel 13, Arcanum místico de nivel 7, competencia +5 y duodécimo conjuro preparado.':input.level===13?'Siguiente desbloqueo: nivel 14, Arrojar al infierno (8d10 psíquicos), con un uso por descanso largo recuperable gastando una ranura de Pacto.':'Brujo nivel 14 completado. Próximo paso: nivel 15.'}</p>
+   {levelUpOpen&&<WarlockLevelUpWizard input={input} state={state} mode={mode} onAdvance={(nextInput,nextState)=>{setInput(nextInput);setState(nextState);setLevelUpOpen(false);setEditing(false);setLastLuckRoll(null);setLastHurlDamageDice(null);setFeedback(`¡Brujo nivel ${nextInput.level}! Recursos y conjuros actualizados. Guarda los cambios para conservar el progreso.`);}} onCancel={()=>setLevelUpOpen(false)}/>} 
    {levelDownOpen&&<LevelDownDialog preview={levelDownAssessment.preview} error={levelDownAssessment.error} onClose={()=>setLevelDownOpen(false)} onConfirm={()=>{
     if(!levelDownAssessment.preview)throw new RangeError('La bajada de Brujo no es válida');
     setInput(levelDownAssessment.preview.snapshot.input);setState(levelDownAssessment.preview.snapshot.warlockState);
    setLastLuckRoll(null);
+   setLastHurlDamageDice(null);
     setLevelDownOpen(false);setEditing(false);setTab('principal');setFeedback(`Brujo nivel ${levelDownAssessment.preview.snapshot.input.level}. Se han actualizado invocaciones, conjuros, PG y ranuras. Guarda los cambios.`);
    }}/>}
    <SaveLoadPanel characterClass="warlock" snapshot={snapshot} validate={validateWarlockCharacterSnapshot} onLoad={restore} normalize={saved=>makeWarlockCharacterSnapshot(saved.input,saved.warlockState)}/>
@@ -303,7 +320,7 @@ export default function WarlockPage(){
      hitDiceDescription={`Dados de golpe: ${input.level}d8 · Brujo nivel ${input.level}`} mode={mode} onModeChange={setMode}
      hpContent={<SharedHealthControls current={state.hitPointsCurrent} temporary={state.temporaryHitPoints} maximum={sheet.maximumHitPoints} onAdjust={adjustHp} onError={setFeedback}/>}
      attacksContent={<><WarlockWeaponAttacks inventory={sheet.inventory} scores={sheet.abilityScores} proficiency={sheet.proficiencyBonus} mode={mode} pactWeaponId={input.pactWeaponId} invocations={input.invocations} pactSlotLevel={pactSlotLevel}/><WarlockEldritchBlast known={input.cantripIds.includes('eldritch_blast')} level={input.level} spellAttackBonus={sheet.spellAttackBonus} charismaModifier={sheet.abilityModifiers.charisma} invocations={input.invocations} mode={mode}/></>}
-     resourcesContent={<section className="overview-panel panel"><div className="overview-panel-heading"><h3>Recursos</h3><span>Brujo nivel {input.level}</span></div>{input.invocations.map(id=><div key={id} className="overview-record"><span>Invocación sobrenatural</span><strong>{WARLOCK_INVOCATIONS[id].name}</strong></div>)}{input.level>=2&&<div className="overview-record"><span>Astucia mágica</span><strong>{state.magicalCunningUsed?'Usada · 0/1':'Disponible · 1/1'}</strong></div>}{input.level>=3&&<div className="overview-record"><span>Bendición del Oscuro · PG temporales</span><strong>{darkOnesBlessingAmount}</strong><button type="button" onClick={applyDarkOnesBlessing}>Aplicar al cumplirse la condición</button></div>}{luckPanel}{contactPatronPanel}{fiendishResiliencePanel}{mysticArcanumPanel}{mysticArcanum7Panel}<p className="overview-panel-note">La decisión de activar un rasgo corresponde al jugador.</p></section>}
+     resourcesContent={<section className="overview-panel panel"><div className="overview-panel-heading"><h3>Recursos</h3><span>Brujo nivel {input.level}</span></div>{input.invocations.map(id=><div key={id} className="overview-record"><span>Invocación sobrenatural</span><strong>{WARLOCK_INVOCATIONS[id].name}</strong></div>)}{input.level>=2&&<div className="overview-record"><span>Astucia mágica</span><strong>{state.magicalCunningUsed?'Usada · 0/1':'Disponible · 1/1'}</strong></div>}{input.level>=3&&<div className="overview-record"><span>Bendición del Oscuro · PG temporales</span><strong>{darkOnesBlessingAmount}</strong><button type="button" onClick={applyDarkOnesBlessing}>Aplicar al cumplirse la condición</button></div>}{luckPanel}{contactPatronPanel}{fiendishResiliencePanel}{mysticArcanumPanel}{mysticArcanum7Panel}{hurlThroughHellPanel}<p className="overview-panel-note">La decisión de activar un rasgo corresponde al jugador.</p></section>}
      spellSlotsContent={<section className="overview-panel panel"><div className="overview-panel-heading"><h3>Magia de Pacto</h3><span>Recuperación corta y larga</span></div><SpellSlotDiamonds level={pactSlotLevel} spent={pactSlots} onToggle={togglePactSlot}/><p className="overview-panel-note">{pactSlots.length} ranura{pactSlots.length===1?'':'s'} de nivel {pactSlotLevel}. Gastarlas no lanza automáticamente un conjuro.</p>{pactActions}</section>}
      footerContent={<><section className="overview-panel panel"><h3>Percepción pasiva</h3><strong className="overview-spotlight">{10+sheet.skillBonuses.perception}</strong><p className="overview-panel-note">10 + Percepción {signed(sheet.skillBonuses.perception)}</p></section><section className="overview-panel panel"><h3>Movimiento y origen</h3><strong className="overview-spotlight">{sheet.speedFeet} <small>pies</small></strong><p className="overview-panel-note">Tamaño {sheet.size==='medium'?'mediano':'pequeño'} · Brujo nivel {input.level}{input.invocations.includes('gift_of_the_depths')?` · Nado ${sheet.speedFeet} pies`:''}</p></section><SharedDeathSavePanel marks={state.manualDeathMarks} onToggle={toggleDeathMark}/><SharedInspirationPanel checked={state.heroicInspiration} onChange={checked=>patchState({heroicInspiration:checked})}/></>}
      warningContent={feedback?<p className="panel overview-panel-note" role="status">{feedback}</p>:undefined}
