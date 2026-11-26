@@ -41,6 +41,8 @@ export const WARLOCK_FIFTH_LEVEL_IDS=[
 export const WARLOCK_SIXTH_LEVEL_IDS=[
  'arcane_gate','circle_of_death','create_undead','eyebite','summon_fiend','tashas_bubbling_cauldron','true_seeing'
 ] as const;
+/** Arcanum místico del nivel 13: se reutilizan las cuatro fichas ya existentes del Mago. */
+export const WARLOCK_SEVENTH_LEVEL_IDS=['etherealness','finger_of_death','forcecage','plane_shift'] as const;
 export const WARLOCK_FIEND_LEVEL_SEVEN_IDS=['fire_shield','wall_of_fire'] as const;
 export const WARLOCK_FIEND_THROUGH_LEVEL_FIVE_IDS=[...WARLOCK_FIEND_LEVEL_THREE_IDS,...WARLOCK_FIEND_LEVEL_FIVE_IDS] as const;
 export const WARLOCK_FIEND_ALWAYS_PREPARED_IDS=[...WARLOCK_FIEND_THROUGH_LEVEL_FIVE_IDS,...WARLOCK_FIEND_LEVEL_SEVEN_IDS] as const;
@@ -77,6 +79,7 @@ export const WARLOCK_FIEND_LEVEL_FIVE_SPELLS:readonly WizardSpellRule[]=WARLOCK_
 export const WARLOCK_LEVEL_FOUR_SPELLS:readonly WizardSpellRule[]=WARLOCK_FOURTH_LEVEL_IDS.map(required);
 export const WARLOCK_LEVEL_FIVE_SPELLS:readonly WizardSpellRule[]=WARLOCK_FIFTH_LEVEL_IDS.map(required);
 export const WARLOCK_LEVEL_SIX_SPELLS:readonly WizardSpellRule[]=WARLOCK_SIXTH_LEVEL_IDS.map(required);
+export const WARLOCK_LEVEL_SEVEN_SPELLS:readonly WizardSpellRule[]=WARLOCK_SEVENTH_LEVEL_IDS.map(required);
 export const WARLOCK_FIEND_LEVEL_SEVEN_SPELLS:readonly WizardSpellRule[]=WARLOCK_FIEND_LEVEL_SEVEN_IDS.map(required);
 export const WARLOCK_SPELLS_THROUGH_LEVEL_TWO:readonly WizardSpellRule[]=[...WARLOCK_LEVEL_ONE_SPELLS,...WARLOCK_LEVEL_TWO_SPELLS];
 export const WARLOCK_SPELLS_THROUGH_LEVEL_THREE:readonly WizardSpellRule[]=[...WARLOCK_SPELLS_THROUGH_LEVEL_TWO,...WARLOCK_LEVEL_THREE_SPELLS];
