@@ -57,17 +57,25 @@ export function collectWarlockTraits(input:GuidedWarlockInput,sheet:CalculatedWa
    summary:choice.mode==='plus_two'?`+2 a ${names[choice.first]}`:`+1 a ${names[choice.first]} y +1 a ${names[choice.second??choice.first]}`,
    explanation:'Esta segunda mejora se acumula con la de nivel 4; la hoja recalcula modificadores, habilidades, CD y puntos de golpe automáticamente.',automation:'calculated',details:['Dote Mejora de característica; otras dotes de nivel 8 se incorporarán en fases posteriores.']});
  }
+ if(input.level>=12&&input.level12Improvement){
+  const choice=input.level12Improvement;
+  const names:Record<string,string>={strength:'Fuerza',dexterity:'Destreza',constitution:'Constitución',intelligence:'Inteligencia',wisdom:'Sabiduría',charisma:'Carisma'};
+  add({id:'warlock:ability_score_improvement_12',title:'Mejora de característica',group:'feats',source:'Brujo · nivel 12',level:12,
+   summary:choice.mode==='plus_two'?`+2 a ${names[choice.first]}`:`+1 a ${names[choice.first]} y +1 a ${names[choice.second??choice.first]}`,
+   explanation:'Tercera mejora acumulada con las de niveles 4 y 8. Los modificadores, conjuros, ataques y PG se recalculan con las características finales.',automation:'calculated',details:['Máximo 20. Otras dotes generales podrán añadirse en futuras fases.']});
+ }
  for(const invocation of input.invocations){
   const info=WARLOCK_INVOCATIONS[invocation];
   add({id:`warlock:invocation:${invocation}`,title:info.name,group:'class',source:'Invocación sobrenatural',level:info.minLevel,
    summary:info.summary,explanation:'Las invocaciones se eligen en creación o en la ventana de subida de nivel.',
-   automation:['pact_of_blade','armor_of_shadows','agonizing_blast','eldritch_spear','thirsting_blade','gift_of_the_depths'].includes(invocation)?'calculated':'partial',details:[
+   automation:['pact_of_blade','armor_of_shadows','agonizing_blast','eldritch_spear','thirsting_blade','devouring_blade','gift_of_the_depths'].includes(invocation)?'calculated':'partial',details:[
     invocation==='pact_of_blade'?'Los beneficios se aplican al arma vinculada solo cuando esté equipada.':
     invocation==='pact_of_chain'?'El familiar se gestiona en la pestaña Compañeros.':
     invocation==='pact_of_tome'?'Los conjuros adicionales aparecen en Hechizos mientras lleves el Libro de las Sombras.':
     invocation==='armor_of_shadows'?'La CA alternativa se aplica cuando activas el efecto y no llevas armadura.':
     invocation==='eldritch_mind'?'La ventaja se aplica solo a salvaciones para mantener la concentración.':
     invocation==='thirsting_blade'?'Se habilitan dos ataques independientes solo con el arma de pacto equipada.':
+    invocation==='devouring_blade'?'Requiere Hoja sedienta; el botón de ataque realiza tres tiradas independientes solo con el arma del pacto equipada.':
     invocation==='eldritch_smite'?`Al gastar una ranura de nivel ${input.level>=9?5:input.level>=7?4:3} con un impacto del arma del pacto, añade ${input.level>=9?6:input.level>=7?5:4}d8 de fuerza; marca el gasto de ranura manualmente.`:
     invocation==='lifedrinker'?'Solo con el arma de pacto equipada: puedes tirar 1d6 adicional una vez por turno. El tipo de daño y cualquier gasto de dado de golpe son decisiones manuales.':
     invocation==='gift_of_the_protectors'?'Requiere el Libro de las Sombras; las inscripciones y la reacción a 0 PG se gestionan en mesa.':

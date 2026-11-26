@@ -5,7 +5,7 @@ import {rollDie} from '../../../../packages/rules-engine/src/dice';
 import {WEAPONS,type WeaponId} from '../../../../packages/rules-engine/src/martial';
 import type {InventoryState} from '../../../../packages/rules-engine/src/inventory';
 import type {AbilityScores} from '../../../../packages/rules-engine/src/abilities';
-import {warlockWeaponProfile,type WarlockInvocationId} from '../../../../packages/rules-engine/src/warlock';
+import {warlockWeaponProfile,warlockPactWeaponAttackCount,type WarlockInvocationId} from '../../../../packages/rules-engine/src/warlock';
 import {WeaponRollCards,weaponAttackCard,type WeaponRollCard} from './WeaponRollCards';
 const signed=(n:number)=>n>=0?'+'+n:String(n);
 
@@ -24,16 +24,17 @@ export function WarlockWeaponAttacks({inventory,scores,proficiency,mode,pactWeap
   {inventory.equipped.weapons.length===0&&<p className="overview-panel-note">Equipa un arma desde Equipo para utilizar sus tiradas.</p>}
   {inventory.equipped.weapons.map(id=>{
    const attack=warlockWeaponProfile(id,inventory,scores,proficiency,invocations,pactWeaponId,useCharisma);
+   const attackCount=warlockPactWeaponAttackCount(attack.pactActive,invocations);
    const name=WEAPONS[id].name;
    const damage=attack.damageDice?String(attack.damageDice.count)+'d'+attack.damageDice.sides:String(attack.fixedDamage);
    return <div className="overview-record" key={id}><span><strong>{name}</strong><small> Ataque {signed(attack.attackBonus)} · {damage} {signed(attack.damageBonus)}{attack.pactActive?' · Pacto activo':''}</small></span>
     <span className="overview-roll-actions"><button type="button" className="overview-roll-button" onClick={()=>{
       try{setResults([weaponAttackCard(`${name} · Ataque`,rollD20(attack.attackBonus,'normal',mode))]);setError('');}
       catch(e){setResults([]);setError(e instanceof Error?e.message:'Error al atacar');}
-    }}>Atacar</button>{attack.pactActive&&invocations.includes('thirsting_blade')&&<button type="button" className="overview-roll-button" onClick={()=>{
-      try{setResults(Array.from({length:2},(_,index)=>weaponAttackCard(`${name} · Ataque ${index+1}`,rollD20(attack.attackBonus,'normal',mode))));setError('');}
+    }}>Atacar</button>{attackCount>1&&<button type="button" className="overview-roll-button" onClick={()=>{
+      try{setResults(Array.from({length:attackCount},(_,index)=>weaponAttackCard(`${name} · Ataque ${index+1}`,rollD20(attack.attackBonus,'normal',mode))));setError('');}
       catch(e){setResults([]);setError(e instanceof Error?e.message:'Error en los ataques');}
-    }}>Atacar ×2</button>}{attack.pactActive&&invocations.includes('eldritch_smite')&&<button type="button" className="overview-roll-button" onClick={()=>{
+    }}>Atacar ×{attackCount}</button>}{attack.pactActive&&invocations.includes('eldritch_smite')&&<button type="button" className="overview-roll-button" onClick={()=>{
       try{const count=(pactSlotLevel+1)*(critical?2:1),dice=Array.from({length:count},()=>rollDie(8));setResults([{label:`${name} · Castigo sobrenatural`,kind:'damage',dice,bonus:0,total:dice.reduce((sum,die)=>sum+die,0),formula:`${count}d8 · fuerza${critical?' · crítico':''}`,critical,note:`Ranura de nivel ${pactSlotLevel}: marca el gasto manualmente; una vez por turno.`}]);setError('');}
       catch(e){setResults([]);setError(e instanceof Error?e.message:'Error en Castigo sobrenatural');}
     }}>Castigo · {(pactSlotLevel+1)*(critical?2:1)}d8</button>}{attack.pactActive&&invocations.includes('lifedrinker')&&<button type="button" className="overview-roll-button" onClick={()=>{
@@ -46,7 +47,7 @@ export function WarlockWeaponAttacks({inventory,scores,proficiency,mode,pactWeap
   })}
   {error&&<p className="overview-dice-error" role="alert">{error}</p>}
   <WeaponRollCards rolls={results}/>
-  <p className="overview-panel-note">Solo las armas simples suman competencia normalmente; el arma vinculada también la suma. Hoja sedienta, Castigo sobrenatural y Bebedor de vida solo se muestran en el arma del pacto equipada. Las ranuras, el gasto de dado de golpe y la condición Derribado se gestionan manualmente.</p>
+  <p className="overview-panel-note">Solo las armas simples suman competencia normalmente; el arma vinculada también la suma. Hoja sedienta permite dos ataques y Hoja devoradora tres si ambas están elegidas, únicamente con el arma del pacto equipada. Castigo sobrenatural y Bebedor de vida también dependen del arma del pacto. Las ranuras, el gasto de dado de golpe y la condición Derribado se gestionan manualmente.</p>
  </section>;
 }
 

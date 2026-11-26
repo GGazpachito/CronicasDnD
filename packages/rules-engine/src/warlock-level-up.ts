@@ -1,7 +1,7 @@
-/** Pasos 69, 72–77: transiciones explícitas de Brujo 1→2→3→4→5→6→7→8 (D&D 2024).
+/** Progresión explícita de Brujo 1→12 (D&D 2024).
  * Las elecciones se validan aquí, no únicamente en los controles React.
  */
-import {calculateWarlockOne,makeWarlockCharacterSnapshot,WARLOCK_INVOCATIONS,WARLOCK_INVOCATION_PREREQUISITES,WARLOCK_LEVEL_ONE_INVOCATIONS,type GuidedWarlockInput,type WarlockOneState,type WarlockInvocationId,type WarlockLevelTwoHistory,type WarlockLevelThreeHistory,type WarlockLevelFourHistory,type WarlockLevelFiveHistory,type WarlockLevelSixHistory,type WarlockLevelSevenHistory,type WarlockLevelEightHistory,type WarlockLevelNineHistory,type WarlockLevelTenHistory} from './warlock';
+import {calculateWarlockOne,makeWarlockCharacterSnapshot,WARLOCK_INVOCATIONS,WARLOCK_INVOCATION_PREREQUISITES,WARLOCK_LEVEL_ONE_INVOCATIONS,warlockDarkOnesOwnLuckMaximum,type GuidedWarlockInput,type WarlockOneState,type WarlockInvocationId,type WarlockLevelTwoHistory,type WarlockLevelThreeHistory,type WarlockLevelFourHistory,type WarlockLevelFiveHistory,type WarlockLevelSixHistory,type WarlockLevelSevenHistory,type WarlockLevelEightHistory,type WarlockLevelNineHistory,type WarlockLevelTenHistory,type WarlockLevelElevenHistory} from './warlock';
 import type {FighterAbilityImprovement} from './progression';
 import {TOME_CANTRIP_OPTIONS,TOME_RITUAL_OPTIONS,WARLOCK_SIXTH_LEVEL_IDS} from './warlock-spells';
 import type {LevelDownSummary} from './level-down';
@@ -529,12 +529,100 @@ export function advanceWarlockToLevelEleven(input:GuidedWarlockInput,state:Warlo
  return {input:nextInput,state:makeWarlockCharacterSnapshot(nextInput,nextState).warlockState};
 }
 
+export type WarlockLevelTwelveChoices=Readonly<{
+ invocations:readonly WarlockInvocationId[];cantripIds:readonly string[];preparedIds:readonly string[];
+ mysticArcanum6Id:typeof WARLOCK_SIXTH_LEVEL_IDS[number];level12Improvement:FighterAbilityImprovement;level12HitDieRoll:number;
+ lessonsFeat?:'alert'|'tough';tomeCantripIds?:readonly string[];tomeRitualIds?:readonly string[];
+}>;
+
+/** 11→12: octava invocación, mejora de característica y hoja devoradora opcional. */
+export function advanceWarlockToLevelTwelve(input:GuidedWarlockInput,state:WarlockOneState,choices:WarlockLevelTwelveChoices):{
+ input:GuidedWarlockInput;state:WarlockOneState;
+}{
+ if(input.level!==11||input.subclassId!=='fiend')throw new RangeError('Solo puedes subir a nivel 12 desde Brujo Infernal de nivel 11');
+ const previous=makeWarlockCharacterSnapshot(input,state);
+ if(!Array.isArray(choices.invocations)||choices.invocations.length!==8||new Set(choices.invocations).size!==8||choices.invocations.filter(id=>input.invocations.includes(id)).length<6)
+  throw new RangeError('Selecciona ocho invocaciones y conserva al menos seis de las siete anteriores');
+ const selectedInvocations:readonly WarlockInvocationId[]=choices.invocations;
+ if(selectedInvocations.some(id=>{const required=WARLOCK_INVOCATION_PREREQUISITES[id];return required!==undefined&&!selectedInvocations.includes(required);}))
+  throw new RangeError('Las invocaciones seleccionadas deben mantener sus requisitos, incluida Hoja sedienta para Hoja devoradora');
+ if(!Array.isArray(choices.cantripIds)||choices.cantripIds.length!==4||choices.cantripIds.filter(id=>input.cantripIds.includes(id)).length<3)
+  throw new RangeError('Conserva al menos tres de los cuatro trucos actuales');
+ if(!Array.isArray(choices.preparedIds)||choices.preparedIds.length!==11||choices.preparedIds.filter(id=>input.preparedIds.includes(id)).length<10)
+  throw new RangeError('Conserva al menos diez de los once conjuros preparados');
+ if(!(WARLOCK_SIXTH_LEVEL_IDS as readonly string[]).includes(choices.mysticArcanum6Id))throw new RangeError('El Arcanum debe ser de nivel 6 de Brujo');
+ const history:WarlockLevelElevenHistory={
+  invocations:[...input.invocations],cantripIds:[...input.cantripIds],preparedIds:[...input.preparedIds],
+  mysticArcanum6Id:input.mysticArcanum6Id!,lessonsFeat:input.lessonsFeat,pactWeaponId:input.pactWeaponId,
+  tomeCantripIds:input.tomeCantripIds,tomeRitualIds:input.tomeRitualIds,
+  mageArmorActive:previous.warlockState.mageArmorActive,tomePresent:previous.warlockState.tomePresent,
+  familiarForm:previous.warlockState.familiarForm,familiarName:previous.warlockState.familiarName,
+  familiarInvestmentMovement:previous.warlockState.familiarInvestmentMovement,giftOfDepthsUsed:previous.warlockState.giftOfDepthsUsed,
+  darkOnesOwnLuckUsed:previous.warlockState.darkOnesOwnLuckUsed,
+  fiendishResilienceType:previous.warlockState.fiendishResilienceType,fiendishResiliencePending:previous.warlockState.fiendishResiliencePending,
+ };
+ const blade=selectedInvocations.includes('pact_of_blade'),tome=selectedInvocations.includes('pact_of_tome');
+ const chooseTome=(options:readonly {id:string}[],selected:readonly string[]|undefined,existing:readonly string[]|undefined,count:number,forbidden:readonly string[])=>
+  selected??existing??options.filter(option=>!forbidden.includes(option.id)).slice(0,count).map(option=>option.id);
+ const nextInput:GuidedWarlockInput={...input,level:12,level12Improvement:choices.level12Improvement,level12HitDieRoll:choices.level12HitDieRoll,level12History:history,
+  mysticArcanum6Id:choices.mysticArcanum6Id,invocations:selectedInvocations,cantripIds:choices.cantripIds,preparedIds:choices.preparedIds,
+  lessonsFeat:selectedInvocations.includes('lessons_of_the_first_ones')?choices.lessonsFeat:undefined,
+  pactWeaponId:blade?input.pactWeaponId:undefined,
+  tomeCantripIds:tome?chooseTome(TOME_CANTRIP_OPTIONS,choices.tomeCantripIds,input.tomeCantripIds,3,choices.cantripIds):undefined,
+  tomeRitualIds:tome?chooseTome(TOME_RITUAL_OPTIONS,choices.tomeRitualIds,input.tomeRitualIds,2,choices.preparedIds):undefined,
+ };
+ const before=calculateWarlockOne(input,state),after=calculateWarlockOne(nextInput,state);
+ const damage=before.maximumHitPoints-previous.warlockState.hitPointsCurrent;
+ const nextState:WarlockOneState={...previous.warlockState,
+  hitPointsCurrent:Math.max(0,Math.min(after.maximumHitPoints,after.maximumHitPoints-damage)),
+  mageArmorActive:selectedInvocations.includes('armor_of_shadows')?state.mageArmorActive:false,
+  tomePresent:tome&&input.invocations.includes('pact_of_tome')?state.tomePresent:false,
+  familiarForm:selectedInvocations.includes('pact_of_chain')?state.familiarForm:null,
+  familiarName:selectedInvocations.includes('pact_of_chain')?state.familiarName:'',
+  familiarInvestmentMovement:selectedInvocations.includes('investment_of_the_chain_master')?state.familiarInvestmentMovement??'fly':undefined,
+  giftOfDepthsUsed:selectedInvocations.includes('gift_of_the_depths')?state.giftOfDepthsUsed??false:undefined,
+ };
+ return {input:nextInput,state:makeWarlockCharacterSnapshot(nextInput,nextState).warlockState};
+}
+
 /** El descenso comparte el mismo LevelDownDialog de Guerrero/Mago.
  * Como la lista histórica del nivel 1 no se guardaba en los snapshots previos,
  * retiene la primera invocación legal y los dos primeros conjuros/trucos.
  * La vista previa lo explica ANTES de confirmar; nunca muta el origen.
  */
 export function previewWarlockLevelDown(input:GuidedWarlockInput,state:WarlockOneState){
+ if(input.level===12){
+  const previous=makeWarlockCharacterSnapshot(input,state),history=input.level12History;
+  if(!history)throw new RangeError('No hay historial de elecciones para regresar al nivel 11');
+  const {level12HitDieRoll,level12Improvement,level12History,invocations,cantripIds,preparedIds,lessonsFeat,pactWeaponId,tomeCantripIds,tomeRitualIds,mysticArcanum6Id,...rest}=input;
+  void level12HitDieRoll;void level12Improvement;void level12History;void invocations;void cantripIds;void preparedIds;void lessonsFeat;void pactWeaponId;void tomeCantripIds;void tomeRitualIds;void mysticArcanum6Id;
+  const nextInput:GuidedWarlockInput={...rest,level:11,invocations:history.invocations,cantripIds:history.cantripIds,preparedIds:history.preparedIds,
+   mysticArcanum6Id:history.mysticArcanum6Id,
+   ...(history.lessonsFeat?{lessonsFeat:history.lessonsFeat}:{}),
+   ...(history.pactWeaponId?{pactWeaponId:history.pactWeaponId}:{}),
+   ...(history.tomeCantripIds?{tomeCantripIds:history.tomeCantripIds}:{}),
+   ...(history.tomeRitualIds?{tomeRitualIds:history.tomeRitualIds}:{}),
+  };
+  const before=calculateWarlockOne(input,state),after=calculateWarlockOne(nextInput,state),oldState=previous.warlockState;
+  const nextState:WarlockOneState={...oldState,
+   hitPointsCurrent:Math.max(0,Math.min(after.maximumHitPoints,oldState.hitPointsCurrent-(before.maximumHitPoints-after.maximumHitPoints))),
+   mageArmorActive:history.mageArmorActive,tomePresent:history.tomePresent,
+   familiarForm:history.familiarForm,familiarName:history.familiarName,
+   familiarInvestmentMovement:history.familiarInvestmentMovement,giftOfDepthsUsed:history.giftOfDepthsUsed,
+   darkOnesOwnLuckUsed:Math.min(oldState.darkOnesOwnLuckUsed??0,warlockDarkOnesOwnLuckMaximum(nextInput)),
+  };
+  const snapshot=makeWarlockCharacterSnapshot(nextInput,nextState);
+  const summary:LevelDownSummary={className:'Brujo',fromLevel:12,toLevel:11,
+   lost:[
+    {title:'Mejora de característica · nivel 12',description:'Se retira el aumento de característica, y se recalculan todas las estadísticas relacionadas.'},
+    {title:'Octava invocación y Hoja devoradora',description:'Se restaura el conjunto de siete invocaciones anterior; Hoja devoradora ya no permite tres ataques.'},
+   ],changes:[
+    {title:'Puntos de golpe',description:`PG máximos: ${before.maximumHitPoints} → ${after.maximumHitPoints}. PG actuales: ${oldState.hitPointsCurrent} → ${snapshot.warlockState.hitPointsCurrent}.`},
+    {title:'Conjuros y Arcanum',description:'Vuelven las elecciones exactas de nivel 11, incluido el Arcanum de nivel 6 anterior.'},
+   ],preserved:['Identidad, inventario, compañeros e inspiración','Gastos de las tres ranuras, Astucia mágica, Suerte del Oscuro y uso del Arcanum','Historial previo y daño compatible'],
+  };
+  return {...summary,snapshot};
+ }
  if(input.level===11){
   const previous=makeWarlockCharacterSnapshot(input,state);
   const history=input.level11History;
