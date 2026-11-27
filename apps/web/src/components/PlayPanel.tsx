@@ -11,7 +11,6 @@ type Props={sheet:CalculatedFighterSheet|null;state:AdventureState|null;outOfSyn
 export default function PlayPanel({sheet,state,outOfSync,onChange}:Props){
   const [amount,setAmount]=useState(5);
   const [criticalDamage,setCriticalDamage]=useState(false);
-  const [fortitudeBonus,setFortitudeBonus]=useState(false);
   const [d10,setD10]=useState(6);
   const [hitDieRolls,setHitDieRolls]=useState('');
   const [check,setCheck]=useState(11);
@@ -44,8 +43,6 @@ export default function PlayPanel({sheet,state,outOfSync,onChange}:Props){
   const ready=Boolean(sheet&&state&&!outOfSync);
   const resources=sheet&&state&&!outOfSync?resourceDisplay(state,sheet):null;
   const available=sheet&&state?sheet.level-state.spentHitDice:0;
-  const fortitude=Boolean(sheet?.features.includes('epic_boon_fortitude'));
-  const fortitudeReady=fortitude&&!state?.combat.fortitudeHealUsed;
   return <section className="play-panel panel" aria-label="Hoja de juego durante una partida">
     <div className="save-panel-head"><div><span className="eyebrow">FASE 4.2 · ESTADO DE PARTIDA</span><h2>Jugar con tu personaje</h2></div><span className="save-label">Guardado manual</span></div>
     <p className="muted-note">Daño, curación, PG temporales, dados de golpe y recursos se registran aquí. Después pulsa <strong>Actualizar guardado</strong> en «Mis personajes» para conservarlos en PostgreSQL.</p>
@@ -65,13 +62,12 @@ export default function PlayPanel({sheet,state,outOfSync,onChange}:Props){
         <div className="play-action-group"><h3>PG y daño</h3>
           <label className="field"><span>Cantidad (entero positivo)</span><input type="number" min="1" max="100000" step="1" value={amount} onChange={e=>setAmount(Number(e.target.value))}/></label>
           <label className="switch-field"><span>Daño por impacto crítico (dos fallos si ya está a 0 PG)</span><input type="checkbox" checked={criticalDamage} onChange={e=>setCriticalDamage(e.target.checked)}/></label>
-          {fortitude&&<label className="switch-field"><span>Añadir modificador de CON por Fortaleza épica (una vez hasta mi próximo turno)</span><input type="checkbox" checked={fortitudeReady&&fortitudeBonus} disabled={!fortitudeReady} onChange={e=>setFortitudeBonus(e.target.checked)}/></label>}
-          <div className="play-buttons"><button type="button" disabled={!ready} onClick={()=>act({type:'damage',amount,critical:criticalDamage})}>Aplicar daño</button><button type="button" disabled={!ready} onClick={()=>act({type:'heal',amount,fortitudeBonus:fortitudeReady&&fortitudeBonus})}>Curar PG</button><button type="button" disabled={!ready} onClick={()=>act({type:'temporary_hp',amount})}>Recibir PG temporales</button></div>
+          <div className="play-buttons"><button type="button" disabled={!ready} onClick={()=>act({type:'damage',amount,critical:criticalDamage})}>Aplicar daño</button><button type="button" disabled={!ready} onClick={()=>act({type:'heal',amount})}>Curar PG</button><button type="button" disabled={!ready} onClick={()=>act({type:'temporary_hp',amount})}>Recibir PG temporales</button></div>
         </div>
         <div className="play-action-group"><h3>Rasgos del Guerrero</h3>
           <label className="field"><span>Resultado del d10</span><input type="number" min="1" max="10" step="1" value={d10} onChange={e=>setD10(Number(e.target.value))}/></label>
           {sheet.level>=5&&<p className="muted-note">Desplazamiento táctico: al usar Segundo aliento como acción adicional, puedes moverte hasta la mitad de tu velocidad sin provocar ataques de oportunidad. El movimiento se resuelve manualmente con el DM.</p>}
-          <div className="play-buttons"><button type="button" disabled={!ready||state.fighter.hitPoints.current===0||(resources?.second_wind?.current??0)===0} onClick={()=>act({type:'second_wind',d10,fortitudeBonus:fortitudeReady&&fortitudeBonus})}>Segundo aliento</button>
+          <div className="play-buttons"><button type="button" disabled={!ready||state.fighter.hitPoints.current===0||(resources?.second_wind?.current??0)===0} onClick={()=>act({type:'second_wind',d10})}>Segundo aliento</button>
           {sheet.level>=2&&<button type="button" disabled={!ready||state.fighter.hitPoints.current===0||(resources?.action_surge?.current??0)===0} onClick={()=>act({type:'action_surge'})}>Gastar Acción súbita</button>}</div>
           {sheet.level>=2&&<div className="play-mind"><p className="muted-note">Mente táctica (solo tras fallar una prueba). Utiliza el d10 anterior.</p>
             <div className="play-check-row"><label className="field"><span>Resultado previo</span><input type="number" value={check} onChange={e=>setCheck(Number(e.target.value))}/></label><label className="field"><span>CD</span><input type="number" value={dc} onChange={e=>setDc(Number(e.target.value))}/></label></div>
@@ -87,7 +83,7 @@ export default function PlayPanel({sheet,state,outOfSync,onChange}:Props){
         <div className="play-action-group play-rest-group"><h3>Descansos</h3>
           <label className="field"><span>Resultados de dados de golpe d10 (ej.: 6, 3); vacío = no gastar dados</span><input type="text" value={hitDieRolls} placeholder="6, 3" onChange={e=>setHitDieRolls(e.target.value)}/></label>
           <p className="muted-note">Descanso corto: recupera un uso de Segundo aliento, todos los usos de Acción súbita y PG de los dados gastados. No se pueden gastar más de {available} dados.</p>
-          <div className="play-buttons"><button type="button" disabled={!ready||state.fighter.hitPoints.current===0} onClick={()=>act({type:'short_rest',hitDieRolls:dice(),fortitudeBonus:fortitudeReady&&fortitudeBonus&&dice().length>0})}>Terminar descanso corto</button><button type="button" disabled={!ready||state.fighter.hitPoints.current===0} onClick={()=>{if(window.confirm('¿Terminar un descanso largo válido según las reglas?'))act({type:'long_rest'});}}>Terminar descanso largo</button></div>
+          <div className="play-buttons"><button type="button" disabled={!ready||state.fighter.hitPoints.current===0} onClick={()=>act({type:'short_rest',hitDieRolls:dice()})}>Terminar descanso corto</button><button type="button" disabled={!ready||state.fighter.hitPoints.current===0} onClick={()=>{if(window.confirm('¿Terminar un descanso largo válido según las reglas?'))act({type:'long_rest'});}}>Terminar descanso largo</button></div>
           <p className="muted-note">Descanso largo: restaura PG, dados de golpe y recursos; los PG temporales desaparecen. Los tiempos e interrupciones los confirma el DM.</p>
         </div>
       </div>

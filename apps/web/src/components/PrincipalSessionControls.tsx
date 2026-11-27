@@ -92,16 +92,12 @@ type HealthProps = SessionProps & { onError: (message: string) => void };
 /** Los PG y los PG temporales se ajustan desde la cabecera, sin un panel separado. */
 export function PrincipalHealthControls({ state, sheet, onAction, onError }: HealthProps) {
   const [critical, setCritical] = useState(false);
-  const [fortitude, setFortitude] = useState(false);
-  const hasFortitude = sheet.features.includes("epic_boon_fortitude");
-  const canUseFortitude = hasFortitude && !state?.combat.fortitudeHealUsed &&
-    (state?.fighter.hitPoints.current ?? 0) < sheet.maximumHitPoints;
   const current = state?.fighter.hitPoints.current ?? null;
   const temporary = state?.temporaryHitPoints ?? null;
 
   function updateHealth(delta: number) {
     if (delta < 0) return onAction({ type: "damage", amount: -delta, critical: current === 0 && critical });
-    return onAction({ type: "heal", amount: delta, fortitudeBonus: canUseFortitude && fortitude });
+    return onAction({ type: "heal", amount: delta });
   }
 
   return <div className="overview-health-inline" aria-label="Ajustar puntos de golpe">
@@ -113,7 +109,6 @@ export function PrincipalHealthControls({ state, sheet, onAction, onError }: Hea
     </div>
     <p className="overview-health-hint">Escribe <b>+5</b> o <b>-5</b> y pulsa Intro, o usa las flechas para cambiar 1 PG al instante. El daño consume primero los temporales.</p>
     {state && current === 0 && <label className="overview-quick-check overview-hp-option"><input type="checkbox" checked={critical} onChange={(event: ChangeEvent<HTMLInputElement>) => setCritical(event.target.checked)}/><span>Daño crítico mientras estás a 0 PG</span></label>}
-    {hasFortitude && <label className="overview-quick-check overview-hp-option"><input type="checkbox" checked={canUseFortitude && fortitude} onChange={(event: ChangeEvent<HTMLInputElement>) => setFortitude(event.target.checked)} disabled={!state || !canUseFortitude}/><span>Aplicar Fortaleza épica al curar</span></label>}
   </div>;
 }
 
@@ -121,15 +116,11 @@ type ResourceProps = SessionProps & { onOpenTools: () => void; onError: (message
 
 export function PrincipalResourceControls({ state, sheet, onAction, onOpenTools, onError }: ResourceProps) {
   const [d10, setD10] = useState(6);
-  const [fortitude, setFortitude] = useState(false);
   const ready = Boolean(state);
   const conscious = ready && state!.fighter.hitPoints.current > 0 && !state!.survival?.death.dead;
   const second = sheet.resources.second_wind;
   const surge = sheet.resources.action_surge;
   const indomitable = sheet.resources.indomitable;
-  const hasFortitude = sheet.features.includes("epic_boon_fortitude");
-  const canUseFortitude = hasFortitude && !state?.combat.fortitudeHealUsed &&
-    (state?.fighter.hitPoints.current ?? 0) < sheet.maximumHitPoints;
 
   return <section className="overview-panel panel" aria-label="Gestionar recursos de clase">
     <div className="overview-panel-heading"><h3>Recursos</h3><span>Usos disponibles</span></div>
@@ -142,9 +133,8 @@ export function PrincipalResourceControls({ state, sheet, onAction, onOpenTools,
       <label><span>Segundo aliento · resultado d10</span><input type="number" min="1" max="10" step="1" value={d10} onChange={(e: ChangeEvent<HTMLInputElement>) => setD10(Number(e.target.value))} disabled={!ready}/></label>
       <button type="button" disabled={!ready} onClick={() => { try { setD10(rollDie(10)); onError(""); } catch (reason) { onError(reason instanceof Error ? reason.message : "Error al tirar d10"); } }}>Tirar d10</button>
     </div>
-    {hasFortitude && <label className="overview-quick-check"><input type="checkbox" disabled={!conscious || !canUseFortitude} checked={canUseFortitude && fortitude} onChange={(e: ChangeEvent<HTMLInputElement>) => setFortitude(e.target.checked)}/><span>Aplicar Fortaleza épica a Segundo aliento</span></label>}
     <div className="overview-quick-actions">
-      <button type="button" disabled={!conscious || (state?.fighter.resources.second_wind?.current ?? 0) === 0} onClick={() => onAction({ type: "second_wind", d10, fortitudeBonus: canUseFortitude && fortitude })}>Usar Segundo aliento</button>
+      <button type="button" disabled={!conscious || (state?.fighter.resources.second_wind?.current ?? 0) === 0} onClick={() => onAction({ type: "second_wind", d10 })}>Usar Segundo aliento</button>
       {surge && <button type="button" disabled={!conscious || (state?.fighter.resources.action_surge?.current ?? 0) === 0} onClick={() => onAction({ type: "action_surge" })}>Gastar Acción súbita</button>}
     </div>
     <p className="overview-panel-note">La tirada del d10 no gasta el recurso. Pulsa «Usar Segundo aliento» para aplicar la curación. El movimiento táctico y las acciones del turno siguen siendo decisiones del jugador.</p>

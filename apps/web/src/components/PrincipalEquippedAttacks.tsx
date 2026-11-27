@@ -34,7 +34,6 @@ function EquippedWeaponCard({choice,sheet,inventory,martial,combat,circumstanceM
   );
   const [twoHands,setTwoHands]=useState(false);
   const [thrown,setThrown]=useState(false);
-  const [otherWeapon,setOtherWeapon]=useState(false);
   const [lastAttack,setLastAttack]=useState<AttackRecord|null>(null);
   const [lastDamage,setLastDamage]=useState<DamageRecord|null>(null);
   const [error,setError]=useState<string|null>(null);
@@ -48,7 +47,6 @@ function EquippedWeaponCard({choice,sheet,inventory,martial,combat,circumstanceM
         ...(stats.finesse?{ability}:{}),
         ...(stats.versatileSides?{twoHanded:twoHands}:{}),
         ...(stats.thrownRange&&stats.kind==="melee"?{thrown}:{}),
-        otherWeaponHeld:otherWeapon,
         conditionAdvantage:conditions.advantages.length>0,
         conditionDisadvantage:conditions.disadvantages.length>0,
         conditionD20Penalty:conditions.d20Penalty,
@@ -102,12 +100,11 @@ function EquippedWeaponCard({choice,sheet,inventory,martial,combat,circumstanceM
         <p>Ataque: {signed(profile.abilityModifier)} característica · {signed(sheet.proficiencyBonus)} competencia{profile.magicEnhancement?` · +${profile.magicEnhancement} mágica`:""}{profile.attackBonus-profile.abilityModifier-sheet.proficiencyBonus-(profile.magicEnhancement??0)!==0?` · ${signed(profile.attackBonus-profile.abilityModifier-sheet.proficiencyBonus-(profile.magicEnhancement??0))} otros efectos`:""}</p>
         <p>Daño: {signed(profile.abilityModifier)} característica{profile.magicEnhancement?` · +${profile.magicEnhancement} mágica`:""}{profile.damageModifier-profile.abilityModifier-(profile.magicEnhancement??0)!==0?` · ${signed(profile.damageModifier-profile.abilityModifier-(profile.magicEnhancement??0))} estilo/efectos`:""}{profile.greatWeaponFighting?" · 1 y 2 cuentan como 3":""}. El modificador solo se suma una vez en un crítico.</p>
       </details>
-      {(stats.finesse||stats.versatileSides||stats.thrownRange&&stats.kind==="melee"||martial.fightingStyle==="dueling"||martial.additionalFightingStyle==="dueling")&&
+      {(stats.finesse||stats.versatileSides||stats.thrownRange&&stats.kind==="melee")&&
         <details className="overview-weapon-options"><summary>Opciones de uso del arma</summary><div>
           {stats.finesse&&<label>Característica<select value={ability} onChange={(e:ChangeEvent<HTMLSelectElement>)=>setAbility(e.target.value as "strength"|"dexterity")}><option value="strength">Fuerza</option><option value="dexterity">Destreza</option></select></label>}
-          {stats.versatileSides&&<label className="overview-weapon-check"><input type="checkbox" checked={twoHands} disabled={thrown} onChange={e=>{setTwoHands(e.target.checked);if(e.target.checked)setOtherWeapon(false);}}/> A dos manos (versátil)</label>}
+          {stats.versatileSides&&<label className="overview-weapon-check"><input type="checkbox" checked={twoHands} disabled={thrown} onChange={e=>setTwoHands(e.target.checked)}/> A dos manos (versátil)</label>}
           {stats.thrownRange&&stats.kind==="melee"&&<label className="overview-weapon-check"><input type="checkbox" checked={thrown} disabled={twoHands} onChange={e=>setThrown(e.target.checked)}/> Ataque arrojadizo</label>}
-          {(martial.fightingStyle==="dueling"||martial.additionalFightingStyle==="dueling")&&<label className="overview-weapon-check"><input type="checkbox" checked={otherWeapon} disabled={twoHands} onChange={e=>setOtherWeapon(e.target.checked)}/> Sostengo otra arma en la otra mano (afecta a Duelo)</label>}
         </div></details>}
       <div className="overview-weapon-actions">
         <button className="overview-roll-button" type="button" disabled={attackDisabled} onClick={rollAttack}>Tirar ataque</button>
