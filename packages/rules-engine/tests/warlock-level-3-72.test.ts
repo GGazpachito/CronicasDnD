@@ -13,7 +13,7 @@ const start:GuidedWarlockInput={classId:'warlock',level:1,name:'Patrono',backgro
  invocations:['pact_of_blade'],pactWeaponId:'sickle'};
 const second=advanceWarlockToLevelTwo(start,initialWarlockOneState(start),{
  invocations:['pact_of_blade','agonizing_blast','eldritch_spear'],cantripIds:start.cantripIds,
- preparedIds:['hex','charm_person','armor_of_agathys'],level2HitDieRoll:5,
+ preparedIds:['hex','charm_person','unseen_servant'],level2HitDieRoll:5,
 });
 const thirdChoices={subclassId:'fiend' as const,invocations:second.input.invocations,
  cantripIds:second.input.cantripIds,preparedIds:[...second.input.preparedIds,'misty_step'],level3HitDieRoll:5};
@@ -38,7 +38,7 @@ describe('Paso 72: Brujo nivel 3 y Patrón Infernal',()=>{
   const result=advanceWarlockToLevelThree(second.input,second.state,thirdChoices);
   expect(result.input.preparedIds).not.toContain('command');
   expect(WARLOCK_FIEND_LEVEL_THREE_IDS).toEqual(['burning_hands','command','scorching_ray','suggestion']);
-  expect(WARLOCK_LEVEL_TWO_SPELLS).toHaveLength(12);
+  expect(WARLOCK_LEVEL_TWO_SPELLS).toHaveLength(10);
   // La biblioteca es extensible: al añadir nivel 5 se mantienen todos los hechizos previos.
   expect(WARLOCK_SPELL_IDS.size).toBeGreaterThanOrEqual(39);
   expect(SHARED_CLASS_SPELL_LISTS.some(list=>list.id==='fiend'&&WARLOCK_FIEND_LEVEL_THREE_IDS.every(id=>list.spellIds.includes(id)))).toBe(true);
@@ -62,7 +62,7 @@ describe('Paso 72: Brujo nivel 3 y Patrón Infernal',()=>{
   expect(()=>advanceWarlockToLevelThree(second.input,second.state,{...thirdChoices,
    invocations:['pact_of_chain','eldritch_mind','mask_of_many_faces']})).toThrow(/una/);
   expect(()=>advanceWarlockToLevelThree(second.input,second.state,{...thirdChoices,
-   cantripIds:['friends','mage_hand']})).toThrow(/trucos/);
+   cantripIds:['chill_touch','mage_hand']})).toThrow(/trucos/i);
   expect(()=>advanceWarlockToLevelThree(second.input,second.state,{...thirdChoices,
    preparedIds:['misty_step','invisibility','darkness','mirror_image']})).toThrow(/dos/);
   expect(()=>advanceWarlockToLevelThree(second.input,second.state,{...thirdChoices,subclassId:'unknown' as 'fiend'})).toThrow();

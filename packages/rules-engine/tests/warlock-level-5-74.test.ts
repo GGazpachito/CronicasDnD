@@ -13,12 +13,12 @@ const one:GuidedWarlockInput={classId:'warlock',level:1,name:'Auditora',backgrou
  invocations:['pact_of_blade'],pactWeaponId:'sickle'};
 const two=advanceWarlockToLevelTwo(one,initialWarlockOneState(one),{
  invocations:['pact_of_blade','agonizing_blast','eldritch_spear'],cantripIds:one.cantripIds,
- preparedIds:['hex','charm_person','armor_of_agathys'],level2HitDieRoll:5});
+ preparedIds:['hex','charm_person','unseen_servant'],level2HitDieRoll:5});
 const three=advanceWarlockToLevelThree(two.input,two.state,{subclassId:'fiend',
  invocations:two.input.invocations,cantripIds:two.input.cantripIds,
- preparedIds:['hex','charm_person','armor_of_agathys','misty_step'],level3HitDieRoll:5});
+ preparedIds:['hex','charm_person','unseen_servant','misty_step'],level3HitDieRoll:5});
 const four=advanceWarlockToLevelFour(three.input,three.state,{
- invocations:three.input.invocations,cantripIds:[...three.input.cantripIds,'friends'],
+ invocations:three.input.invocations,cantripIds:[...three.input.cantripIds,'chill_touch'],
  preparedIds:[...three.input.preparedIds,'hold_person'],level4HitDieRoll:5,
  level4Improvement:{mode:'plus_two',first:'charisma'}});
 const choose={invocations:['pact_of_blade','agonizing_blast','eldritch_spear','thirsting_blade','eldritch_smite'] as const,
@@ -38,15 +38,15 @@ describe('Actualización 74: Brujo nivel 5 · conjuros y nuevas invocaciones',()
   expect(next.input.invocations).toHaveLength(5);
   expect(warlockPactSlots(next.state,5)).toEqual([false,false]);
  });
- it('usa el catálogo único: 14 conjuros de nivel 3, 13 compartidos y Hambre de Hadar exclusivo',()=>{
-  expect(WARLOCK_LEVEL_THREE_SPELLS).toHaveLength(14);
+ it('usa los 11 conjuros SRD de nivel 3 y comparte sus fichas con el Mago',()=>{
+  expect(WARLOCK_LEVEL_THREE_SPELLS).toHaveLength(11);
   const shared=WARLOCK_LEVEL_THREE_SPELLS.filter(spell=>wizardSpellRule(spell.id));
-  expect(shared).toHaveLength(13);
+  expect(shared).toHaveLength(11);
   for(const spell of shared)expect(warlockSpellRule(spell.id)).toBe(wizardSpellRule(spell.id));
-  expect(warlockSpellRule('hunger_of_hadar')?.level).toBe(3);
-  expect(WARLOCK_SPELLS_THROUGH_LEVEL_THREE).toHaveLength(41);
-  expect(SHARED_SPELL_RULES.some(spell=>spell.id==='hunger_of_hadar')).toBe(true);
-  expect(SHARED_CLASS_SPELL_LISTS.find(list=>list.id==='warlock')?.spellIds).toContain('hunger_of_hadar');
+  expect(warlockSpellRule('vampiric_touch')?.level).toBe(3);
+  expect(WARLOCK_SPELLS_THROUGH_LEVEL_THREE).toHaveLength(33);
+  expect(SHARED_SPELL_RULES.some(spell=>spell.id==='vampiric_touch')).toBe(true);
+  expect(SHARED_CLASS_SPELL_LISTS.find(list=>list.id==='warlock')?.spellIds).toContain('vampiric_touch');
  });
  it('añade Bola de fuego y Nube apestosa como conjuros gratuitos sin consumir preparados',()=>{
   const next=advanceWarlockToLevelFive(four.input,four.state,choose);
@@ -64,7 +64,7 @@ describe('Actualización 74: Brujo nivel 5 · conjuros y nuevas invocaciones',()
   expect(()=>advanceWarlockToLevelFive(four.input,four.state,{...choose,
    invocations:['agonizing_blast','ascendant_step','gaze_of_two_minds','master_of_myriad_forms','one_with_shadows']})).toThrow(/conservar/);
   expect(()=>advanceWarlockToLevelFive(four.input,four.state,{...choose,
-   cantripIds:['friends','chill_touch','mage_hand']})).toThrow(/trucos/);
+   cantripIds:['chill_touch','chill_touch','mage_hand']})).toThrow(/trucos/i);
   expect(()=>advanceWarlockToLevelFive(four.input,four.state,{...choose,
    preparedIds:['hex','charm_person','counterspell','fear','fly','gaseous_form']})).toThrow(/cuatro/);
   expect(()=>advanceWarlockToLevelFive(four.input,four.state,{...choose,

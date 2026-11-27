@@ -9,7 +9,7 @@ const NON_ACTION_FIRST_LEVEL=new Set<string>([
  'illusory_script','jump','shield',
 ]);
 const NON_ACTION_SECOND_LEVEL=new Set<string>([
- 'arcane_vigor','augury','dragons_breath','magic_mouth','magic_weapon','misty_step',
+ 'augury','dragons_breath','magic_mouth','magic_weapon','misty_step',
 ]);
 
 /** Contrato de los tiempos de lanzamiento usados por la validación del motor.

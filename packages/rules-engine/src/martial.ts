@@ -1,10 +1,8 @@
 /** Paso 09: elecciones marciales del Guerrero, PHB 2024 pp. 91, 209-210, 215. */
 export const FIGHTING_STYLES = {
-  archery: 'Tiro con arco', blind_fighting: 'Combate a ciegas', defense: 'Defensa',
-  dueling: 'Duelo', great_weapon_fighting: 'Combate con arma a dos manos',
-  interception: 'Intercepción', protection: 'Protección',
-  thrown_weapon_fighting: 'Combate con armas arrojadizas',
-  two_weapon_fighting: 'Combate con dos armas', unarmed_fighting: 'Combate sin armas',
+  archery: 'Tiro con arco', defense: 'Defensa',
+  great_weapon_fighting: 'Combate con arma a dos manos',
+  two_weapon_fighting: 'Combate con dos armas',
 } as const;
 export type FightingStyleId = keyof typeof FIGHTING_STYLES;
 export type MasteryId = 'Cleave' | 'Graze' | 'Nick' | 'Push' | 'Sap' | 'Slow' | 'Topple' | 'Vex';

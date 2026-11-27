@@ -2,6 +2,8 @@
 
 > **CONTRATO OBLIGATORIO DE UI Y REGLAS PARA TODAS LAS CLASES.** Este documento complementa `ESTRUCTURA_HOJA_COMUN.md`. Ninguna clase nueva debe fabricar sus propios contenedores de progreso, pasos, botones ni estilos. Debe integrar componentes compartidos con un adaptador de reglas de clase.
 
+**A partir del paso 84:** las elecciones expuestas por cualquier subida/bajada de nivel pertenecen al [catálogo permitido del programa base SRD y los futuros módulos activados](ARQUITECTURA_MODULAR_SRD.md). El marco visual y el historial reversible no cambian al instalar un módulo: únicamente se amplían opciones, requisitos y datos desde el registro de contenido. La ausencia de un módulo no debe borrar una selección histórica.
+
 ## A. Subida de nivel: estructura exacta
 
 **Único marco visual y accesible:** `apps/web/src/components/LevelUpDialogFrame.tsx`.

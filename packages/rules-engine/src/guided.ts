@@ -194,13 +194,7 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
     extraTools.push(...selected.toolProficiencies);
     luckPointsMaximum=selected.luckPointsMaximum;
     if (extraFeat==='alert') modifiers.push(initiativeBonus('human',proficiencyBonus(input.level)));
-    if (extraFeat==='tough') bonusHitPointsPerLevel+=2;
     if (extraFeat==='savage_attacker') pending.push('Ataque salvaje: su repetición de dados está pendiente del sistema de ataques');
-    if (extraFeat==='lucky') pending.push('Afortunado: el máximo de puntos está registrado; gastar y recuperar puntos queda pendiente');
-    if (extraFeat==='crafter') pending.push('Artesano: el descuento y la fabricación rápida requieren tienda/inventario');
-    if (extraFeat==='musician') pending.push('Músico: Inspiración heroica a aliados durante descansos aún no automatizada');
-    if (extraFeat==='healer') pending.push('Sanador: curación con botiquín y repetición de dados aún no automatizadas');
-    if (extraFeat==='tavern_brawler') pending.push('Peleador de taberna: efectos de golpes desarmados aún no automatizados');
     pending.push('Inspiración heroica del Humano al terminar un descanso largo aún no se gestiona');
   } else if (input.species==='dwarf') {
     bonusHitPointsPerLevel+=1;
@@ -225,8 +219,7 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
   const martial = input.martial===undefined ? undefined : validateMartialChoices(input.martial,input.level>=16?6:input.level>=10?5:input.level>=4?4:3,input.level>=7);
   if (!martial) pending.push('Estilo de combate, tres maestrías y equipo inicial aún no seleccionados');
   if (martial && martial.fightingStyle !== 'defense') pending.push('El estilo de combate se utiliza en el panel de ataques cuando corresponde; las reacciones y sentidos especiales siguen pendientes');
-  if(input.level>=19)pending.push('Otras dotes de beneficio épico y dotes alternativas al nivel 19: catálogo pendiente; disponibles Pericia en combate, Fortaleza y Velocidad');
-  if(input.level>=19&&input.epicBoon?.id==='speed')pending.push('Velocidad épica: Destrabarse como acción adicional requiere confirmación manual del DM; la velocidad +30 sí se aplica');
+  if(input.level>=19)pending.push('Otras dotes de beneficio épico y dotes alternativas al nivel 19: catálogo pendiente; disponible Pericia en combate (SRD 5.2.1)');
   if(input.level>=4)pending.push('Dotes generales alternativas a Mejora de característica: catálogo pendiente; en esta fase solo se admite esa dote en niveles 4, 6, 8, 12, 14 y 16');
   if(input.level>=7&&martial?.additionalFightingStyle)pending.push('Segundo estilo del Campeón: los efectos situacionales y reacciones siguen requiriendo resolución manual');
   if(input.level>=5)pending.push('Desplazamiento táctico: el movimiento sin ataques de oportunidad de Segundo aliento debe resolverse con el DM');
@@ -251,7 +244,7 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
     baseAbilities:improvedScores,baseProficiencies:{skills:[...skills],savingThrows:['strength','constitution']},
     modifiers:[...modifiers,...fightingStyleModifiers,...magicModifiers],hpMethod:input.levelHitPointRolls?'rolled':'fixed',
     ...(input.levelHitPointRolls?{hpRolls:input.levelHitPointRolls}:{}),equipment:{armor:input.armor,shieldEquipped:input.shield,shieldTrained:true},
-    bonusHitPointsPerLevel,bonusHitPointsFlat:input.level>=19&&input.epicBoon?.id==='fortitude'?40:0,
+    bonusHitPointsPerLevel,bonusHitPointsFlat:0,
     ...(input.level>=3?{subclass:'champion' as const}:{})
   };
   const baseSheet=calculateFighterSheet(character);
@@ -259,7 +252,7 @@ export function calculateGuidedFighter(input: GuidedFighterInput): GuidedFighter
     ?{...baseSheet,features:[...baseSheet.features,`epic_boon_${input.epicBoon.id}`]}
     :baseSheet;
   const bgTool=bgEquipment?.gamingSet?GAMING_SETS[bgEquipment.gamingSet]:bg.tool;
-  return {sheet,origin:{background:input.background,species:input.species,feat:bg.feat,...(extraFeat?{additionalFeat:extraFeat}:{}),size,speedFeet:speedFeet+(input.level>=19&&input.epicBoon?.id==='speed'?30:0),tools:[bgTool,...extraTools.map(t=>TOOL_NAMES[t])],...(luckPointsMaximum!==undefined?{luckPointsMaximum}:{})},spells,pendingAutomation:pending,
+  return {sheet,origin:{background:input.background,species:input.species,feat:bg.feat,...(extraFeat?{additionalFeat:extraFeat}:{}),size,speedFeet,tools:[bgTool,...extraTools.map(t=>TOOL_NAMES[t])],...(luckPointsMaximum!==undefined?{luckPointsMaximum}:{})},spells,pendingAutomation:pending,
     ...(startingInventory?{startingInventory}:{}),
     ...(inventory?{inventory}:{}),
     ...(martial ? {martial:{choices:martial,gold:FIGHTER_PACKAGES[martial.startingPackage].gold,inventory:FIGHTER_PACKAGES[martial.startingPackage].items,masteries:martial.weaponMasteries.map(id=>({weapon:WEAPONS[id].name,property:WEAPONS[id].mastery}))}} : {})};

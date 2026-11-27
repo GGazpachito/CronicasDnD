@@ -23,7 +23,7 @@ function to9(){
  const eight=prepareWizardLevelUp(seven.input,seven.state,{newSpellIds:['arcane_eye','wall_of_fire'],preparedIds:[...seven.input.preparedIds,'arcane_eye'],level8Improvement:{mode:'two_ones',first:'intelligence',second:'constitution'}});
  return prepareWizardLevelUp(eight.input,eight.state,{newSpellIds:['cone_of_cold','telekinesis'],preparedIds:[...eight.input.preparedIds,'cone_of_cold','telekinesis'],evokerLevelFiveSpellId:'wall_of_force'});
 }
-function to10(){const nine=to9();return prepareWizardLevelUp(nine.input,nine.state,{newSpellIds:['hold_monster','geas'],preparedIds:[...nine.input.preparedIds,'hold_monster'],newCantripId:'mind_sliver'});}
+function to10(){const nine=to9();return prepareWizardLevelUp(nine.input,nine.state,{newSpellIds:['hold_monster','geas'],preparedIds:[...nine.input.preparedIds,'hold_monster'],newCantripId:'poison_spray'});}
 function to11(){const ten=to10();return prepareWizardLevelUp(ten.input,ten.state,{newSpellIds:['chain_lightning','disintegrate'],preparedIds:[...ten.input.preparedIds,'chain_lightning'],evokerLevelSixSpellId:'sunbeam'});}
 
 import {WIZARD_LEVEL_SEVEN_SPELLS} from '../src/wizard-seventh-level';
@@ -32,7 +32,7 @@ import {wizardMemorizePreparedSpell as memorize} from '../src/wizard-level-up';
 function to12(){
  const eleven=to11();
  return prepareWizardLevelUp(eleven.input,eleven.state,{
-  newSpellIds:['arcane_gate','circle_of_death'],preparedIds:[...eleven.input.preparedIds],
+  newSpellIds:['globe_of_invulnerability','circle_of_death'],preparedIds:[...eleven.input.preparedIds],
   level12Improvement:{mode:'two_ones',first:'wisdom',second:'dexterity'}
  });
 }

@@ -36,10 +36,8 @@ export function collectWizardTraits(input:GuidedWizardInput,view:WizardLevelOneV
     const {id,ability}=input.epicBoon;
     add(`wizard:epic_boon:${id}`,WIZARD_EPIC_BOONS[id],'Beneficio épico','feats',
       WIZARD_EPIC_BOON_DESCRIPTIONS[id],WIZARD_EPIC_BOON_DESCRIPTIONS[id],
-      ['fortitude','speed','truesight'].includes(id)?'calculated':'partial',
+      id==='truesight'?'calculated':'partial',
       [`Característica aumentada: ${ability}. Puntuación actual: ${view.abilityScores[ability]}.`,
-        ...(id==='fortitude'?[`PG máximos pasivos: +40. Al curarte, puedes añadir tu modificador de Constitución (${view.abilityModifiers.constitution}).`]:[]),
-        ...(id==='speed'?[`Velocidad total: ${view.speedFeet} pies.`]:[]),
         ...(id==='truesight'?[`Visión verdadera: ${view.truesightFeet} pies.`]:[]),
         ...(id==='spell_recall'?['La tirada de 1d4 se realiza en Hechizos tras elegir el nivel de ranura (1–4); el resultado informa, pero no altera marcas.']:[])]);
   }
@@ -58,7 +56,7 @@ export function collectWizardTraits(input:GuidedWizardInput,view:WizardLevelOneV
   function feat(id:string,from:string){
     const title=ORIGIN_FEATS[id as keyof typeof ORIGIN_FEATS]??id.replaceAll('_',' ');
     add(`feat:${from}:${id}`,title,from,'feats',`Dote de origen: ${title}`,
-      ORIGIN_FEAT_EXPLANATIONS[id]??'Consulta al director de juego para aplicar esta dote.',id==='tough'||id==='alert'?'calculated':'manual');
+      ORIGIN_FEAT_EXPLANATIONS[id]??'Consulta al director de juego para aplicar esta dote.',id==='alert'?'calculated':'manual');
   }
   feat(BACKGROUNDS[input.background].feat,`Trasfondo: ${BACKGROUNDS[input.background].name}`);
   if(input.species==='human'&&input.humanFeat)feat(input.humanFeat,'Humano');

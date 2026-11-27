@@ -1,6 +1,6 @@
-/** Nivel 8 de conjuros de Mago (13 entradas), PHB 2024.
+/** Nivel 8 de conjuros de Mago (12 entradas), SRD 5.2.1.
  * Resúmenes de consulta redactados originalmente; efectos y decisiones activas en mesa.
- * Referencia contrastada: D&D Beyond Basic Rules 2024 / lista PHB de Roll20.
+ * Referencia contrastada: SRD 5.2.1 (CC BY 4.0).
  */
 import type {WizardMagicSchool} from './wizard';
 
@@ -23,5 +23,4 @@ export const WIZARD_LEVEL_EIGHT_SPELLS:readonly EighthLevelSpell[]=[
  {id:'mind_blank',name:'Mente en blanco',level:8,school:'abjuration',castingTime:'Acción',range:'Toque',components:'V, S',duration:'24 horas',description:'Proteges a una criatura voluntaria del daño psíquico y de la condición Hechizado durante un día. También impides la lectura mágica de pensamientos y emociones, la detección mágica de su posición y otras intrusiones en su mente. La defensa no requiere concentración; las excepciones y la interacción con otros efectos se consultan en el reglamento.'},
  {id:'power_word_stun',name:'Palabra de poder: aturdir',level:8,school:'enchantment',castingTime:'Acción',range:'60 pies',components:'V',duration:'Instantánea',description:'Pronuncias una palabra contra una criatura que puedas ver. Si posee 150 PG o menos queda Aturdida; si supera ese umbral, su velocidad se reduce a cero hasta el comienzo de tu siguiente turno. Una criatura aturdida puede terminar la condición superando una salvación de Constitución al final de cada uno de sus turnos.'},
  {id:'sunburst',name:'Estallido solar',level:8,school:'evocation',castingTime:'Acción',range:'150 pies',components:'V, S, M (piedra solar)',duration:'Instantánea',description:'Una luz solar extraordinaria llena una esfera de sesenta pies de radio. Cada criatura debe salvar Constitución contra 12d6 de daño radiante; con fallo también queda Cegada hasta que logre superar una salvación posterior al final de alguno de sus turnos. Disipa la oscuridad causada por conjuros en la zona. Las salvaciones se resuelven en mesa.',rolls:[{label:'Daño radiante (salvación de Constitución)',formula:'12d6'}]},
- {id:'telepathy',name:'Telepatía',level:8,school:'divination',castingTime:'Acción',range:'Ilimitado, en el mismo plano',components:'V, S, M (dos anillos de plata unidos)',duration:'24 horas',description:'Estableces un enlace telepático de un día con una criatura voluntaria y conocida, incluso si está muy lejos, siempre que ambos compartáis plano de existencia. Podéis transmitiros palabras e impresiones sensoriales y entender su significado; si alguno abandona el plano, el enlace termina. El conjuro no impone decisiones ni controla a su destinatario.'}
 ];

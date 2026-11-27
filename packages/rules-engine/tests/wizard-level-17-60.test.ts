@@ -23,9 +23,9 @@ const steps:readonly {spells:readonly [string,string];prep:readonly string[];ext
  {spells:['dimension_door','polymorph'],prep:['dimension_door'],extra:{evokerLevelFourSpellId:'ice_storm'}},
  {spells:['arcane_eye','wall_of_fire'],prep:['arcane_eye'],extra:{level8Improvement:{mode:'two_ones',first:'intelligence',second:'constitution'}}},
  {spells:['cone_of_cold','telekinesis'],prep:['cone_of_cold','telekinesis'],extra:{evokerLevelFiveSpellId:'wall_of_force'}},
- {spells:['hold_monster','geas'],prep:['hold_monster'],extra:{newCantripId:'mind_sliver'}},
+ {spells:['hold_monster','geas'],prep:['hold_monster'],extra:{newCantripId:'poison_spray'}},
  {spells:['chain_lightning','disintegrate'],prep:['chain_lightning'],extra:{evokerLevelSixSpellId:'sunbeam'}},
- {spells:['arcane_gate','circle_of_death'],prep:[],extra:{level12Improvement:{mode:'two_ones',first:'wisdom',second:'dexterity'}}},
+ {spells:['globe_of_invulnerability','circle_of_death'],prep:[],extra:{level12Improvement:{mode:'two_ones',first:'wisdom',second:'dexterity'}}},
  {spells:['teleport','finger_of_death'],prep:['teleport'],extra:{evokerLevelSevenSpellId:'delayed_blast_fireball'}},
  {spells:['forcecage','simulacrum'],prep:['forcecage'],extra:{}},
  {spells:['antimagic_field','befuddlement'],prep:['befuddlement'],extra:{evokerLevelEightSpellId:'sunburst'}},
@@ -50,8 +50,8 @@ describe('Actualización 60: Mago Evocación nivel 17',()=>{
  it('incluye exactamente 12 conjuros de nivel 9 con fichas y fórmulas consultables',()=>{
   expect(WIZARD_LEVEL_NINE_SPELLS).toHaveLength(12);
   expect(WIZARD_SPELL_CATALOG.filter(spell=>spell.level===9)).toHaveLength(12);
-  expect(WIZARD_SPELL_RULES).toHaveLength(242);
-  expect(new Set(WIZARD_SPELL_RULES.map(rule=>rule.id)).size).toBe(242);
+  expect(WIZARD_SPELL_RULES).toHaveLength(217);
+  expect(new Set(WIZARD_SPELL_RULES.map(rule=>rule.id)).size).toBe(217);
   for(const spell of WIZARD_LEVEL_NINE_SPELLS){
    const details=wizardSpellRule(spell.id);
    expect(details?.school).toBe(spell.school);

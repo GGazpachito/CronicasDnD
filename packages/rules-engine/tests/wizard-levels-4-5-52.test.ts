@@ -24,15 +24,15 @@ const to5=()=>{const four=to4();return prepareWizardLevelUp(four.input,four.stat
 
 describe('Actualización 52: progresión de Mago niveles 4 y 5',()=>{
  it('incluye los 32 conjuros oficiales de nivel 3, con fichas y fuente',()=>{
-  expect(WIZARD_LEVEL_THREE_SPELLS).toHaveLength(32);
-  expect(new Set(WIZARD_LEVEL_THREE_SPELLS.map(s=>s.id)).size).toBe(32);
+  expect(WIZARD_LEVEL_THREE_SPELLS).toHaveLength(29);
+  expect(new Set(WIZARD_LEVEL_THREE_SPELLS.map(s=>s.id)).size).toBe(29);
   for(const spell of WIZARD_LEVEL_THREE_SPELLS){
    expect(spell.level).toBe(3);
    expect(spell.description.length>70).toBe(true);
    expect(spell.sourcePage>=239&&spell.sourcePage<=343).toBe(true);
    expect(wizardSpellRule(spell.id)?.sourcePage).toBe(spell.sourcePage);
   }
-  expect(WIZARD_SPELL_CATALOG.filter(s=>s.level===3)).toHaveLength(32);
+  expect(WIZARD_SPELL_CATALOG.filter(s=>s.level===3)).toHaveLength(29);
   expect(WIZARD_SPELL_RULES.length).toBeGreaterThanOrEqual(217);
  });
  it('Bola de fuego, Rayo relampagueante y Toque vampírico tienen dados base y datos de consulta',()=>{

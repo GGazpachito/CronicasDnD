@@ -22,13 +22,13 @@ function to9(){
  const eight=prepareWizardLevelUp(seven.input,seven.state,{newSpellIds:['arcane_eye','wall_of_fire'],preparedIds:[...seven.input.preparedIds,'arcane_eye'],level8Improvement:{mode:'two_ones',first:'intelligence',second:'constitution'}});
  return prepareWizardLevelUp(eight.input,eight.state,{newSpellIds:['cone_of_cold','telekinesis'],preparedIds:[...eight.input.preparedIds,'cone_of_cold','telekinesis'],evokerLevelFiveSpellId:'wall_of_force'});
 }
-function to10(){const nine=to9();return prepareWizardLevelUp(nine.input,nine.state,{newSpellIds:['hold_monster','geas'],preparedIds:[...nine.input.preparedIds,'hold_monster'],newCantripId:'mind_sliver'});}
+function to10(){const nine=to9();return prepareWizardLevelUp(nine.input,nine.state,{newSpellIds:['hold_monster','geas'],preparedIds:[...nine.input.preparedIds,'hold_monster'],newCantripId:'poison_spray'});}
 function to11(){const ten=to10();return prepareWizardLevelUp(ten.input,ten.state,{newSpellIds:['chain_lightning','disintegrate'],preparedIds:[...ten.input.preparedIds,'chain_lightning'],evokerLevelSixSpellId:'sunbeam'});}
 
 function to12(){
  const eleven=to11();
  return prepareWizardLevelUp(eleven.input,eleven.state,{
-  newSpellIds:['arcane_gate','circle_of_death'],preparedIds:[...eleven.input.preparedIds],
+  newSpellIds:['globe_of_invulnerability','circle_of_death'],preparedIds:[...eleven.input.preparedIds],
   level12Improvement:{mode:'two_ones',first:'wisdom',second:'dexterity'}
  });
 }
@@ -68,9 +68,9 @@ function to16(){
 
 describe('Actualización 59: Mago Evocación niveles 15 y 16',()=>{
  it('integra 13 conjuros de nivel 8, sin duplicados, con datos para consultar y tirar',()=>{
-  expect(WIZARD_LEVEL_EIGHT_SPELLS).toHaveLength(13);
-  expect(WIZARD_SPELL_CATALOG.filter(spell=>spell.level===8)).toHaveLength(13);
-  expect(WIZARD_SPELL_RULES.length).toBeGreaterThanOrEqual(230);
+  expect(WIZARD_LEVEL_EIGHT_SPELLS).toHaveLength(12);
+  expect(WIZARD_SPELL_CATALOG.filter(spell=>spell.level===8)).toHaveLength(12);
+  expect(WIZARD_SPELL_RULES.length).toBe(217);
   expect(new Set(WIZARD_SPELL_RULES.map(rule=>rule.id)).size).toBe(WIZARD_SPELL_RULES.length);
   for(const spell of WIZARD_LEVEL_EIGHT_SPELLS){
    const details=wizardSpellRule(spell.id);
@@ -83,7 +83,7 @@ describe('Actualización 59: Mago Evocación niveles 15 y 16',()=>{
   expect(wizardSpellRule('incendiary_cloud')?.rolls[0].formula).toBe('10d8');
   expect(wizardSpellRule('sunburst')?.rolls[0].formula).toBe('12d6');
   expect(wizardSpellRule('sunburst')?.school).toBe('evocation');
-  expect(wizardSpellRule('telepathy')?.school).toBe('divination');
+  expect(wizardSpellRule('scrying')?.school).toBe('divination');
  });
  it('14→15 gana ranura de nivel 8, +2 al libro, +1 preparado y regalo Evocación',()=>{
   const fourteen=to14(),advanced=to15();

@@ -17,9 +17,9 @@ describe('Actualización 71: catálogo de criaturas y familiares del Pacto de la
    expect(entry.sheet.speed.length).toBeGreaterThan(0);
   }
  });
- it('incluye las ocho formas exclusivas y fichas diferenciadas',()=>{
+ it('incluye las siete formas especiales SRD y fichas diferenciadas',()=>{
   const special=BESTIARY_ENTRIES.filter(c=>c.category==='familiar_especial');
-  expect(special.map(c=>c.id).sort()).toEqual(['imp','pseudodragon','quasit','skeleton','slaad_tadpole','sphinx_of_wonder','sprite','venomous_snake'].sort());
+  expect(special.map(c=>c.id).sort()).toEqual(['imp','pseudodragon','quasit','skeleton','sphinx_of_wonder','sprite','venomous_snake'].sort());
   expect(findBestiaryCreature('imp')?.sheet.hitPointsMaximum).toBe(21);
   expect(findBestiaryCreature('pseudodragon')?.sheet.armorClass).toBe(14);
   expect(findBestiaryCreature('sphinx_of_wonder')?.sheet.hitPointsMaximum).toBe(24);

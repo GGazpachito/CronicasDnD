@@ -9,9 +9,9 @@ const one={classId:'warlock' as const,level:1 as const,name:'Brujo auditoría 9'
  assignedAbilities:{strength:8,dexterity:14,constitution:13,intelligence:10,wisdom:12,charisma:15},
  increaseMode:'two_plus_one' as const,plusTwoAbility:'charisma' as const,plusOneAbility:'wisdom' as const,warlockSkills:['arcana','deception'] as const,
  equipmentChoice:'equipment' as const,cantripIds:['eldritch_blast','prestidigitation'],preparedIds:['hex','charm_person'],invocations:['pact_of_blade'] as const,pactWeaponId:'sickle' as const};
-const two=advanceWarlockToLevelTwo(one,initialWarlockOneState(one),{invocations:['pact_of_blade','agonizing_blast','eldritch_spear'],cantripIds:one.cantripIds,preparedIds:['hex','charm_person','armor_of_agathys'],level2HitDieRoll:5});
+const two=advanceWarlockToLevelTwo(one,initialWarlockOneState(one),{invocations:['pact_of_blade','agonizing_blast','eldritch_spear'],cantripIds:one.cantripIds,preparedIds:['hex','charm_person','unseen_servant'],level2HitDieRoll:5});
 const three=advanceWarlockToLevelThree(two.input,two.state,{subclassId:'fiend',invocations:two.input.invocations,cantripIds:two.input.cantripIds,preparedIds:[...two.input.preparedIds,'misty_step'],level3HitDieRoll:5});
-const four=advanceWarlockToLevelFour(three.input,three.state,{invocations:three.input.invocations,cantripIds:[...three.input.cantripIds,'friends'],preparedIds:[...three.input.preparedIds,'hold_person'],level4HitDieRoll:5,level4Improvement:{mode:'plus_two',first:'charisma'}});
+const four=advanceWarlockToLevelFour(three.input,three.state,{invocations:three.input.invocations,cantripIds:[...three.input.cantripIds,'chill_touch'],preparedIds:[...three.input.preparedIds,'hold_person'],level4HitDieRoll:5,level4Improvement:{mode:'plus_two',first:'charisma'}});
 const five=advanceWarlockToLevelFive(four.input,four.state,{invocations:['pact_of_blade','agonizing_blast','eldritch_spear','thirsting_blade','eldritch_smite'],cantripIds:four.input.cantripIds,preparedIds:[...four.input.preparedIds,'counterspell'],level5HitDieRoll:5});
 const six=advanceWarlockToLevelSix(five.input,five.state,{invocations:five.input.invocations,cantripIds:five.input.cantripIds,preparedIds:[...five.input.preparedIds,'fly'],level6HitDieRoll:5});
 const seven=advanceWarlockToLevelSeven(six.input,six.state,{invocations:[...six.input.invocations,'whispers_of_the_grave'],cantripIds:six.input.cantripIds,preparedIds:[...six.input.preparedIds,'blight'],level7HitDieRoll:5});
@@ -28,7 +28,7 @@ describe('Actualización 78: Brujo nivel 9',()=>{
   expect(next.input.preparedIds).toHaveLength(10);
   expect(warlockPactSlots(next.state,9)).toEqual([false,false]);
   expect(collectWarlockTraits(next.input,sheet).traits).toContainEqual(expect.objectContaining({id:'warlock:contact_patron'}));
-  expect(WARLOCK_LEVEL_FIVE_SPELLS).toHaveLength(9);
+  expect(WARLOCK_LEVEL_FIVE_SPELLS).toHaveLength(7);
   expect(WARLOCK_LEVEL_FIVE_SPELLS.every(s=>warlockSpellIsShared(s.id))).toBe(true);
   expect(SHARED_SPELL_RULES.filter(s=>s.id==='contact_other_plane')).toHaveLength(1);
   expect(SHARED_CLASS_SPELL_LISTS.find(x=>x.id==='warlock')?.spellIds).toContain('hold_monster');

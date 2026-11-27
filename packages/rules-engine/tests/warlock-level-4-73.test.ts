@@ -11,11 +11,11 @@ const starter:GuidedWarlockInput={classId:'warlock',level:1,name:'Auditora',back
  invocations:['pact_of_blade'],pactWeaponId:'sickle'};
 const second=advanceWarlockToLevelTwo(starter,initialWarlockOneState(starter),{
  invocations:['pact_of_blade','agonizing_blast','eldritch_spear'],cantripIds:starter.cantripIds,
- preparedIds:['hex','charm_person','armor_of_agathys'],level2HitDieRoll:5});
+ preparedIds:['hex','charm_person','unseen_servant'],level2HitDieRoll:5});
 const third=advanceWarlockToLevelThree(second.input,second.state,{subclassId:'fiend',
  invocations:second.input.invocations,cantripIds:second.input.cantripIds,
- preparedIds:['hex','charm_person','armor_of_agathys','misty_step'],level3HitDieRoll:5});
-const fourthChoices={invocations:third.input.invocations,cantripIds:[...third.input.cantripIds,'friends'],
+ preparedIds:['hex','charm_person','unseen_servant','misty_step'],level3HitDieRoll:5});
+const fourthChoices={invocations:third.input.invocations,cantripIds:[...third.input.cantripIds,'chill_touch'],
  preparedIds:[...third.input.preparedIds,'hold_person'],level4HitDieRoll:5,
  level4Improvement:{mode:'plus_two' as const,first:'charisma' as const}};
 
@@ -51,7 +51,7 @@ describe('Actualización 73: nivel 4 de Brujo y ventana común',()=>{
   expect(()=>advanceWarlockToLevelFour(third.input,third.state,{...fourthChoices,
    level4Improvement:{mode:'plus_two',first:'charisma',second:'constitution'}})).toThrow();
   expect(()=>advanceWarlockToLevelFour(third.input,third.state,{...fourthChoices,
-   cantripIds:['blade_ward','mage_hand','friends']})).toThrow(/trucos/);
+   cantripIds:['poison_spray','mage_hand','chill_touch']})).toThrow(/trucos/i);
   expect(()=>advanceWarlockToLevelFour(third.input,third.state,{...fourthChoices,
    preparedIds:['darkness','hold_person','mirror_image','invisibility','crown_of_madness']})).toThrow(/tres conjuros/);
   expect(()=>advanceWarlockToLevelFour(third.input,third.state,{...fourthChoices,

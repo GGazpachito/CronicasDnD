@@ -18,7 +18,7 @@ export default function FighterSpellLibrary({result,error,mode,onEditOrigin}:{
   if(distinct.has(entry.id))continue;
   const rule=wizardSpellRule(entry.id);
   distinct.set(entry.id,rule??{id:entry.id,name:entry.name,level:entry.level,school:'Origen',
-   description:'Este conjuro procede de un rasgo o dote de origen. Consulta sus efectos y requisitos en el Manual del Jugador 2024.',
+   description:'Este conjuro procede de un rasgo o dote de origen del SRD 5.2.1. Consulta sus efectos y requisitos en el documento de referencia.',
    attack:false,rolls:[],cantripScales:false});
  }
  const ids=[...distinct.keys()];

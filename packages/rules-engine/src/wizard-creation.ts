@@ -33,15 +33,15 @@ export const WIZARD_LEVEL_ONE_EQUIPMENT={equipment:{description:'2 dagas, foco a
 
 /** Lista inicial de conjuros PHB 2024 p. 168. Su catálogo completo se ampliará en la fase 49. */
 const rawCantrips=[
- ['acid_splash','Salpicadura ácida','evocation'],['blade_ward','Protección contra armas','abjuration'],
+ ['acid_splash','Salpicadura ácida','evocation'],
  ['chill_touch','Toque helado','necromancy'],['dancing_lights','Luces danzantes','illusion'],
  ['elementalism','Elementalismo','transmutation'],['fire_bolt','Descarga de fuego','evocation'],
- ['friends','Amistad','enchantment'],['light','Luz','evocation'],['mage_hand','Mano de mago','conjuration'],
+ ['light','Luz','evocation'],['mage_hand','Mano de mago','conjuration'],
  ['mending','Remendar','transmutation'],['message','Mensaje','transmutation'],
- ['mind_sliver','Fragmento mental','enchantment'],['minor_illusion','Ilusión menor','illusion'],
+ ['minor_illusion','Ilusión menor','illusion'],
  ['poison_spray','Rociada venenosa','necromancy'],['prestidigitation','Prestidigitación','transmutation'],
  ['ray_of_frost','Rayo de escarcha','evocation'],['shocking_grasp','Agarre electrizante','evocation'],
- ['thunderclap','Estallido de trueno','evocation'],['toll_the_dead','Doblar a muerto','necromancy'],
+ 
  ['true_strike','Golpe verdadero','divination']
 ] as const;
 const rawLevelOne=[
@@ -58,20 +58,20 @@ const rawLevelOne=[
  ['magic_missile','Proyectil mágico','evocation',false],['protection_from_evil_and_good','Protección contra el bien y el mal','abjuration',false],
  ['ray_of_sickness','Rayo de enfermedad','necromancy',false],['shield','Escudo','abjuration',false],
  ['silent_image','Imagen silenciosa','illusion',false],['sleep','Dormir','enchantment',false],
- ['tashas_hideous_laughter','Risa horrible de Tasha','enchantment',false],
- ['tensers_floating_disk','Disco flotante de Tenser','conjuration',true],
+ ['tashas_hideous_laughter','Risa horrible','enchantment',false],
+ ['tensers_floating_disk','Disco flotante','conjuration',true],
  ['thunderwave','Onda atronadora','evocation',false],['unseen_servant','Sirviente invisible','conjuration',true],
- ['witch_bolt','Rayo de bruja','evocation',false]
+ 
 ] as const;
 export const WIZARD_LEVEL_ONE_CANTRIPS=rawCantrips.map(([id,name,school])=>({id,name,level:0 as const,school}));
 export const WIZARD_LEVEL_ONE_SPELLS=rawLevelOne.map(([id,name,school,ritual])=>({id,name,level:1 as const,school,ritual}));
 /** Catálogo de nivel 2, Manual del Jugador 2024 pp. 168-169. */
 const rawLevelTwo=[
  ['alter_self','Alterar el propio aspecto','transmutation'],['arcane_lock','Cerradura arcana','abjuration'],
- ['arcane_vigor','Vigor arcano','abjuration'],['augury','Augurio','divination',true],
+ ['augury','Augurio','divination',true],
  ['blindness_deafness','Ceguera/Sordera','transmutation'],['blur','Contorno borroso','illusion'],
- ['cloud_of_daggers','Nube de dagas','conjuration'],['continual_flame','Llama continua','evocation'],
- ['crown_of_madness','Corona de locura','enchantment'],['darkness','Oscuridad','evocation'],
+ ['continual_flame','Llama continua','evocation'],
+ ['darkness','Oscuridad','evocation'],
  ['darkvision','Visión en la oscuridad','transmutation'],['detect_thoughts','Detectar pensamientos','divination'],
  ['dragons_breath','Aliento de dragón','transmutation'],['enhance_ability','Potenciar característica','transmutation'],
  ['enlarge_reduce','Agrandar/Reducir','transmutation'],['flaming_sphere','Esfera flamígera','evocation'],
@@ -79,10 +79,10 @@ const rawLevelTwo=[
  ['hold_person','Inmovilizar persona','enchantment'],['invisibility','Invisibilidad','illusion'],
  ['knock','Llamar','transmutation'],['levitate','Levitar','transmutation'],
  ['locate_object','Localizar objeto','divination'],['magic_mouth','Boca mágica','illusion',true],
- ['magic_weapon','Arma mágica','transmutation'],['melfs_acid_arrow','Flecha ácida de Melf','evocation'],
+ ['magic_weapon','Arma mágica','transmutation'],['melfs_acid_arrow','Flecha ácida','evocation'],
  ['mind_spike','Púa mental','divination'],['mirror_image','Imagen múltiple','illusion'],
- ['misty_step','Paso brumoso','conjuration'],['nystuls_magic_aura','Aura mágica de Nystul','illusion'],
- ['phantasmal_force','Fuerza fantasmal','illusion'],['ray_of_enfeeblement','Rayo debilitador','necromancy'],
+ ['misty_step','Paso brumoso','conjuration'],['nystuls_magic_aura','Aura mágica de arcanista','illusion'],
+ ['ray_of_enfeeblement','Rayo debilitador','necromancy'],
  ['rope_trick','Truco de la cuerda','transmutation'],['scorching_ray','Rayo abrasador','evocation'],
  ['see_invisibility','Ver invisibilidad','divination'],['shatter','Estallar','evocation'],
  ['spider_climb','Trepar cual arácnido','transmutation'],['suggestion','Sugestión','enchantment'],
@@ -105,7 +105,7 @@ export type GuidedWizardInput=Readonly<{
  abilityGenerationMethod?:AbilityGenerationMethod;
  companions?:readonly CompanionSheet[];
  increaseMode:'two_plus_one'|'three_ones';plusTwoAbility:Ability;plusOneAbility:Ability;
- wizardSkills:readonly WizardSkill[];humanSkill?:Skill;humanFeat?:'alert'|'tough';
+ wizardSkills:readonly WizardSkill[];humanSkill?:Skill;humanFeat?:'alert'|'savage_attacker';
  humanSize?:'small'|'medium';elfLineage?:ElfLineage;
  equipmentChoice:WizardEquipmentChoice; backgroundEquipment?:BackgroundEquipmentChoice; inventoryActions?:readonly InventoryAction[];
  cantripIds:readonly string[];spellbookIds:readonly string[];preparedIds:readonly string[];
@@ -207,8 +207,8 @@ export function calculateGuidedWizard(input:GuidedWizardInput):WizardLevelOneVie
  if(!Array.isArray(input.wizardSkills)||input.wizardSkills.length!==2||new Set(input.wizardSkills).size!==2||input.wizardSkills.some(s=>!WIZARD_SKILL_OPTIONS.includes(s)||(bg.skills as readonly string[]).includes(s)))
   throw new RangeError('Elige dos habilidades distintas de Mago que no conceda ya el trasfondo');
  if(input.species==='human'){
-  if(!validSkill(input.humanSkill)||!['alert','tough'].includes(input.humanFeat??'')||input.humanFeat===bg.feat)
-   throw new RangeError('Humano: elige habilidad adicional y dote de origen compatible (Alerta o Duro)');
+  if(!validSkill(input.humanSkill)||!['alert','savage_attacker'].includes(input.humanFeat??'')||input.humanFeat===bg.feat)
+   throw new RangeError('Humano: elige habilidad adicional y dote de origen del SRD (Alerta o Ataque salvaje)');
   if(input.humanSize!==undefined&&!['small','medium'].includes(input.humanSize))throw new RangeError('Tamaño humano inválido');
  }else if(input.humanSkill!==undefined||input.humanFeat!==undefined||input.humanSize!==undefined)throw new RangeError('Las elecciones humanas solo corresponden al humano');
  if(input.species==='elf'){
@@ -286,16 +286,16 @@ export function calculateGuidedWizard(input:GuidedWizardInput):WizardLevelOneVie
  const proficiency=[...new Set<Skill>([...bg.skills as readonly Skill[],...input.wizardSkills,...(input.species==='human'?[input.humanSkill!]:[])])];
  const inventory=wizardInventory(input);
  const armorClass=calculateArmorClass({dexterityScore:finalScores.dexterity,strengthScore:finalScores.strength,armor:equippedArmor(inventory),shieldEquipped:inventory.equipped.shield,shieldTrained:false}).value;
- const hpBonus=(input.species==='dwarf'?1:0)+(input.humanFeat==='tough'?2:0);
+ const hpBonus=(input.species==='dwarf'?1:0);
  if(input.level>=2&&!proficiency.includes(input.scholarSkill!))throw new RangeError('Erudito requiere competencia previa en la habilidad');
  const core=wizardCoreStatistics(input.level,finalScores,input.levelHitPointRolls);
  return {classId:'wizard',level:input.level,name:input.name.trim(),abilityScores:finalScores,abilityModifiers:bonuses,
   skillBonuses:calculateSkillBonuses(finalScores,input.level,{skills:proficiency,expertiseSkills:input.scholarSkill?[input.scholarSkill]:[]}),skillProficiencies:proficiency,
   savingThrowBonuses:calculateSavingThrows(finalScores,input.level,{savingThrows:['intelligence','wisdom']}),
-  maximumHitPoints:core.maximumHitPoints+hpBonus*input.level+(input.epicBoon?.id==='fortitude'?40:0),
+  maximumHitPoints:core.maximumHitPoints+hpBonus*input.level,
   armorClass,
   initiative:bonuses.dexterity+((bg.feat==='alert'||input.humanFeat==='alert')?core.proficiencyBonus:0),
-  speedFeet:(input.species==='elf'&&input.elfLineage==='wood_elf'?35:30)+(input.epicBoon?.id==='speed'?30:0),
+  speedFeet:(input.species==='elf'&&input.elfLineage==='wood_elf'?35:30),
   truesightFeet:input.epicBoon?.id==='truesight'?60:0,
   size:input.species==='halfling'||(input.species==='human'&&input.humanSize==='small')?'small':'medium',
   spellAttackBonus:core.spellAttackBonus,spellSaveDC:core.spellSaveDC,

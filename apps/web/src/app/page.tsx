@@ -10,6 +10,7 @@ export default function Home(){
     <Link href="/bestiary" className="front-action-card"><span className="front-action-symbol" aria-hidden="true">◆</span><h2>Bestiario</h2><p>Consulta las fichas y los ataques de familiares, bestias, monstruos y futuras criaturas.</p><strong>Explorar criaturas</strong></Link>
    </div>
    <p className="front-smallprint">Los personajes se guardan únicamente cuando confirmas «Guardar personaje» o «Guardar cambios» en su hoja.</p>
+   <p className="front-smallprint">Contenido base adaptado del <a href="https://www.dndbeyond.com/srd" target="_blank" rel="noopener noreferrer">SRD 5.2.1</a> de Wizards of the Coast LLC, bajo <a href="https://creativecommons.org/licenses/by/4.0/legalcode" target="_blank" rel="noopener noreferrer">Creative Commons Atribución 4.0 Internacional</a>. Incluye selección, traducciones de interfaz y resúmenes propios.</p>
   </div>
  </main>;
 }

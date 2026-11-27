@@ -11,7 +11,7 @@ export type WarlockLevelTwoChoices=Readonly<{
  cantripIds:readonly string[];
  preparedIds:readonly string[];
  level2HitDieRoll:number;
- lessonsFeat?:'alert'|'tough';
+ lessonsFeat?:'alert'|'savage_attacker';
  tomeCantripIds?:readonly string[];
  tomeRitualIds?:readonly string[];
 }>;
@@ -57,7 +57,7 @@ export function advanceWarlockToLevelTwo(input:GuidedWarlockInput,state:WarlockO
 export type WarlockLevelThreeChoices=Readonly<{
  subclassId:'fiend';invocations:readonly WarlockInvocationId[];
  cantripIds:readonly string[];preparedIds:readonly string[];
- level3HitDieRoll:number;lessonsFeat?:'alert'|'tough';
+ level3HitDieRoll:number;lessonsFeat?:'alert'|'savage_attacker';
  tomeCantripIds?:readonly string[];tomeRitualIds?:readonly string[];
 }>;
 
@@ -109,7 +109,7 @@ export function advanceWarlockToLevelThree(input:GuidedWarlockInput,state:Warloc
 export type WarlockLevelFourChoices=Readonly<{
  invocations:readonly WarlockInvocationId[];cantripIds:readonly string[];preparedIds:readonly string[];
  level4HitDieRoll:number;level4Improvement:FighterAbilityImprovement;
- lessonsFeat?:'alert'|'tough';tomeCantripIds?:readonly string[];tomeRitualIds?:readonly string[];
+ lessonsFeat?:'alert'|'savage_attacker';tomeCantripIds?:readonly string[];tomeRitualIds?:readonly string[];
 }>;
 
 /** Nivel 4: dote Mejora de característica, 3 trucos, 5 preparados y ranuras intactas de nivel 2. */
@@ -156,7 +156,7 @@ export function advanceWarlockToLevelFour(input:GuidedWarlockInput,state:Warlock
 
 export type WarlockLevelFiveChoices=Readonly<{
  invocations:readonly WarlockInvocationId[];cantripIds:readonly string[];preparedIds:readonly string[];
- level5HitDieRoll:number;lessonsFeat?:'alert'|'tough';tomeCantripIds?:readonly string[];tomeRitualIds?:readonly string[];
+ level5HitDieRoll:number;lessonsFeat?:'alert'|'savage_attacker';tomeCantripIds?:readonly string[];tomeRitualIds?:readonly string[];
 }>;
 
 /** Nivel 5: +3 competencia, dos invocaciones nuevas, 6 preparados y dos ranuras de nivel 3. */
@@ -209,7 +209,7 @@ export function advanceWarlockToLevelFive(input:GuidedWarlockInput,state:Warlock
 
 export type WarlockLevelSixChoices=Readonly<{
  invocations:readonly WarlockInvocationId[];cantripIds:readonly string[];preparedIds:readonly string[];
- level6HitDieRoll:number;lessonsFeat?:'alert'|'tough';tomeCantripIds?:readonly string[];tomeRitualIds?:readonly string[];
+ level6HitDieRoll:number;lessonsFeat?:'alert'|'savage_attacker';tomeCantripIds?:readonly string[];tomeRitualIds?:readonly string[];
 }>;
 
 /** Nivel 6: Suerte del Oscuro, séptimo preparado, mismas invocaciones y ranuras de nivel 3. */
@@ -261,7 +261,7 @@ export function advanceWarlockToLevelSix(input:GuidedWarlockInput,state:WarlockO
 
 export type WarlockLevelSevenChoices=Readonly<{
  invocations:readonly WarlockInvocationId[];cantripIds:readonly string[];preparedIds:readonly string[];
- level7HitDieRoll:number;lessonsFeat?:'alert'|'tough';tomeCantripIds?:readonly string[];tomeRitualIds?:readonly string[];
+ level7HitDieRoll:number;lessonsFeat?:'alert'|'savage_attacker';tomeCantripIds?:readonly string[];tomeRitualIds?:readonly string[];
 }>;
 
 /** Nivel 7: sexta invocación, ocho preparados, ranuras de nivel 4 y dos conjuros extra del patrón. */
@@ -314,7 +314,7 @@ export function advanceWarlockToLevelSeven(input:GuidedWarlockInput,state:Warloc
 export type WarlockLevelEightChoices=Readonly<{
  invocations:readonly WarlockInvocationId[];cantripIds:readonly string[];preparedIds:readonly string[];
  level8HitDieRoll:number;level8Improvement:FighterAbilityImprovement;
- lessonsFeat?:'alert'|'tough';tomeCantripIds?:readonly string[];tomeRitualIds?:readonly string[];
+ lessonsFeat?:'alert'|'savage_attacker';tomeCantripIds?:readonly string[];tomeRitualIds?:readonly string[];
 }>;
 
 /** 7→8: +1 preparación ordinaria, Mejora de característica, 1d8 PG y mismos recursos de Pacto. */
@@ -366,7 +366,7 @@ export function advanceWarlockToLevelEight(input:GuidedWarlockInput,state:Warloc
 
 export type WarlockLevelNineChoices=Readonly<{
  invocations:readonly WarlockInvocationId[];cantripIds:readonly string[];preparedIds:readonly string[];
- level9HitDieRoll:number;lessonsFeat?:'alert'|'tough';
+ level9HitDieRoll:number;lessonsFeat?:'alert'|'savage_attacker';
  tomeCantripIds?:readonly string[];tomeRitualIds?:readonly string[];
 }>;
 
@@ -421,7 +421,7 @@ export function advanceWarlockToLevelNine(input:GuidedWarlockInput,state:Warlock
 
 export type WarlockLevelTenChoices=Readonly<{
  invocations:readonly WarlockInvocationId[];cantripIds:readonly string[];preparedIds:readonly string[];
- level10HitDieRoll:number;lessonsFeat?:'alert'|'tough';
+ level10HitDieRoll:number;lessonsFeat?:'alert'|'savage_attacker';
  tomeCantripIds?:readonly string[];tomeRitualIds?:readonly string[];
 }>;
 
@@ -476,7 +476,7 @@ export function advanceWarlockToLevelTen(input:GuidedWarlockInput,state:WarlockO
 export type WarlockLevelElevenChoices=Readonly<{
  invocations:readonly WarlockInvocationId[];cantripIds:readonly string[];preparedIds:readonly string[];
  mysticArcanum6Id:typeof WARLOCK_SIXTH_LEVEL_IDS[number];level11HitDieRoll:number;
- lessonsFeat?:'alert'|'tough';tomeCantripIds?:readonly string[];tomeRitualIds?:readonly string[];
+ lessonsFeat?:'alert'|'savage_attacker';tomeCantripIds?:readonly string[];tomeRitualIds?:readonly string[];
 }>;
 
 /** 10→11: tercer hueco de Pacto (nivel 5), undécimo preparado y Arcanum nivel 6. */
@@ -532,7 +532,7 @@ export function advanceWarlockToLevelEleven(input:GuidedWarlockInput,state:Warlo
 export type WarlockLevelTwelveChoices=Readonly<{
  invocations:readonly WarlockInvocationId[];cantripIds:readonly string[];preparedIds:readonly string[];
  mysticArcanum6Id:typeof WARLOCK_SIXTH_LEVEL_IDS[number];level12Improvement:FighterAbilityImprovement;level12HitDieRoll:number;
- lessonsFeat?:'alert'|'tough';tomeCantripIds?:readonly string[];tomeRitualIds?:readonly string[];
+ lessonsFeat?:'alert'|'savage_attacker';tomeCantripIds?:readonly string[];tomeRitualIds?:readonly string[];
 }>;
 
 /** 11→12: octava invocación, mejora de característica y hoja devoradora opcional. */
@@ -589,7 +589,7 @@ export type WarlockLevelThirteenChoices=Readonly<{
  invocations:readonly WarlockInvocationId[];cantripIds:readonly string[];preparedIds:readonly string[];
  mysticArcanum6Id:typeof WARLOCK_SIXTH_LEVEL_IDS[number];
  mysticArcanum7Id:typeof WARLOCK_SEVENTH_LEVEL_IDS[number];
- level13HitDieRoll:number;lessonsFeat?:'alert'|'tough';
+ level13HitDieRoll:number;lessonsFeat?:'alert'|'savage_attacker';
  tomeCantripIds?:readonly string[];tomeRitualIds?:readonly string[];
 }>;
 
@@ -651,7 +651,7 @@ export type WarlockLevelFourteenChoices=Readonly<{
  invocations:readonly WarlockInvocationId[];cantripIds:readonly string[];preparedIds:readonly string[];
  mysticArcanum6Id:typeof WARLOCK_SIXTH_LEVEL_IDS[number];
  mysticArcanum7Id:typeof WARLOCK_SEVENTH_LEVEL_IDS[number];
- level14HitDieRoll:number;lessonsFeat?:'alert'|'tough';
+ level14HitDieRoll:number;lessonsFeat?:'alert'|'savage_attacker';
  tomeCantripIds?:readonly string[];tomeRitualIds?:readonly string[];
 }>;
 

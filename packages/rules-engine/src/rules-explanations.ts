@@ -38,15 +38,9 @@ export function explainFighterFeature(id:string):string|undefined{
 
 export const FIGHTING_STYLE_EXPLANATIONS:Readonly<Record<FightingStyleId,string>>={
   archery:'Obtienes +2 a las tiradas de ataque que realizas con armas a distancia.',
-  blind_fighting:'Tienes visión ciega en un radio de 10 pies, útil para detectar criaturas sin depender de la vista normal.',
   defense:'Mientras llevas armadura ligera, media o pesada, obtienes +1 a la clase de armadura.',
-  dueling:'Al usar un arma cuerpo a cuerpo en una mano y ninguna otra arma, obtienes +2 al daño con esa arma.',
   great_weapon_fighting:'Con un arma cuerpo a cuerpo a dos manos que tenga la propiedad A dos manos o Versátil, los resultados de 1 o 2 de sus dados de daño cuentan como 3.',
-  interception:'Como reacción, reduces en 1d10 + competencia el daño que un ataque causa a otra criatura cercana, si llevas escudo o arma apropiada.',
-  protection:'Como reacción, al proteger con tu escudo a una criatura cercana impones desventaja a los ataques del agresor contra ella mientras se mantengan las condiciones.',
-  thrown_weapon_fighting:'Al impactar con un ataque a distancia usando un arma Arrojadiza, sumas +2 al daño.',
   two_weapon_fighting:'Puedes sumar el modificador de característica al daño del ataque adicional concedido por la propiedad Ligera si no lo estabas sumando.',
-  unarmed_fighting:'Los golpes sin armas infligen 1d6 de daño, o 1d8 si no llevas armas ni escudo. También puedes dañar a una criatura a la que tengas agarrada al inicio de tu turno.',
 };
 
 export const MASTERY_EXPLANATIONS:Readonly<Record<MasteryId,string>>={
@@ -62,23 +56,15 @@ export const MASTERY_EXPLANATIONS:Readonly<Record<MasteryId,string>>={
 
 export const EPIC_BOON_EXPLANATIONS:Readonly<Record<EpicBoonId,string>>={
   combat_prowess:'Aumentas una característica en 1 (máximo 30). Cuando fallas una tirada de ataque puedes convertirla en un impacto; vuelves a disponer de este beneficio al comienzo de tu próximo turno.',
-  fortitude:'Aumentas una característica en 1 (máximo 30) y tus PG máximos en 40. Al recuperar PG puedes sumar también tu modificador de Constitución, una vez por turno.',
-  speed:'Aumentas una característica en 1 (máximo 30) y tu velocidad en 30 pies. Puedes usar Destrabarse como acción adicional y terminar el estado Agarrado.',
 };
 
 export const ORIGIN_FEAT_EXPLANATIONS:Readonly<Record<string,string>>={
   alert:'Sumas competencia a la iniciativa. Justo después de tirar iniciativa puedes intercambiar tu resultado con el de un aliado voluntario elegible.',
-  crafter:'Obtienes competencia con tres herramientas de artesano, descuentos del 20 % al comprar objetos no mágicos y la posibilidad de fabricar equipo sencillo tras un descanso largo.',
-  healer:'Usando un botiquín puedes permitir que una criatura gaste un dado de golpe para curarse y añadir tu competencia. Además, puedes repetir un 1 en dados de curación aplicables.',
-  lucky:'Tienes tantos puntos de suerte como tu bonificador de competencia; los recuperas tras un descanso largo. Puedes gastarlos para obtener ventaja en tus pruebas de d20 o imponer desventaja a un ataque contra ti.',
   magic_initiate:'Aprendes dos trucos y preparas un conjuro de nivel 1 de la lista elegida. El conjuro se puede lanzar una vez sin espacio por descanso largo, además de con espacios disponibles.',
   magic_initiate_cleric:'Aprendes dos trucos y preparas un conjuro de nivel 1 de Clérigo. Puedes lanzarlo una vez sin espacio por descanso largo, además de usar los espacios que tengas.',
   magic_initiate_wizard:'Aprendes dos trucos y preparas un conjuro de nivel 1 de Mago. Puedes lanzarlo una vez sin espacio por descanso largo, además de usar los espacios que tengas.',
-  musician:'Obtienes competencia con tres instrumentos y puedes conceder Inspiración heroica a varios aliados al terminar un descanso tocando un instrumento.',
   savage_attacker:'Una vez por turno, al impactar con un arma, puedes tirar dos veces sus dados de daño y escoger cuál de los dos resultados usar.',
   skilled:'Obtienes tres competencias a elegir entre habilidades y herramientas. Se aplican a las tiradas correspondientes.',
-  tavern_brawler:'Mejoras los golpes sin armas, puedes repetir sus dados de daño si sacas 1, dominas armas improvisadas y puedes empujar una vez por turno al golpear sin armas.',
-  tough:'Tus PG máximos aumentan en 2 por cada nivel de personaje, incluidos los niveles que ganes después.',
 };
 
 export const SPECIES_TRAIT_EXPLANATIONS:Readonly<Record<string,string>>={

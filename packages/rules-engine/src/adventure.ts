@@ -70,17 +70,17 @@ export type AdventureState = Readonly<{
 
 export type AdventureAction =
   | Readonly<{type:'damage'; amount:number; critical?:boolean}>
-  | Readonly<{type:'heal'; amount:number;fortitudeBonus?:boolean}>
+  | Readonly<{type:'heal'; amount:number}>
   | Readonly<{type:'temporary_hp'; amount:number}>
   | Readonly<{type:'adjust_temporary_hp'; amount:number}>
   | Readonly<{type:'clear_temporary_hp'}>
   | Readonly<{type:'gain_heroic_inspiration'}>
   | Readonly<{type:'spend_heroic_inspiration'}>
-  | Readonly<{type:'second_wind'; d10:number;fortitudeBonus?:boolean}>
+  | Readonly<{type:'second_wind'; d10:number}>
   | Readonly<{type:'action_surge'}>
   | Readonly<{type:'tactical_mind'; originalTotal:number; difficultyClass:number; d10:number}>
   | Readonly<{type:'indomitable'; originalTotal:number; difficultyClass:number; ability:Ability; d20:number; extraBonus?:number}>
-  | Readonly<{type:'short_rest'; hitDieRolls:readonly number[];fortitudeBonus?:boolean}>
+  | Readonly<{type:'short_rest'; hitDieRolls:readonly number[]}>
   | Readonly<{type:'long_rest'}>
   | Readonly<{type:'death_save';d20:number;secondD20?:number}>
   | Readonly<{type:'stabilize';medicineTotal:number}>
@@ -155,13 +155,6 @@ function withHp(state:AdventureState,current:number):AdventureState{
 function withFighter(state:AdventureState,fighter:FighterState):AdventureState{
   return {...state,fighter};
 }
-/** Beneficio de Fortaleza voluntario: solo una curación adicional hasta el inicio del turno siguiente. */
-function fortitudeHealing(state:AdventureState,sheet:CalculatedFighterSheet,useBonus:boolean):Readonly<{bonus:number;combat:CombatState}>{
-  if(!useBonus)return {bonus:0,combat:state.combat};
-  if(sheet.level<19||!sheet.features.includes('epic_boon_fortitude'))throw new RangeError('El personaje no tiene Fortaleza épica');
-  if(state.combat.fortitudeHealUsed)throw new RangeError('Fortaleza épica ya usada antes del siguiente turno');
-  return {bonus:Math.max(0,sheet.abilityModifiers.constitution),combat:{...state.combat,fortitudeHealUsed:true}};
-}
 function requireConscious(state:AdventureState,activity:string):void{
   if(state.survival?.death.dead)throw new RangeError(`${activity}: el personaje está muerto`);
   if(state.fighter.hitPoints.current===0)throw new RangeError(`${activity}: el personaje está a 0 PG`);
@@ -226,15 +219,12 @@ export function applyAdventureAction(source:AdventureState,action:AdventureActio
         description:`Daño ${amount}: ${absorbed} PG temporales absorbidos, ${hpLoss} PG perdidos. ${detail}`};
     }
     case 'heal':{
-      onlyKeys(action,['type','amount','fortitudeBonus'],'Curación');
-      if(action.fortitudeBonus!==undefined&&typeof action.fortitudeBonus!=='boolean')throw new RangeError('Fortaleza épica requiere verdadero/falso');
+      onlyKeys(action,['type','amount'],'Curación');
       const amount=requireInteger(action.amount,'Curación',1,100_000);
       if(state.survival!.death.dead)throw new RangeError('Un personaje muerto requiere un efecto de resurrección, no curación normal');
-      if(action.fortitudeBonus===true&&state.fighter.hitPoints.current===state.fighter.hitPoints.maximum)throw new RangeError('No se puede activar Fortaleza sin recuperar PG');
-      const boost=fortitudeHealing(state,sheet,action.fortitudeBonus===true);
-      const current=Math.min(state.fighter.hitPoints.maximum,state.fighter.hitPoints.current+amount+boost.bonus);
+      const current=Math.min(state.fighter.hitPoints.maximum,state.fighter.hitPoints.current+amount);
       const survival=state.fighter.hitPoints.current===0&&current>0?{...state.survival!,death:resetDeathTrack()}:state.survival!;
-      return {state:{...withHp(state,current),survival,combat:boost.combat},description:`Curación efectiva: ${current-state.fighter.hitPoints.current} PG${action.fortitudeBonus?' (incluye Fortaleza épica)':''}.`};
+      return {state:{...withHp(state,current),survival},description:`Curación efectiva: ${current-state.fighter.hitPoints.current} PG.`};
     }
     case 'temporary_hp':{
       onlyKeys(action,['type','amount'],'PG temporales');
@@ -267,16 +257,12 @@ export function applyAdventureAction(source:AdventureState,action:AdventureActio
       return {state:{...state,combat:spendHeroicInspiration(state.combat)},description:'Inspiración heroica gastada; repite el dado manualmente y usa el nuevo resultado.'};
     }
     case 'second_wind':{
-      onlyKeys(action,['type','d10','fortitudeBonus'],'Segundo aliento');
-      if(action.fortitudeBonus!==undefined&&typeof action.fortitudeBonus!=='boolean')throw new RangeError('Fortaleza épica requiere verdadero/falso');
+      onlyKeys(action,['type','d10'],'Segundo aliento');
       requireConscious(state,'Segundo aliento');
       if(!conditionCapabilities(state.combat.conditions??initialConditionLedger()).canTakeBonusAction)throw new RangeError('Una condición impide usar Segundo aliento');
-      if(action.fortitudeBonus===true&&state.fighter.hitPoints.current===state.fighter.hitPoints.maximum)throw new RangeError('Fortaleza requiere recuperar PG');
-      const boost=fortitudeHealing(state,sheet,action.fortitudeBonus===true);
       const applied=useSecondWind(state.fighter,requireInteger(action.d10,'d10',1,10));
-      const healedState=boost.bonus?{...applied.state,hitPoints:{...applied.state.hitPoints,current:Math.min(sheet.maximumHitPoints,applied.state.hitPoints.current+boost.bonus)}}:applied.state;
-      const combat=state.combat.turn?.active?spendCombatSlot(boost.combat,'bonus'):boost.combat;
-      return {state:{...withFighter(state,healedState),combat},description:`Segundo aliento: +${healedState.hitPoints.current-state.fighter.hitPoints.current} PG efectivos y un uso gastado${action.fortitudeBonus?' (incluye Fortaleza épica)':''}.`};
+      const combat=state.combat.turn?.active?spendCombatSlot(state.combat,'bonus'):state.combat;
+      return {state:{...withFighter(state,applied.state),combat},description:`Segundo aliento: +${applied.state.hitPoints.current-state.fighter.hitPoints.current} PG efectivos y un uso gastado.`};
     }
     case 'action_surge':{
       onlyKeys(action,['type'],'Acción súbita');
@@ -313,22 +299,17 @@ export function applyAdventureAction(source:AdventureState,action:AdventureActio
       return {state:withFighter(state,fighter),description:`Indomable: nueva tirada ${d20} + salvación ${sheet.savingThrowBonuses[action.ability]} + nivel ${sheet.level}${exhaustion?` − agotamiento ${exhaustion*2}`:''}${extra?` ${extra>=0?'+':''}${extra} situacional`:''} = ${total} contra CD ${dc}. ${total>=dc?'Éxito.':'Fallo.'} Debes usar la nueva tirada; Indomable gastado.`};
     }
     case 'short_rest':{
-      onlyKeys(action,['type','hitDieRolls','fortitudeBonus'],'Descanso corto');
-      if(action.fortitudeBonus!==undefined&&typeof action.fortitudeBonus!=='boolean')throw new RangeError('Fortaleza épica requiere verdadero/falso');
+      onlyKeys(action,['type','hitDieRolls'],'Descanso corto');
       requireConscious(state,'Descanso corto');
       if(!Array.isArray(action.hitDieRolls)||action.hitDieRolls.length>sheet.hitDice.total-state.spentHitDice)
         throw new RangeError('No hay suficientes dados de golpe disponibles');
-      if(action.fortitudeBonus===true&&action.hitDieRolls.length===0)throw new RangeError('Fortaleza requiere curación con dados de golpe');
       let current=state.fighter.hitPoints.current;
       for(const raw of action.hitDieRolls){
         const die=requireInteger(raw,'Tirada de dado de golpe d10',1,10);
         current=Math.min(state.fighter.hitPoints.maximum,current+Math.max(1,die+sheet.abilityModifiers.constitution));
       }
-      if(action.fortitudeBonus===true&&current===state.fighter.hitPoints.current)throw new RangeError('Fortaleza requiere recuperar PG');
-      const boost=fortitudeHealing(state,sheet,action.fortitudeBonus===true&&action.hitDieRolls.length>0);
-      current=Math.min(sheet.maximumHitPoints,current+boost.bonus);
       const fighter=finishFighterRest(withHp(state,current).fighter,'short_rest');
-      return {state:{...state,fighter,combat:boost.combat,spentHitDice:state.spentHitDice+action.hitDieRolls.length},description:`Descanso corto: ${action.hitDieRolls.length} dados gastados; recuperas ${current-state.fighter.hitPoints.current} PG y los recursos del Guerrero correspondientes.`};
+      return {state:{...state,fighter,spentHitDice:state.spentHitDice+action.hitDieRolls.length},description:`Descanso corto: ${action.hitDieRolls.length} dados gastados; recuperas ${current-state.fighter.hitPoints.current} PG y los recursos del Guerrero correspondientes.`};
     }
     case 'long_rest':{
       onlyKeys(action,['type'],'Descanso largo');

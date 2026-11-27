@@ -70,7 +70,7 @@ describe('Paso 70: estructura de progresión compartida y dado de PG por nivel',
   const first=initialWarlockOneState(warlock);
   const second=advanceWarlockToLevelTwo(warlock,first,{
    invocations:['pact_of_blade','agonizing_blast','eldritch_spear'],
-   cantripIds:warlock.cantripIds,preparedIds:[...warlock.preparedIds,'armor_of_agathys'],level2HitDieRoll:8,
+   cantripIds:warlock.cantripIds,preparedIds:[...warlock.preparedIds,'unseen_servant'],level2HitDieRoll:8,
   });
   expect(second.input.level2HitDieRoll).toBe(8);
   expect(calculateWarlockOne(second.input).maximumHitPoints).toBeGreaterThan(calculateWarlockOne(warlock).maximumHitPoints);

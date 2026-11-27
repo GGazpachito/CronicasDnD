@@ -19,14 +19,14 @@ const one={
 };
 const two=advanceWarlockToLevelTwo(one,initialWarlockOneState(one),{
  invocations:['pact_of_blade','agonizing_blast','eldritch_spear'],cantripIds:one.cantripIds,
- preparedIds:['hex','charm_person','armor_of_agathys'],level2HitDieRoll:5,
+ preparedIds:['hex','charm_person','unseen_servant'],level2HitDieRoll:5,
 });
 const three=advanceWarlockToLevelThree(two.input,two.state,{
  subclassId:'fiend',invocations:two.input.invocations,cantripIds:two.input.cantripIds,
- preparedIds:['hex','charm_person','armor_of_agathys','misty_step'],level3HitDieRoll:5,
+ preparedIds:['hex','charm_person','unseen_servant','misty_step'],level3HitDieRoll:5,
 });
 const four=advanceWarlockToLevelFour(three.input,three.state,{
- invocations:three.input.invocations,cantripIds:[...three.input.cantripIds,'friends'],
+ invocations:three.input.invocations,cantripIds:[...three.input.cantripIds,'chill_touch'],
  preparedIds:[...three.input.preparedIds,'hold_person'],level4HitDieRoll:5,
  level4Improvement:{mode:'plus_two',first:'charisma'},
 });
@@ -76,7 +76,7 @@ describe('Actualización 75: Brujo nivel 6 · Suerte del Oscuro',()=>{
   expect(()=>advanceWarlockToLevelSix(five.input,five.state,{...choices,
    invocations:['pact_of_blade','ascendant_step','gaze_of_two_minds','master_of_myriad_forms','one_with_shadows']})).toThrow(/cuatro/);
   expect(()=>advanceWarlockToLevelSix(five.input,five.state,{...choices,
-   preparedIds:['hex','charm_person','counterspell','fly','fear','gaseous_form','hunger_of_hadar']})).toThrow(/cinco/);
+   preparedIds:['hex','charm_person','counterspell','fly','fear','gaseous_form','vampiric_touch']})).toThrow(/cinco/);
  });
  it('retrocede 6→5 restaurando elecciones y PG, y sigue 5→4 sin borrar compañeros ni recursos',()=>{
   const companions=[] as const;

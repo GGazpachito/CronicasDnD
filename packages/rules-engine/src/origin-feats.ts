@@ -1,11 +1,10 @@
-/** Elecciones de dotes de origen del PHB 2024, pp. 200-202. */
+/** Dotes de origen publicadas en SRD 5.2.1 (CC BY 4.0). */
 import { SKILLS, type Skill } from './proficiencies';
 import { type MagicInitiateSelection, validateMagicInitiate } from './origin-magic';
 
 export const ORIGIN_FEATS = {
-  alert:'Alerta',crafter:'Artesano',healer:'Sanador',lucky:'Afortunado',
-  magic_initiate:'Iniciado en la Magia',musician:'Músico',savage_attacker:'Ataque salvaje',
-  skilled:'Competente',tavern_brawler:'Peleador de taberna',tough:'Duro',
+  alert:'Alerta',magic_initiate:'Iniciado en la Magia',
+  savage_attacker:'Ataque salvaje',skilled:'Competente',
 } as const;
 export type OriginFeatId = keyof typeof ORIGIN_FEATS;
 export const CRAFTER_TOOLS = ['carpenters_tools','leatherworkers_tools','masons_tools','potters_tools','smiths_tools','tinkers_tools','weavers_tools','woodcarvers_tools'] as const;
@@ -54,14 +53,11 @@ export function validateHumanOriginFeat(feat:unknown,details:HumanFeatDetails|un
   const id=feat as OriginFeatId;
   switch(id){
     case 'magic_initiate': return {feat:id,skillProficiencies:[],toolProficiencies:[],magicInitiate:validateMagicInitiate(details?.magicInitiate)};
-    case 'crafter': return {feat:id,skillProficiencies:[],toolProficiencies:distinctChoices(details?.crafterTools,3,CRAFTER_TOOLS,'Artesano') as ToolId[]};
-    case 'musician': return {feat:id,skillProficiencies:[],toolProficiencies:distinctChoices(details?.musicianInstruments,3,MUSICAL_INSTRUMENTS,'Músico') as ToolId[]};
     case 'skilled': {
       const entries=distinctChoices(details?.skilledProficiencies,3,SKILLED_OPTIONS,'Competente');
       return {feat:id,skillProficiencies:entries.filter(s=>s.startsWith('skill:')).map(s=>s.substring(6) as Skill),
         toolProficiencies:entries.filter(s=>s.startsWith('tool:')).map(s=>s.substring(5) as ToolId)};
     }
-    case 'lucky': return {feat:id,skillProficiencies:[],toolProficiencies:[],luckPointsMaximum:Math.floor((level-1)/4)+2};
     default: return {feat:id,skillProficiencies:[],toolProficiencies:[]};
   }
 }

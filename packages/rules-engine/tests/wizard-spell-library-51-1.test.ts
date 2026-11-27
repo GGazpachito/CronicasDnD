@@ -20,8 +20,8 @@ describe('Actualización 51.1: catálogo, reglas y selección manual de Mago',()
  });
  it('catalogo contiene todos los trucos y conjuros implementados de nivel 1 y 2',()=>{
   const counts=[0,1,2].map(level=>WIZARD_SPELL_RULES.filter(spell=>spell.level===level).length);
-  expect(counts).toEqual([20,31,39]);
-  expect(WIZARD_SPELL_RULES.filter(spell=>spell.level<=2)).toHaveLength(90);
+  expect(counts).toEqual([15,30,35]);
+  expect(WIZARD_SPELL_RULES.filter(spell=>spell.level<=2)).toHaveLength(80);
   expect(WIZARD_SPELL_RULES.length).toBeGreaterThanOrEqual(217);
   expect(WIZARD_SPELL_RULES.every(spell=>spell.description.length>70)).toBe(true);
   expect(new Set(WIZARD_SPELL_RULES.map(spell=>spell.id)).size).toBe(WIZARD_SPELL_RULES.length);
@@ -94,17 +94,17 @@ describe('Actualización 51.1: catálogo, reglas y selección manual de Mago',()
   expect(spellDiceForCharacter('1d10',true,17)).toBe('4d10');
   expect(spellDiceForCharacter('3d6',false,20)).toBe('3d6');
  });
- it('los metadatos de lanzamiento identifican los 90 conjuros en el manual',()=>{
+ it('los metadatos de lanzamiento identifican los 80 conjuros SRD de niveles 0–2',()=>{
   expect(WIZARD_SPELL_RULES.filter(spell=>spell.level<=6).every(spell=>typeof spell.sourcePage==='number'&&spell.sourcePage>=239&&spell.sourcePage<=343)).toBe(true);
   // Las fichas nuevas de nivel 7 remiten a la referencia oficial; la paginación PHB se cotejará por separado.
   expect(WIZARD_SPELL_RULES.filter(spell=>spell.level===7).every(spell=>spell.description.length>70&&spell.castingTime&&spell.range&&spell.components&&spell.duration)).toBe(true);
   expect(wizardSpellRule('ray_of_enfeeblement')?.attack).toBe(false);
   expect(wizardSpellRule('ray_of_enfeeblement')?.rolls[0].formula).toBe('1d8');
  });
- it('las penalizaciones de truco no escalan indebidamente',()=>{
-  const penalty=wizardSpellRule('mind_sliver')?.rolls.find(roll=>roll.formula==='1d4');
-  expect(penalty?.scales).toBe(false);
-  expect(spellDiceForCharacter(penalty!.formula,penalty!.scales!==false,17)).toBe('1d4');
+ it('las tiradas marcadas como no escalables se mantienen a nivel 17',()=>{
+  const damage=wizardSpellRule('magic_missile')?.rolls.find(roll=>roll.formula==='1d4+1');
+  expect(damage).toBeDefined();
+  expect(spellDiceForCharacter(damage!.formula,false,17)).toBe('1d4+1');
  });
  it('conjuros con ataque o dados exponen los controles necesarios',()=>{
   expect(wizardSpellRule('fire_bolt')?.attack).toBe(true);

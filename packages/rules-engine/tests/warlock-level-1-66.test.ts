@@ -34,11 +34,11 @@ describe('Brujo D&D 2024, nivel 1 (paso 66)',()=>{
  });
 
  it('la lista del Brujo reutiliza las instancias existentes del Mago; solo crea conjuros nuevos',()=>{
-  expect(WARLOCK_LEVEL_ONE_CANTRIPS).toHaveLength(12);
-  expect(WARLOCK_LEVEL_ONE_SPELLS).toHaveLength(15);
+  expect(WARLOCK_LEVEL_ONE_CANTRIPS).toHaveLength(7);
+  expect(WARLOCK_LEVEL_ONE_SPELLS).toHaveLength(12);
   expect(warlockSpellIsShared('charm_person')).toBe(true);
   expect(warlockSpellRule('charm_person')).toBe(wizardSpellRule('charm_person'));
-  expect(warlockSpellRule('witch_bolt')).toBe(wizardSpellRule('witch_bolt'));
+  expect(warlockSpellRule('ray_of_enfeeblement')).toBe(wizardSpellRule('ray_of_enfeeblement'));
   expect(warlockSpellIsShared('hex')).toBe(false);
   expect(warlockSpellRule('eldritch_blast')?.rolls[0].formula).toBe('1d10');
  });

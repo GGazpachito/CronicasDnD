@@ -109,14 +109,14 @@ export default function WarlockPage(){
   patch({background:backgroundId,backgroundEquipment:{startingPackage:'a',...(backgroundId==='soldier'?{gamingSet:'dice_set' as const}:{})},inventoryActions:[],
    plusTwoAbility:bg.abilities[0],plusOneAbility:bg.abilities[1],warlockSkills:available.slice(0,2),
    pactWeaponId:undefined,
-   ...(input.species==='human'&&input.humanFeat===bg.feat?{humanFeat:bg.feat==='alert'?'tough':'alert' as const}:{}),
+   ...(input.species==='human'&&input.humanFeat===bg.feat?{humanFeat:bg.feat==='alert'?'savage_attacker':'alert' as const}:{}),
    ...(input.species==='human'?{humanSkill:currentHuman&&!(bg.skills as readonly string[]).includes(currentHuman)&&!available.slice(0,2).includes(currentHuman as never)?currentHuman:SKILLS.find(s=>!(bg.skills as readonly string[]).includes(s)&&!available.slice(0,2).includes(s as never))}:{})});
  }
  function swapSpecies(species:SpeciesId){
   const {humanSkill,humanFeat,humanSize,elfLineage,...base}=input;
   void humanSkill;void humanFeat;void humanSize;void elfLineage;
   const humanChoice=SKILLS.find(s=>!(background.skills as readonly string[]).includes(s)&&!(input.warlockSkills as readonly string[]).includes(s))??'perception';
-  setInput({...base,species,...(species==='human'?{humanSkill:humanChoice,humanFeat:background.feat==='alert'?'tough' as const:'alert' as const,humanSize:'medium' as const}:{}),
+  setInput({...base,species,...(species==='human'?{humanSkill:humanChoice,humanFeat:background.feat==='alert'?'savage_attacker' as const:'alert' as const,humanSize:'medium' as const}:{}),
    ...(species==='elf'?{elfLineage:'high_elf' as const}:{})});
   patchState({heroicInspiration:species==='human'});
  }
@@ -252,7 +252,7 @@ export default function WarlockPage(){
  return <main className="app-shell wizard-page">
   <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Brujo · D&D 2024</span></div></div><Link href="/" className="wizard-class-link">Menú de personajes</Link></header>
   <div className="content">
-   <p className="sheet-release-note">CLASE · BRUJO NIVEL {input.level} · PHB 2024</p>
+   <p className="sheet-release-note">CLASE · BRUJO NIVEL {input.level} · SRD 5.2.1</p>
    <CharacterHeader name={input.name} portraitDataUrl={input.profile?.portraitDataUrl} level={input.level} background={background.name} species={SPECIES_NAMES[input.species]} className="Brujo" valid={Boolean(snapshot)} onEdit={()=>setEditing(true)}
     onLevelUp={input.level<14&&snapshot?()=>{setLevelUpOpen(true);setEditing(false);}:undefined}
     onLevelDown={input.level>=2&&levelDownAssessment.preview?()=>setLevelDownOpen(true):undefined}/>
@@ -276,7 +276,7 @@ export default function WarlockPage(){
       {input.species==='elf'&&<label className="field"><span>Linaje élfico</span><select value={input.elfLineage} onChange={e=>patch({elfLineage:e.target.value as NonNullable<GuidedWarlockInput['elfLineage']>})}><option value="high_elf">Alto elfo</option><option value="wood_elf">Elfo silvano</option><option value="drow">Drow</option></select></label>}
       {input.species==='human'&&<>
        <label className="field"><span>Habilidad humana adicional</span><select value={input.humanSkill} onChange={e=>patch({humanSkill:e.target.value as Skill})}>{picker(SKILLS,s=>SKILL_NAMES[s])}</select></label>
-       <label className="field"><span>Dote humana (catálogo inicial)</span><select value={input.humanFeat} onChange={e=>patch({humanFeat:e.target.value as 'alert'|'tough'})}>{background.feat!=='alert'&&<option value="alert">Alerta</option>}<option value="tough">Duro</option></select></label>
+       <label className="field"><span>Dote humana (opciones SRD implementadas)</span><select value={input.humanFeat} onChange={e=>patch({humanFeat:e.target.value as 'alert'|'savage_attacker'})}>{background.feat!=='alert'&&<option value="alert">Alerta</option>}{background.feat!=='savage_attacker'&&<option value="savage_attacker">Ataque salvaje</option>}</select></label>
        <label className="field"><span>Tamaño</span><select value={input.humanSize??'medium'} onChange={e=>patch({humanSize:e.target.value as 'small'|'medium'})}><option value="medium">Mediano</option><option value="small">Pequeño</option></select></label>
       </>}
       <label className="field"><span>Equipo inicial del Brujo</span><select value={input.equipmentChoice} onChange={e=>patch({equipmentChoice:e.target.value as GuidedWarlockInput['equipmentChoice'],inventoryActions:[],pactWeaponId:undefined})}><option value="equipment">Equipo + 15 po</option><option value="gold">100 po</option></select></label>
@@ -335,7 +335,7 @@ export default function WarlockPage(){
       {input.invocations.includes('eldritch_mind')&&<p className="muted-note">Ventaja en las tiradas de salvación de Constitución para mantener concentración. Se elige y tira con ventaja cuando la situación lo requiera; no todas las salvaciones de Constitución la reciben.</p>}
       {hasTome&&<div><h4>Libro de las sombras</h4><label className="field"><span>Libro presente y llevado</span><input type="checkbox" checked={state.tomePresent} onChange={e=>patchState({tomePresent:e.target.checked})}/></label><p className="muted-note">Los conjuros del libro aparecen en Hechizos mientras lo lleves. Invoca un nuevo libro al acabar un descanso para cambiar las elecciones en el editor.</p></div>}
       {hasChain&&<button type="button" className="overview-link" onClick={()=>setTab('companions')}>Abrir familiar en Compañeros</button>}
-      {input.invocations.includes('lessons_of_the_first_ones')&&<p className="muted-note">Lecciones de los Primeros: dote de origen {input.lessonsFeat==='alert'?'Alerta':'Duro'}. Sus efectos pasivos se incorporan a la hoja.</p>}
+      {input.invocations.includes('lessons_of_the_first_ones')&&<p className="muted-note">Lecciones de los Primeros: dote de origen {input.lessonsFeat==='alert'?'Alerta':'Ataque salvaje'}. Los efectos pasivos compatibles se incorporan a la hoja.</p>}
       {input.invocations.includes('gift_of_the_depths')&&<div><h4>Don de las profundidades</h4><p className="muted-note">Puedes respirar bajo el agua y nadar a {sheet?.speedFeet??30} pies. Respirar bajo el agua se lanza una vez gratis por descanso largo; después puedes gastar ranuras si la magia lo permite.</p><label className="field"><span>Lanzamiento gratuito utilizado</span><input type="checkbox" checked={state.giftOfDepthsUsed??false} onChange={e=>patchState({giftOfDepthsUsed:e.target.checked})}/></label></div>}
       {input.level>=2&&<div><h4>Astucia mágica</h4><p className="muted-note">Rito de un minuto: recuperas hasta {input.level>=11?'dos ranuras':'una ranura'} de Magia de Pacto gastadas. Solo una vez por descanso largo. No se realiza ninguna acción de partida automáticamente.</p><button type="button" disabled={Boolean(state.magicalCunningUsed)||pactSlots.every(spent=>!spent)} onClick={useMagicalCunning}>Recuperar {input.level>=11?'hasta dos ranuras':'una ranura'} · {state.magicalCunningUsed?'uso agotado':'1 uso'}</button></div>}
       {contactPatronPanel}

@@ -4,8 +4,6 @@
 import {ABILITIES,type Ability,type AbilityScores} from './abilities';
 export const EPIC_BOONS={
   combat_prowess:'Beneficio épico: Pericia en combate',
-  fortitude:'Beneficio épico: Fortaleza',
-  speed:'Beneficio épico: Velocidad',
 } as const;
 export type EpicBoonId=keyof typeof EPIC_BOONS;
 export type EpicBoonChoice=Readonly<{id:EpicBoonId;ability:Ability}>;

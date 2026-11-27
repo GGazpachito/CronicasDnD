@@ -2,6 +2,8 @@
 
 > **Normativo para cualquier clase, subclase, invocación, montura o enemigo que utilice criaturas.** No introducir una segunda copia de un bloque de estadísticas en el JSX ni en el motor de otra clase.
 
+**Edición base (paso 84):** este catálogo forma parte del contenido `srd-5.2.1`. Solo admite entradas verificadas en el SRD; los futuros módulos externos aportarán sus propias criaturas con procedencia, permiso y licencia independiente. Consultar [`ARQUITECTURA_MODULAR_SRD.md`](ARQUITECTURA_MODULAR_SRD.md).
+
 ## Propósito y separación de responsabilidades
 
 El menú principal de CRÓNICAS presenta **Crear personaje / Cargar personaje / Bestiario**. El Bestiario es una página independiente (`/bestiary`) que consulta un catálogo único de bloques de criaturas. Se conserva la arquitectura común de las siete pestañas de cada clase.
@@ -37,9 +39,9 @@ El Bestiario **siempre muestra las criaturas en orden ascendente de valor de des
 
 ## Entradas iniciales y trazabilidad
 
-**23 formas** del selector del Brujo: ocho especiales (`imp`, `pseudodragon`, `quasit`, `skeleton`, `slaad_tadpole`, `sphinx_of_wonder`, `sprite`, `venomous_snake`) y quince comunes o históricas (`bat`, `cat`, `crab`, `frog`, `hawk`, `lizard`, `octopus`, `owl`, `poisonous_snake`, `fish`, `rat`, `raven`, `sea_horse`, `spider`, `weasel`).
+**22 formas** del selector del Brujo: siete especiales (`imp`, `pseudodragon`, `quasit`, `skeleton`, `sphinx_of_wonder`, `sprite`, `venomous_snake`) y quince comunes o históricas (`bat`, `cat`, `crab`, `frog`, `hawk`, `lizard`, `octopus`, `owl`, `poisonous_snake`, `fish`, `rat`, `raven`, `sea_horse`, `spider`, `weasel`). La forma `slaad_tadpole` se retira del catálogo base al no aparecer en la lista autorizada del Pacto de la Cadena del SRD 5.2.1.
 
-Se ha usado la [tabla de criaturas de *Basic Rules 2024* de D&D Beyond](https://www.dndbeyond.com/sources/dnd/br-2024/creature-stat-blocks) para contrastar CA, PG, características, velocidades, ataques y aptitudes. El texto de reglas largo **no se reproduce**: se resumen los efectos principales en español y se enlaza la fuente para detalles completos. La [opción Pacto de la Cadena de Brujo 2024](https://www.dndbeyond.com/sources/dnd/br-2024/character-classes#Warlock) especifica las ocho formas especiales.
+La referencia habilitada para distribución en el programa base es el [SRD 5.2.1 bajo CC BY 4.0](https://www.dndbeyond.com/srd), incluidas las formas especiales de Pacto de la Cadena y las estadísticas de criaturas contenidas en ese documento. La existencia de un bloque en las *Basic Rules* o en un manual comercial **no** basta para incorporarlo al programa base. Los resúmenes están escritos en español y deben cotejarse con los valores del SRD antes de aprobar nuevas entradas.
 
 **Compatibilidad deliberada:**
 

@@ -21,9 +21,9 @@ const steps:readonly {spells:readonly [string,string];prep:readonly string[];ext
  {spells:['dimension_door','polymorph'],prep:['dimension_door'],extra:{evokerLevelFourSpellId:'ice_storm'}},
  {spells:['arcane_eye','wall_of_fire'],prep:['arcane_eye'],extra:{level8Improvement:{mode:'two_ones',first:'intelligence',second:'constitution'}}},
  {spells:['cone_of_cold','telekinesis'],prep:['cone_of_cold','telekinesis'],extra:{evokerLevelFiveSpellId:'wall_of_force'}},
- {spells:['hold_monster','geas'],prep:['hold_monster'],extra:{newCantripId:'mind_sliver'}},
+ {spells:['hold_monster','geas'],prep:['hold_monster'],extra:{newCantripId:'poison_spray'}},
  {spells:['chain_lightning','disintegrate'],prep:['chain_lightning'],extra:{evokerLevelSixSpellId:'sunbeam'}},
- {spells:['arcane_gate','circle_of_death'],prep:[],extra:{level12Improvement:{mode:'two_ones',first:'wisdom',second:'dexterity'}}},
+ {spells:['globe_of_invulnerability','circle_of_death'],prep:[],extra:{level12Improvement:{mode:'two_ones',first:'wisdom',second:'dexterity'}}},
  {spells:['teleport','finger_of_death'],prep:['teleport'],extra:{evokerLevelSevenSpellId:'delayed_blast_fireball'}},
  {spells:['forcecage','simulacrum'],prep:['forcecage'],extra:{}},
  {spells:['antimagic_field','befuddlement'],prep:['befuddlement'],extra:{evokerLevelEightSpellId:'sunburst'}},
@@ -38,7 +38,7 @@ function to18(){const seventeen=to17();return prepareWizardLevelUp(seventeen.inp
 describe('Actualización 61: Mago Evocación nivel 18 y Maestría de conjuros',()=>{
  it('clasifica los 70 conjuros de nivel 1 y 2 por su tiempo real de lanzamiento',()=>{
   const spells=WIZARD_SPELL_CATALOG.filter(s=>s.level===1||s.level===2);
-  expect(spells).toHaveLength(70);
+  expect(spells).toHaveLength(65);
   for(const spell of spells){
    const time=wizardSpellRule(spell.id)?.castingTime??'';
    expect(wizardMasteryCastingTime(spell.id,spell.level)).toBe(/^Action(?:\s|$)/i.test(time)?'action':'other');

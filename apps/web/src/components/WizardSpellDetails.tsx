@@ -34,7 +34,7 @@ export default function WizardSpellDetails({spell,characterLevel,spellAttackBonu
     })}
    </div>}
    {result&&<output className="wizard-spell-result" aria-live="polite">{result}</output>}
-   <p className="muted-note">Resumen de consulta basado en el Manual del Jugador 2024{spell.sourcePage?` (p. ${spell.sourcePage})`:''}. Para condiciones, escalados y excepciones no resumidos, consulta la regla completa del manual. Las tiradas no gastan ranuras ni aplican efectos automáticamente.</p>
+   <p className="muted-note">Resumen de consulta del SRD 5.2.1. Para condiciones, escalados y excepciones no resumidos, consulta la regla completa del SRD. Las tiradas no gastan ranuras ni aplican efectos automáticamente.</p>
   </div>
  </details>;
 }

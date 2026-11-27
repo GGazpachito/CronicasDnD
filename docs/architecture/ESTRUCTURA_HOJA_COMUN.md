@@ -2,6 +2,8 @@
 
 > **DOCUMENTO NORMATIVO PARA TODAS LAS CLASES.** Antes de implementar otra clase o subclase, mantener este contrato. Si un módulo cambia, actualizar el componente común, sus adaptadores y este documento en el mismo cambio. Nunca reproducir bloques JSX específicos de otra clase mediante copia de código.
 
+**Programa base SRD (paso 84):** este contrato visual no depende de los libros disponibles en la cuenta. Los componentes consultan el catálogo de contenido autorizado resuelto desde el núcleo SRD 5.2.1 y, en el futuro, desde los módulos instalados. Ninguna vista debe incluir directamente opciones comerciales no activas. Consultar [arquitectura modular](ARQUITECTURA_MODULAR_SRD.md).
+
 ## Principio rector
 
 La estructura visual, los nombres de pestaña, los controles y los filtros **no dependen de la clase**. Solo pueden variar los datos calculados, las capacidades permitidas por las reglas y las extensiones de clase ubicadas en espacios explícitos. La ficha no sustituye al jugador: cálculos pasivos y tiradas sí; decisiones y acciones se ejecutan manualmente.

@@ -56,8 +56,8 @@ export default function WarlockLevelUpWizard({input,state,mode,onAdvance,onCance
  const [arcanum,setArcanum]=useState<typeof WARLOCK_SIXTH_LEVEL_IDS[number]>(input.mysticArcanum6Id??WARLOCK_SIXTH_LEVEL_IDS[0]);
  const [arcanum7,setArcanum7]=useState<typeof WARLOCK_SEVENTH_LEVEL_IDS[number]>(input.mysticArcanum7Id??WARLOCK_SEVENTH_LEVEL_IDS[0]);
  const [hitDieRoll,setHitDieRoll]=useState(5);
- const availableFeats=(['alert','tough'] as const).filter(id=>id!==BACKGROUNDS[input.background].feat&&id!==input.humanFeat);
- const [feat,setFeat]=useState<'alert'|'tough'>(input.lessonsFeat??availableFeats[0]??'alert');
+ const availableFeats=(['alert','savage_attacker'] as const).filter(id=>id!==BACKGROUNDS[input.background].feat&&id!==input.humanFeat);
+ const [feat,setFeat]=useState<'alert'|'savage_attacker'>(input.lessonsFeat??availableFeats[0]??'alert');
  const current=useMemo(()=>calculateWarlockOne(input,state),[input,state]);
  const [improvement,setImprovement]=useState<FighterAbilityImprovement>({mode:'plus_two',first:current.abilityScores.charisma<=18?'charisma':'constitution'});
  const [spellFilter,setSpellFilter]=useState('');
@@ -209,7 +209,7 @@ export default function WarlockLevelUpWizard({input,state,mode,onAdvance,onCance
      <select value={id} onChange={event=>selectInvocation(index,event.target.value as WarlockInvocationId)}>{(fourteenth||thirteenth||twelfth?WARLOCK_LEVEL_TWELVE_INVOCATIONS:eleventh||tenth||ninth?WARLOCK_LEVEL_NINE_INVOCATIONS:eighth||seventh?WARLOCK_LEVEL_SEVEN_INVOCATIONS:fifth||sixth?WARLOCK_LEVEL_FIVE_INVOCATIONS:WARLOCK_LEVEL_TWO_INVOCATIONS).map(option=><option key={option} value={option} disabled={invocations.some((selected,i)=>i!==index&&selected===option)}>{WARLOCK_INVOCATIONS[option].name}{WARLOCK_INVOCATION_PREREQUISITES[option]?' · requiere '+(WARLOCK_INVOCATION_PREREQUISITES[option]==='pact_of_blade'?'Hoja':WARLOCK_INVOCATION_PREREQUISITES[option]==='pact_of_tome'?'Tomo':WARLOCK_INVOCATION_PREREQUISITES[option]==='thirsting_blade'?'Hoja sedienta':'Cadena'):''}</option>)}</select>
      <small className="level-wizard-explanation">{WARLOCK_INVOCATIONS[id].summary}</small>
     </label>)}
-    {invocations.includes('lessons_of_the_first_ones')&&<label className="field"><span>Dote de origen · Lecciones de los Primeros</span><select value={feat} disabled={availableFeats.length===0} onChange={event=>setFeat(event.target.value as 'alert'|'tough')}>{availableFeats.map(id=><option key={id} value={id}>{id==='alert'?'Alerta':'Duro'}</option>)}</select><small>{availableFeats.length===0?'No quedan dotes válidas; selecciona otra invocación.':'No se permite repetir dotes ya concedidas por el origen.'}</small></label>}
+    {invocations.includes('lessons_of_the_first_ones')&&<label className="field"><span>Dote de origen · Lecciones de los Primeros</span><select value={feat} disabled={availableFeats.length===0} onChange={event=>setFeat(event.target.value as 'alert'|'savage_attacker')}>{availableFeats.map(id=><option key={id} value={id}>{id==='alert'?'Alerta':'Ataque salvaje'}</option>)}</select><small>{availableFeats.length===0?'No quedan dotes válidas; selecciona otra invocación.':'No se permite repetir dotes ya concedidas por el origen.'}</small></label>}
     {invocations.includes('pact_of_tome')&&<p className="muted-note">Si eliges Pacto del Tomo, se asignarán tres trucos y dos rituales válidos; podrás revisarlos en el editor del personaje.</p>}
    </fieldset>
    <label className="field"><span>Buscar conjuros por nombre o escuela</span><input value={spellFilter} onChange={event=>setSpellFilter(event.target.value)} placeholder="Ej.: descarga, evocación, maleficio..."/></label>

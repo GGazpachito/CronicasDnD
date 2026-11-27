@@ -21,9 +21,9 @@ const steps:readonly {spells:readonly [string,string];prep:readonly string[];ext
  {spells:['dimension_door','polymorph'],prep:['dimension_door'],extra:{evokerLevelFourSpellId:'ice_storm'}},
  {spells:['arcane_eye','wall_of_fire'],prep:['arcane_eye'],extra:{level8Improvement:{mode:'two_ones',first:'intelligence',second:'constitution'}}},
  {spells:['cone_of_cold','telekinesis'],prep:['cone_of_cold','telekinesis'],extra:{evokerLevelFiveSpellId:'wall_of_force'}},
- {spells:['hold_monster','geas'],prep:['hold_monster'],extra:{newCantripId:'mind_sliver'}},
+ {spells:['hold_monster','geas'],prep:['hold_monster'],extra:{newCantripId:'poison_spray'}},
  {spells:['chain_lightning','disintegrate'],prep:['chain_lightning'],extra:{evokerLevelSixSpellId:'sunbeam'}},
- {spells:['arcane_gate','circle_of_death'],prep:[],extra:{level12Improvement:{mode:'two_ones',first:'wisdom',second:'dexterity'}}},
+ {spells:['globe_of_invulnerability','circle_of_death'],prep:[],extra:{level12Improvement:{mode:'two_ones',first:'wisdom',second:'dexterity'}}},
  {spells:['teleport','finger_of_death'],prep:['teleport'],extra:{evokerLevelSevenSpellId:'delayed_blast_fireball'}},
  {spells:['forcecage','simulacrum'],prep:['forcecage'],extra:{}},
  {spells:['antimagic_field','befuddlement'],prep:['befuddlement'],extra:{evokerLevelEightSpellId:'sunburst'}},
@@ -63,26 +63,21 @@ describe('Actualización 62: Mago Evocador nivel 19 y Beneficio épico',()=>{
   expect(()=>prepareWizardLevelUp(eighteen.input,eighteen.state,normal)).toThrow(/beneficio épico/i);
   expect(()=>prepareWizardLevelUp(eighteen.input,eighteen.state,{...normal,epicBoon:{id:'spell_recall',ability:'constitution'}})).toThrow(/Inteligencia/i);
   expect(()=>prepareWizardLevelUp(eighteen.input,eighteen.state,{...normal,epicBoon:{id:'desconocido' as WizardEpicBoonChoice['id'],ability:'wisdom'}})).toThrow();
-  expect(()=>calculateGuidedWizard({...eighteen.input,epicBoon:{id:'speed',ability:'strength'}})).toThrow();
+  expect(()=>calculateGuidedWizard({...eighteen.input,epicBoon:{id:'speed' as WizardEpicBoonChoice['id'],ability:'strength'}})).toThrow();
   expect(()=>prepareWizardLevelUp(to19().input,to19().state,normal)).toThrow();
   const scores={strength:30,dexterity:10,constitution:12,intelligence:20,wisdom:14,charisma:8};
-  expect(()=>applyWizardEpicBoon(scores,{id:'speed',ability:'strength'})).toThrow(/30/);
+  expect(()=>applyWizardEpicBoon(scores,{id:'combat_prowess',ability:'strength'})).toThrow(/30/);
   expect(()=>applyWizardEpicBoon(scores,{id:'truesight',ability:'strength'})).toThrow(/30/);
-  expect(Object.keys(WIZARD_EPIC_BOONS)).toHaveLength(5);
+  expect(Object.keys(WIZARD_EPIC_BOONS)).toHaveLength(3);
  });
 
- it('Fortaleza, Velocidad y Visión verdadera afectan únicamente a las estadísticas pasivas que corresponden',()=>{
+ it('Visión verdadera y Pericia en combate aportan solo sus efectos SRD',()=>{
   const eighteenSheet=calculateGuidedWizard(to18().input);
-  const fortitude=calculateGuidedWizard(to19({id:'fortitude',ability:'constitution'}).input);
-  const speed=calculateGuidedWizard(to19({id:'speed',ability:'dexterity'}).input);
   const truesight=calculateGuidedWizard(to19({id:'truesight',ability:'wisdom'}).input);
   const prowess=calculateGuidedWizard(to19({id:'combat_prowess',ability:'strength'}).input);
-  expect(fortitude.maximumHitPoints).toBeGreaterThan(eighteenSheet.maximumHitPoints+40);
-  expect(fortitude.abilityScores.constitution).toBe(eighteenSheet.abilityScores.constitution+1);
-  expect(speed.speedFeet).toBe(eighteenSheet.speedFeet+30);
-  expect(speed.abilityScores.dexterity).toBe(eighteenSheet.abilityScores.dexterity+1);
   expect(truesight.truesightFeet).toBe(60);
   expect(truesight.speedFeet).toBe(eighteenSheet.speedFeet);
+  expect(truesight.maximumHitPoints).toBeGreaterThan(eighteenSheet.maximumHitPoints);
   expect(prowess.abilityScores.strength).toBe(eighteenSheet.abilityScores.strength+1);
   const featTraits=collectWizardTraits(to19({id:'truesight',ability:'wisdom'}).input,truesight).traits;
   expect(featTraits.some(trait=>trait.id==='wizard:epic_boon:truesight'&&trait.details.some(detail=>detail.includes('60 pies')))).toBe(true);
@@ -100,18 +95,18 @@ describe('Actualización 62: Mago Evocador nivel 19 y Beneficio épico',()=>{
  });
 
  it('guarda y recarga la dote épica, las Maestrías y las ranuras gastadas del nivel 19',()=>{
-  const nineteen=to19({id:'speed',ability:'wisdom'});
+  const nineteen=to19({id:'truesight',ability:'wisdom'});
   const spent=toggleWizardSlotMark(toggleWizardSlotMark(nineteen.state,1,6),0,9);
   const saved=validateWizardCharacterSnapshot(makeWizardCharacterSnapshot(nineteen.input,spent));
-  expect(saved.input.epicBoon).toEqual({id:'speed',ability:'wisdom'});
+  expect(saved.input.epicBoon).toEqual({id:'truesight',ability:'wisdom'});
   expect(saved.input.spellMasteryIds).toEqual(['detect_magic','mirror_image']);
   expect(wizardSlotMarks(saved.wizardState,6)).toEqual([false,true]);
   expect(wizardSlotMarks(saved.wizardState,9)).toEqual([true]);
-  expect(calculateGuidedWizard(saved.input).speedFeet).toBe(60);
+  expect(calculateGuidedWizard(saved.input).truesightFeet).toBe(60);
  });
 
  it('19→18 retira solo la dote y el excedente de ranura 6, conserva ambas Maestrías y las heridas',()=>{
-  const eighteen=to18(),nineteen=to19({id:'fortitude',ability:'constitution'});
+  const eighteen=to18(),nineteen=to19({id:'combat_prowess',ability:'constitution'});
   const spent=toggleWizardSlotMark(toggleWizardSlotMark(nineteen.state,0,6),1,6);
   const down=previewWizardLevelDown(nineteen.input,{...spent,hitPointsCurrent:spent.hitPointsCurrent-6});
   const after=calculateGuidedWizard(down.snapshot.input);

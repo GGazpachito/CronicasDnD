@@ -7,9 +7,9 @@ const one={classId:'warlock' as const,level:1 as const,name:'Auditoría nivel di
  assignedAbilities:{strength:8,dexterity:14,constitution:13,intelligence:10,wisdom:12,charisma:15},
  increaseMode:'two_plus_one' as const,plusTwoAbility:'charisma' as const,plusOneAbility:'wisdom' as const,warlockSkills:['arcana','deception'] as const,
  equipmentChoice:'equipment' as const,cantripIds:['eldritch_blast','prestidigitation'],preparedIds:['hex','charm_person'],invocations:['pact_of_blade'] as const,pactWeaponId:'sickle' as const};
-const two=advanceWarlockToLevelTwo(one,initialWarlockOneState(one),{invocations:['pact_of_blade','agonizing_blast','eldritch_spear'],cantripIds:one.cantripIds,preparedIds:['hex','charm_person','armor_of_agathys'],level2HitDieRoll:5});
+const two=advanceWarlockToLevelTwo(one,initialWarlockOneState(one),{invocations:['pact_of_blade','agonizing_blast','eldritch_spear'],cantripIds:one.cantripIds,preparedIds:['hex','charm_person','unseen_servant'],level2HitDieRoll:5});
 const three=advanceWarlockToLevelThree(two.input,two.state,{subclassId:'fiend',invocations:two.input.invocations,cantripIds:two.input.cantripIds,preparedIds:[...two.input.preparedIds,'misty_step'],level3HitDieRoll:5});
-const four=advanceWarlockToLevelFour(three.input,three.state,{invocations:three.input.invocations,cantripIds:[...three.input.cantripIds,'friends'],preparedIds:[...three.input.preparedIds,'hold_person'],level4HitDieRoll:5,level4Improvement:{mode:'plus_two',first:'charisma'}});
+const four=advanceWarlockToLevelFour(three.input,three.state,{invocations:three.input.invocations,cantripIds:[...three.input.cantripIds,'chill_touch'],preparedIds:[...three.input.preparedIds,'hold_person'],level4HitDieRoll:5,level4Improvement:{mode:'plus_two',first:'charisma'}});
 const five=advanceWarlockToLevelFive(four.input,four.state,{invocations:['pact_of_blade','agonizing_blast','eldritch_spear','thirsting_blade','eldritch_smite'],cantripIds:four.input.cantripIds,preparedIds:[...four.input.preparedIds,'counterspell'],level5HitDieRoll:5});
 const six=advanceWarlockToLevelSix(five.input,five.state,{invocations:five.input.invocations,cantripIds:five.input.cantripIds,preparedIds:[...five.input.preparedIds,'fly'],level6HitDieRoll:5});
 const seven=advanceWarlockToLevelSeven(six.input,six.state,{invocations:[...six.input.invocations,'whispers_of_the_grave'],cantripIds:six.input.cantripIds,preparedIds:[...six.input.preparedIds,'blight'],level7HitDieRoll:5});
@@ -49,7 +49,7 @@ describe('Actualización 79: Brujo Infernal nivel 10',()=>{
  it('valida elecciones, estados alterados y el resultado del dado',()=>{
   expect(()=>advanceWarlockToLevelTen(nine.input,nine.state,{...choices,level10HitDieRoll:9})).toThrow(/dado/);
   expect(()=>advanceWarlockToLevelTen(nine.input,nine.state,{...choices,cantripIds:nine.input.cantripIds})).toThrow(/cuatro trucos/);
-  expect(()=>advanceWarlockToLevelTen(nine.input,nine.state,{...choices,preparedIds:[...nine.input.preparedIds.slice(2),'witch_bolt','hold_person']})).toThrow(/nueve/);
+  expect(()=>advanceWarlockToLevelTen(nine.input,nine.state,{...choices,preparedIds:[...nine.input.preparedIds.slice(2),'ray_of_enfeeblement','hold_person']})).toThrow(/nueve/);
   const next=advanceWarlockToLevelTen(nine.input,nine.state,choices);
   expect(()=>makeWarlockCharacterSnapshot(next.input,{...next.state,fiendishResilienceType:'force' as 'fire'})).toThrow(/Resistencia infernal/);
  });

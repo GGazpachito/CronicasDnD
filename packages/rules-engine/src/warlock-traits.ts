@@ -108,7 +108,7 @@ export function collectWarlockTraits(input:GuidedWarlockInput,sheet:CalculatedWa
   const title=ORIGIN_FEATS[id as keyof typeof ORIGIN_FEATS]??id;
   add({id:`feat:${source}:${id}`,title,group:'feats',source,summary:`Dote de origen: ${title}`,
    explanation:ORIGIN_FEAT_EXPLANATIONS[id]??'Su uso corresponde al jugador.',
-   automation:id==='tough'||id==='alert'?'calculated':'manual',details:[]});
+   automation:id==='alert'?'calculated':'manual',details:[]});
  }
  feat(BACKGROUNDS[input.background].feat,`Trasfondo: ${BACKGROUNDS[input.background].name}`);
  if(input.species==='human'&&input.humanFeat)feat(input.humanFeat,'Humano');

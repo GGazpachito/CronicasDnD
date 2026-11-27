@@ -200,9 +200,6 @@ function featTrait(id:string,source:string,origin:'background'|'human_feat',resu
   if(id==='alert'){
     automation='partial';summary='Bonificación de iniciativa y opciones situacionales de orden de turnos.';
     details.push(`Competencia +${result.sheet.proficiencyBonus} a iniciativa incorporada en el total calculado.`);
-  } else if(id==='tough'){
-    automation='calculated';summary='Aumenta los puntos de golpe máximos del personaje.';
-    details.push(`Bonificación aplicada: +${2*result.sheet.level} PG máximos (2 por nivel).`);
   } else if(id==='skilled'){
     automation='calculated';summary='Tres competencias adicionales elegidas entre habilidades y herramientas.';
     details.push(...(input.humanFeatDetails?.skilledProficiencies??[]).map(value=>value.startsWith('skill:')?`Habilidad: ${labelSkill(value.slice(6))}.`:`Herramienta: ${labelTool(value.slice(5))}.`));
@@ -211,26 +208,9 @@ function featTrait(id:string,source:string,origin:'background'|'human_feat',resu
     const spells=result.spells.filter(spell=>spell.source===origin);
     details.push(...spells.map(spell=>`${spell.name} · ${spell.level===0?'truco':'nivel '+spell.level}.`));
     details.push('La aplicación no resuelve todavía el lanzamiento ni consume usos de estos conjuros.');
-  } else if(id==='lucky'){
-    automation='partial';summary='Puntos de suerte disponibles según la progresión del personaje.';
-    details.push(`Máximo registrado: ${result.origin.luckPointsMaximum ?? 0}. Gastos y recuperación pendientes.`);
-  } else if(id==='crafter'){
-    automation='partial';summary='Competencias artesanales y beneficios de fabricación o comercio.';
-    details.push(...(input.humanFeatDetails?.crafterTools??[]).map(tool=>`Herramienta: ${labelTool(tool)}.`));
-    details.push('Descuentos y fabricación rápida todavía no automatizados.');
-  } else if(id==='musician'){
-    automation='partial';summary='Instrumentos elegidos y capacidad de conceder inspiración a aliados.';
-    details.push(...(input.humanFeatDetails?.musicianInstruments??[]).map(tool=>`Instrumento: ${labelTool(tool)}.`));
-    details.push('La inspiración de aliados debe registrarse manualmente.');
   } else if(id==='savage_attacker'){
     summary='Permite una elección especial de dados de daño en determinadas condiciones.';
     details.push('Su repetición de dados todavía no se resuelve automáticamente en el panel de ataques.');
-  } else if(id==='healer'){
-    summary='Apoyo a la curación mediante botiquines y otros beneficios de sanación.';
-    details.push('La activación, el consumo y las repeticiones de dados se resuelven manualmente.');
-  } else if(id==='tavern_brawler'){
-    summary='Opciones especiales para combate sin armas e improvisación.';
-    details.push('Los efectos específicos todavía no se automatizan.');
   }
   return {id:`feat:${origin}:${id}`,title,group:'feats',source,summary,explanation:ORIGIN_FEAT_EXPLANATIONS[id],automation,details};
 }
@@ -243,8 +223,6 @@ function featTraits(input:GuidedFighterInput,result:GuidedFighterResult):Charact
     const boon=input.epicBoon;
     const specs:Record<string,{summary:string;automation:TraitAutomation;details:string[]}>= {
       combat_prowess:{summary:'Puedes convertir un fallo de ataque elegible en un impacto, con límite por turno.',automation:'partial',details:['El uso se registra al confirmar el ataque desde el panel existente.']},
-      fortitude:{summary:'Aumenta la vida máxima y puede mejorar una curación bajo condiciones concretas.',automation:'partial',details:['+40 PG máximos calculados. La mejora de curación requiere activación explícita.']},
-      speed:{summary:'Aumenta la velocidad y concede una opción de desplazamiento adicional.',automation:'partial',details:[`Velocidad total calculada: ${result.origin.speedFeet} pies.`, 'La acción adicional se resuelve manualmente.']},
     };
     const spec=specs[boon.id];
     feats.push({id:`feat:epic:${boon.id}`,title:EPIC_BOONS[boon.id],group:'feats',source:'Guerrero · nivel 19',level:19,

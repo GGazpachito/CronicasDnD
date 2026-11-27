@@ -34,7 +34,7 @@ function SpellCard({spell}:{spell:SpellbookEntry}) {
         : <p>Esta fuente permite un lanzamiento sin gastar ranura por descanso largo. {spell.allowsSpellSlot
           ? 'También puede usarse una ranura adecuada si el personaje llega a disponer de ella.'
           : 'Esta fuente no concede lanzamiento mediante ranuras.'} El uso gratuito todavía no se contabiliza automáticamente.</p>}
-      <p className="spells-rule-note">No todos los conjuros necesitan ataque mágico o salvación. Consulta la descripción de este conjuro en el capítulo 7 del Manual del Jugador (2024) para sus componentes, objetivos, efectos y posibles dados. La ficha aún no ejecuta el conjuro.</p>
+      <p className="spells-rule-note">No todos los conjuros necesitan ataque mágico o salvación. Consulta el SRD 5.2.1 para los componentes, objetivos, efectos y posibles dados de este conjuro. La ficha aún no ejecuta el conjuro.</p>
     </div>
   </details>;
 }
@@ -112,7 +112,7 @@ export default function SpellsPanel({result,error,onEditOrigin}:{
       <h3>¿Qué está automatizado?</h3>
       <p>La lista, el origen, los niveles desbloqueados, las características de lanzamiento, el bonificador de ataque mágico y la CD se calculan a partir del personaje validado.</p>
       <p><strong>Por ahora no se automatizan</strong> los usos gratuitos, las tiradas específicas de cada conjuro, la concentración, los componentes ni la aplicación de efectos. El Guerrero implementado no recibe ranuras de conjuro de su clase. No se han creado ranuras ficticias para mostrar un contador.</p>
-      <p>Fuente de reglas: <em>Player’s Handbook 2024</em>, páginas 190, 201 y 235–238.</p>
+      <p>Fuente de reglas del programa base: <em>SRD 5.2.1</em>, publicado por Wizards of the Coast bajo licencia CC BY 4.0.</p>
     </section>
   </div>;
 }

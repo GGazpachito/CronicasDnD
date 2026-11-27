@@ -26,8 +26,8 @@ const to9=()=>{const eight=to8();return prepareWizardLevelUp(eight.input,eight.s
 
 describe('Actualización 54: Mago Evocación niveles 8 y 9',()=>{
  it('catálogo oficial de 29 conjuros de nivel 5, con fichas y referencias al manual',()=>{
-  expect(WIZARD_LEVEL_FIVE_SPELLS).toHaveLength(29);
-  expect(WIZARD_SPELL_CATALOG.filter(spell=>spell.level===5)).toHaveLength(29);
+  expect(WIZARD_LEVEL_FIVE_SPELLS).toHaveLength(24);
+  expect(WIZARD_SPELL_CATALOG.filter(spell=>spell.level===5)).toHaveLength(24);
   expect(WIZARD_SPELL_RULES.length).toBeGreaterThanOrEqual(217);
   expect(new Set(WIZARD_SPELL_RULES.map(spell=>spell.id)).size).toBe(WIZARD_SPELL_RULES.length);
   for(const spell of WIZARD_LEVEL_FIVE_SPELLS){
@@ -39,7 +39,7 @@ describe('Actualización 54: Mago Evocación niveles 8 y 9',()=>{
    expect(Boolean(rule.castingTime&&rule.range&&rule.components&&rule.duration)).toBe(true);
   }
   expect(wizardSpellRule('cone_of_cold')?.rolls[0]?.formula).toBe('8d8');
-  expect(wizardSpellRule('steel_wind_strike')?.attack).toBe(true);
+  expect(wizardSpellRule('scorching_ray')?.attack).toBe(true);
   expect(wizardSpellRule('rarys_telepathic_bond')?.ritual).toBe(true);
  });
  it('nivel 8: segunda mejora (+1 INT +1 CON), 12 preparados y dos ranuras de nivel 4',()=>{

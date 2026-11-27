@@ -1,7 +1,6 @@
-/** Selección inicial de beneficios épicos para el Mago de nivel 19 (PHB 2024).
- * Reutiliza las tres opciones ya habilitadas para Guerrero y añade dos
- * especialmente relevantes al lanzador. El catálogo general de dotes sigue
- * siendo parcial, como en Guerrero; los otros beneficios quedan pendientes.
+/** Beneficios épicos del Mago de nivel 19 del SRD 5.2.1.
+ * Reutiliza Pericia en combate del Guerrero y añade Recuperación de conjuros
+ * y Visión verdadera. Los beneficios no incluidos en el SRD quedan fuera.
  */
 import {ABILITIES,type Ability,type AbilityScores} from './abilities';
 import {EPIC_BOONS,applyEpicBoon,type EpicBoonId,type EpicBoonChoice} from './epic-boons';
@@ -15,8 +14,6 @@ export type WizardEpicBoonId=EpicBoonId|'spell_recall'|'truesight';
 export type WizardEpicBoonChoice=Readonly<{id:WizardEpicBoonId;ability:Ability}>;
 export const WIZARD_EPIC_BOON_DESCRIPTIONS:Readonly<Record<WizardEpicBoonId,string>>={
  combat_prowess:'+1 a una característica (máximo 30). Cuando fallas una tirada de ataque puedes convertir ese fallo en impacto; vuelve a estar disponible al comenzar tu turno siguiente. La decisión de usarlo es manual.',
- fortitude:'+1 a una característica (máximo 30). Tus PG máximos aumentan en 40; cuando recuperas PG puedes recuperar adicionalmente tu modificador de Constitución. Las curaciones se registran manualmente.',
- speed:'+1 a una característica (máximo 30) y +30 pies a tu velocidad. Puedes Destrabarte mediante acción adicional, terminando también Agarrado; estas acciones se declaran en mesa.',
  spell_recall:'+1 a Inteligencia, Sabiduría o Carisma (máximo 30). Cada vez que lanzas un conjuro usando una ranura de nivel 1–4, tiras 1d4; si coincide con el nivel de ranura, esta no se gasta. La aplicación ofrece esa tirada, pero deja al jugador marcar la ranura.',
  truesight:'+1 a una característica (máximo 30). Obtienes Visión verdadera hasta una distancia de 60 pies; se refleja como sentido pasivo en la hoja.',
 };

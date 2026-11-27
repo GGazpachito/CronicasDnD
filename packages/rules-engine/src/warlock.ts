@@ -29,7 +29,7 @@ export const WARLOCK_INVOCATIONS={
  devils_sight:{minLevel:2,name:'Vista del diablo',summary:'Ves normalmente en luz tenue y oscuridad, incluso mágica, hasta 120 pies.'},
  eldritch_spear:{minLevel:2,name:'Lanza sobrenatural',summary:'Aumenta el alcance del truco dañino elegido 30 pies por nivel de Brujo.'},
  fiendish_vigor:{minLevel:2,name:'Vigor infernal',summary:'Puedes lanzar Vida falsa sobre ti sin gastar ranura y obtienes el máximo de los dados de PG temporales.'},
- lessons_of_the_first_ones:{minLevel:2,name:'Lecciones de los Primeros',summary:'Adquieres una dote de origen elegida; en esta fase se admiten Alerta y Duro.'},
+ lessons_of_the_first_ones:{minLevel:2,name:'Lecciones de los Primeros',summary:'Adquieres una dote de origen elegida; por ahora se admiten Alerta y Ataque salvaje (ambas del SRD).'},
  mask_of_many_faces:{minLevel:2,name:'Máscara de muchos rostros',summary:'Puedes lanzar Disfrazarse sin consumir una ranura.'},
  misty_visions:{minLevel:2,name:'Visiones brumosas',summary:'Puedes lanzar Imagen silenciosa sin gastar ranura.'},
  otherworldly_leap:{minLevel:2,name:'Salto sobrenatural',summary:'Puedes lanzar Salto sobre ti sin gastar ranura.'},
@@ -61,7 +61,7 @@ export const WARLOCK_LEVEL_NINE_INVOCATIONS=(Object.keys(WARLOCK_INVOCATIONS) as
 export const WARLOCK_LEVEL_TWELVE_INVOCATIONS=(Object.keys(WARLOCK_INVOCATIONS) as WarlockInvocationId[]).filter(id=>WARLOCK_INVOCATIONS[id].minLevel<=12);
 export const WARLOCK_FAMILIARS={
  imp:'Diablillo',pseudodragon:'Pseudodragón',quasit:'Quasit',skeleton:'Esqueleto',
- slaad_tadpole:'Renacuajo slaad',sphinx_of_wonder:'Esfinge maravillosa',
+ sphinx_of_wonder:'Esfinge de las maravillas',
  sprite:'Duende',venomous_snake:'Serpiente venenosa',
  bat:'Murciélago',cat:'Gato',crab:'Cangrejo',frog:'Rana',hawk:'Halcón',
  lizard:'Lagarto',octopus:'Pulpo',owl:'Búho',poisonous_snake:'Serpiente',
@@ -74,7 +74,7 @@ const SIMPLE_WEAPONS=new Set<WeaponId>(['club','dagger','greatclub','handaxe','j
 /** Historial de elecciones y efectos del nivel 2, para un descenso 3→2 reversible. */
 export type WarlockLevelTwoHistory=Readonly<{
  invocations:readonly WarlockInvocationId[];cantripIds:readonly string[];preparedIds:readonly string[];
- lessonsFeat?:'alert'|'tough';pactWeaponId?:WeaponId;
+ lessonsFeat?:'alert'|'savage_attacker';pactWeaponId?:WeaponId;
  tomeCantripIds?:readonly string[];tomeRitualIds?:readonly string[];
  mageArmorActive:boolean;tomePresent:boolean;familiarForm:FamiliarForm|null;familiarName:string;
 }>;
@@ -109,7 +109,7 @@ export type GuidedWarlockInput=Readonly<{
  abilityGenerationMethod?:AbilityGenerationMethod;
  companions?:readonly CompanionSheet[];
  increaseMode:'two_plus_one'|'three_ones';plusTwoAbility:Ability;plusOneAbility:Ability;
- warlockSkills:readonly WarlockSkill[];humanSkill?:Skill;humanFeat?:'alert'|'tough';
+ warlockSkills:readonly WarlockSkill[];humanSkill?:Skill;humanFeat?:'alert'|'savage_attacker';
  humanSize?:'small'|'medium';elfLineage?:ElfLineage;
  equipmentChoice:WarlockEquipmentChoice;backgroundEquipment?:BackgroundEquipmentChoice;
  inventoryActions?:readonly InventoryAction[];
@@ -164,7 +164,7 @@ export type GuidedWarlockInput=Readonly<{
  level14HitDieRoll?:number;
  level14History?:WarlockLevelThirteenHistory;
  /** Dote de origen escogida mediante Lecciones de los Primeros (subconjunto implementado). */
- lessonsFeat?:'alert'|'tough';
+ lessonsFeat?:'alert'|'savage_attacker';
  pactWeaponId?:WeaponId;
  tomeCantripIds?:readonly string[];
  tomeRitualIds?:readonly string[];
@@ -271,7 +271,7 @@ export function calculateWarlockOne(input:GuidedWarlockInput,state?:Pick<Warlock
   input.warlockSkills.some(s=>!WARLOCK_SKILL_OPTIONS.includes(s)||(bg.skills as readonly string[]).includes(s)))
   throw new RangeError('Elige dos competencias distintas de Brujo no concedidas por el trasfondo');
  if(input.species==='human'){
-  if(!validSkill(input.humanSkill)||[...bg.skills,...input.warlockSkills].includes(input.humanSkill as never)||!['alert','tough'].includes(input.humanFeat??'')||input.humanFeat===bg.feat)
+  if(!validSkill(input.humanSkill)||[...bg.skills,...input.warlockSkills].includes(input.humanSkill as never)||!['alert','savage_attacker'].includes(input.humanFeat??'')||input.humanFeat===bg.feat)
    throw new RangeError('El humano necesita una competencia adicional no repetida y una dote de origen distinta');
   if(input.humanSize!==undefined&&!['small','medium'].includes(input.humanSize))throw new RangeError('Tamaño humano no válido');
  }else if(input.humanSkill!==undefined||input.humanFeat!==undefined||input.humanSize!==undefined)throw new RangeError('Opciones humanas en otra especie');
@@ -422,8 +422,8 @@ export function calculateWarlockOne(input:GuidedWarlockInput,state?:Pick<Warlock
    lessonsFeat:history.lessonsFeat,pactWeaponId:history.pactWeaponId,tomeCantripIds:history.tomeCantripIds,tomeRitualIds:history.tomeRitualIds});
  }
  if(input.invocations.includes('lessons_of_the_first_ones')){
-  if(!input.lessonsFeat||!['alert','tough'].includes(input.lessonsFeat)||input.lessonsFeat===bg.feat||input.lessonsFeat===input.humanFeat)
-   throw new RangeError('Lecciones de los Primeros necesita una dote de origen válida y no repetida (Alerta o Duro)');
+  if(!input.lessonsFeat||!['alert','savage_attacker'].includes(input.lessonsFeat)||input.lessonsFeat===bg.feat||input.lessonsFeat===input.humanFeat)
+   throw new RangeError('Lecciones de los Primeros necesita una dote de origen válida y no repetida (Alerta o Ataque salvaje)');
  }else if(input.lessonsFeat!==undefined)throw new RangeError('Dote de Lecciones sin invocación correspondiente');
  const pactBlade=input.invocations.includes('pact_of_blade');
  const pactTome=input.invocations.includes('pact_of_tome');
@@ -457,7 +457,7 @@ export function calculateWarlockOne(input:GuidedWarlockInput,state?:Pick<Warlock
   (input.level>=12?Math.max(1,(input.level12HitDieRoll??5)+mods.constitution):0)+
   (input.level>=13?Math.max(1,(input.level13HitDieRoll??5)+mods.constitution):0)+
   (input.level>=14?Math.max(1,(input.level14HitDieRoll??5)+mods.constitution):0)+
-  (input.species==='dwarf'?input.level:0)+(input.humanFeat==='tough'||input.lessonsFeat==='tough'?2*input.level:0);
+  (input.species==='dwarf'?input.level:0);
  const proficiency=input.level>=13?5:input.level>=9?4:input.level>=5?3:2;
  return {
   level:input.level,name:input.name.trim(),abilityScores:scores,abilityModifiers:mods,proficiencyBonus:proficiency,

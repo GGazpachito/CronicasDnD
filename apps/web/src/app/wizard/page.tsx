@@ -110,13 +110,13 @@ export default function WizardPage(){
  function changeBackground(next:BackgroundId){
   const b=BACKGROUNDS[next];const allowed=WIZARD_SKILL_OPTIONS.filter(k=>!(b.skills as readonly string[]).includes(k));
   patch({background:next,backgroundEquipment:{startingPackage:'a',...(next==='soldier'?{gamingSet:'dice_set' as const}:{})},inventoryActions:[],plusTwoAbility:b.abilities[0],plusOneAbility:b.abilities[1],wizardSkills:allowed.slice(0,2),
-   ...(input.species==='human'&&input.humanFeat===b.feat?{humanFeat:b.feat==='alert'?'tough':'alert'}:{})});
+   ...(input.species==='human'&&input.humanFeat===b.feat?{humanFeat:b.feat==='alert'?'savage_attacker':'alert'}:{})});
  }
  function changeSpecies(species:SpeciesId){
   if(species==='human'&&input.species!=='human')setState(previous=>({...previous,heroicInspiration:true}));
   const {humanSkill:oldSkill,humanFeat:oldFeat,humanSize:oldSize,elfLineage:oldLineage,...rest}=input;
   void oldSkill;void oldFeat;void oldSize;void oldLineage;
-  setInput({...rest,species,...(species==='human'?{humanSkill:'perception' as Skill,humanFeat:background.feat==='alert'?'tough' as const:'alert' as const,humanSize:'medium' as const}:{}),
+  setInput({...rest,species,...(species==='human'?{humanSkill:'perception' as Skill,humanFeat:background.feat==='alert'?'savage_attacker' as const:'alert' as const,humanSize:'medium' as const}:{}),
    ...(species==='elf'?{elfLineage:'high_elf' as const}:{})});
  }
  function toggleSpell(kind:'cantripIds'|'spellbookIds'|'preparedIds',id:string,max:number){
@@ -197,7 +197,7 @@ export default function WizardPage(){
  return <main className="app-shell wizard-page">
   <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Mago · D&D 2024</span></div></div><Link href="/" className="wizard-class-link" onNavigate={(event:{preventDefault:()=>void})=>{if(pendingSaveNavigation.current&&!window.confirm("Tienes cambios sin guardar. ¿Descartarlos y volver al menú?"))event.preventDefault();}}>Menú de personajes</Link></header>
   <div className="content">
-   <p className="sheet-release-note">CLASE · MAGO NIVEL {input.level} · PHB 2024</p>
+   <p className="sheet-release-note">CLASE · MAGO NIVEL {input.level} · SRD 5.2.1</p>
    <CharacterHeader name={input.name} portraitDataUrl={input.profile?.portraitDataUrl} level={input.level}
      background={background.name} species={SPECIES_NAMES[input.species]} className="Mago" subclass={input.level>=3?'Evocación':undefined} valid={Boolean(actualSnapshot)}
      onEdit={()=>setEditing(true)}
@@ -224,7 +224,7 @@ export default function WizardPage(){
       <label className="field"><span>Trasfondo</span><select value={input.background} onChange={(e:{target:{value:string}})=>changeBackground(e.target.value as BackgroundId)}>{options(Object.keys(BACKGROUNDS) as BackgroundId[],b=>BACKGROUNDS[b].name)}</select></label>
       <label className="field"><span>Especie</span><select value={input.species} onChange={(e:{target:{value:string}})=>changeSpecies(e.target.value as SpeciesId)}>{options(Object.keys(SPECIES_NAMES) as SpeciesId[],s=>SPECIES_NAMES[s])}</select></label>
       {input.species==='elf'&&<label className="field"><span>Linaje élfico</span><select value={input.elfLineage} onChange={(e:{target:{value:string}})=>patch({elfLineage:e.target.value as NonNullable<GuidedWizardInput['elfLineage']>})}><option value="high_elf">Alto elfo</option><option value="wood_elf">Elfo silvano</option><option value="drow">Drow</option></select></label>}
-      {input.species==='human'&&<><label className="field"><span>Competencia humana adicional</span><select value={input.humanSkill} onChange={(e:{target:{value:string}})=>patch({humanSkill:e.target.value as Skill})}>{options(SKILLS,s=>SKILL_NAMES[s])}</select></label><label className="field"><span>Dote humana (opciones provisionales)</span><select value={input.humanFeat} onChange={(e:{target:{value:string}})=>patch({humanFeat:e.target.value as 'alert'|'tough'})}>{(background.feat!=='alert')&&<option value="alert">Alerta</option>}{(true)&&<option value="tough">Duro</option>}</select></label><label className="field"><span>Tamaño humano</span><select value={input.humanSize??'medium'} onChange={(e:{target:{value:string}})=>patch({humanSize:e.target.value as 'small'|'medium'})}><option value="medium">Mediano</option><option value="small">Pequeño</option></select></label></>}
+      {input.species==='human'&&<><label className="field"><span>Competencia humana adicional</span><select value={input.humanSkill} onChange={(e:{target:{value:string}})=>patch({humanSkill:e.target.value as Skill})}>{options(SKILLS,s=>SKILL_NAMES[s])}</select></label><label className="field"><span>Dote humana (opciones SRD implementadas)</span><select value={input.humanFeat} onChange={(e:{target:{value:string}})=>patch({humanFeat:e.target.value as 'alert'|'savage_attacker'})}>{(background.feat!=='alert')&&<option value="alert">Alerta</option>}{(background.feat!=='savage_attacker')&&<option value="savage_attacker">Ataque salvaje</option>}</select></label><label className="field"><span>Tamaño humano</span><select value={input.humanSize??'medium'} onChange={(e:{target:{value:string}})=>patch({humanSize:e.target.value as 'small'|'medium'})}><option value="medium">Mediano</option><option value="small">Pequeño</option></select></label></>}
       <label className="field"><span>Paquete inicial de Mago</span><select value={input.equipmentChoice} onChange={(e:{target:{value:string}})=>patch({equipmentChoice:e.target.value as GuidedWizardInput['equipmentChoice'],inventoryActions:[]})}><option value="equipment">Equipo y 5 po</option><option value="gold">55 po</option></select></label>
       <p className="muted-note">{WIZARD_LEVEL_ONE_EQUIPMENT[input.equipmentChoice].description}</p>
       <label className="field"><span>Equipo del trasfondo</span><select value={input.backgroundEquipment?.startingPackage??'a'} onChange={e=>patch({backgroundEquipment:{startingPackage:e.target.value as 'a'|'b',...(input.background==='soldier'?{gamingSet:input.backgroundEquipment?.gamingSet??'dice_set'}:{})},inventoryActions:[]})}><option value="a">A · Objetos y monedas</option><option value="b">B · 50 po</option></select></label>

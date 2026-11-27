@@ -1,4 +1,4 @@
-/** Catálogo de consultas de juego: resumen ORIGINAL en español, PHB 2024 pp. 239-343.
+/** Catálogo de consultas de juego del SRD 5.2.1, resumen original en español.
  * Los textos no sustituyen las redacciones completas del manual; la ficha indica
  * fuentes y datos verificados. Dados a nivel base, sin adjudicar efectos.
  */
@@ -14,24 +14,19 @@ export type SpellDice=Readonly<{label:string;formula:string;scales?:boolean}>;
 export type WizardSpellRule=Readonly<{id:string;name:string;level:number;school:string;ritual?:boolean;description:string;castingTime?:string;range?:string;components?:string;duration?:string;sourcePage?:number;attack:boolean;rolls:readonly SpellDice[];cantripScales:boolean}>;
 const descriptions:Record<string,string>={
  "acid_splash": "Creas una burbuja ácida que explota en una esfera de 5 pies de radio centrada en un punto a 60 pies como máximo. Cada criatura en la zona realiza salvación de Destreza; si falla recibe 1d6 de daño ácido. Aumenta a 2d6/3d6/4d6 en los niveles de personaje 5/11/17.",
- "blade_ward": "Mediante concentración te proteges durante un minuto. Los ataques contra ti sufren una penalización de 1d4 mientras el efecto permanezca activo.",
  "chill_touch": "Ataque mágico cuerpo a cuerpo contra una criatura tocada. Inflige daño necrótico y el objetivo no puede recuperar puntos de golpe hasta el comienzo de tu próximo turno; los no muertos también tienen desventaja al atacarte durante ese intervalo.",
  "dancing_lights": "Creas hasta cuatro luces pequeñas, o una figura luminosa, dentro del alcance. Puedes moverlas mediante acción adicional mientras mantienes la concentración; cada luz ilumina débilmente su entorno.",
  "elementalism": "Manipulas una pequeña cantidad de aire, tierra, fuego o agua de forma inofensiva: una ráfaga, polvo, una llama o una forma de agua. No es un conjuro de daño.",
  "fire_bolt": "Realizas un ataque mágico a distancia contra una criatura u objeto. Inflige daño de fuego y puede prender objetos inflamables que no se lleven puestos.",
- "friends": "Intentas influir temporalmente en una criatura humanoide que puedas ver a corta distancia. Requiere concentración, y el objetivo puede intentar resistir el efecto con una salvación de Sabiduría; la relación posterior no está garantizada.",
  "light": "Tocas un objeto y haces que emita luz intensa con un halo de luz tenue durante una hora. Puedes cubrir la fuente; lanzar el conjuro sobre un objeto que porta otra criatura puede requerir salvación.",
  "mage_hand": "Creas una mano espectral que puede manipular objetos, abrir contenedores sin cerrar y transportar objetos ligeros. No puede atacar, activar objetos mágicos ni cargar más peso del permitido.",
  "mending": "Reparas una única rotura o desgarro de un objeto al que tocas, siempre que encaje en los límites del conjuro. No devuelve capacidades mágicas perdidas.",
  "message": "Envías un mensaje susurrado a una criatura a distancia y esta puede responder en voz baja. Determinadas barreras bloquean el efecto y debe existir un recorrido posible hacia el objetivo.",
- "mind_sliver": "Una criatura a distancia realiza una salvación de Inteligencia. Si falla sufre daño psíquico y resta 1d4 a la siguiente salvación que haga antes del final de tu siguiente turno.",
  "minor_illusion": "Creas una imagen inmóvil o un sonido ilusorio durante un minuto. No produce un efecto físico; interactuar con la ilusión o examinarla puede revelar que es falsa.",
  "poison_spray": "Rocías a una criatura que puedas ver a corta distancia. Una salvación de Constitución determina si sufre daño de veneno.",
  "prestidigitation": "Realizas pequeños trucos mágicos inocuos: limpiar o ensuciar, alterar sabores o temperaturas, crear un efecto sensorial, encender o apagar una llama pequeña o marcar un objeto.",
  "ray_of_frost": "Ataque mágico a distancia que inflige daño de frío. Si impacta, reduce temporalmente la velocidad del objetivo hasta tu siguiente turno.",
  "shocking_grasp": "Ataque mágico cuerpo a cuerpo que inflige daño de relámpago. Si impacta, impide al objetivo realizar ataques de oportunidad hasta su siguiente turno.",
- "thunderclap": "Creas un estallido sonoro audible a gran distancia. Las criaturas cercanas que fallen una salvación de Constitución reciben daño de trueno.",
- "toll_the_dead": "Señalas una criatura a distancia y haces sonar una campana fúnebre. Con una salvación de Sabiduría fallida recibe daño necrótico, mayor si ya le faltan puntos de golpe.",
  "true_strike": "Al atacar con un arma como parte del conjuro, puedes usar la característica mágica para el ataque y el daño. El daño puede convertirse en radiante y se incrementa con el nivel del personaje.",
  "alarm": "Proteges una puerta, ventana o zona contra intrusos durante varias horas. Al prepararlo eliges criaturas ignoradas y si la alarma se manifiesta de forma audible o mental; puede lanzarse como ritual.",
  "burning_hands": "Un cono de fuego sale de tus manos y obliga a las criaturas de la zona a realizar una salvación de Destreza. Si la superan reciben la mitad del daño; los objetos inflamables pueden prender.",
@@ -63,16 +58,12 @@ const descriptions:Record<string,string>={
  "tensers_floating_disk": "Creas un disco de fuerza flotante que transporta objetos hasta su capacidad máxima y te sigue a distancia. No puede salvar desniveles elevados ni realizar acciones por sí mismo; ritual.",
  "thunderwave": "Una onda de trueno afecta a una zona cúbica originada en ti. Salvación de Constitución para reducir el daño; puede empujar criaturas y objetos, y suena a gran distancia.",
  "unseen_servant": "Creas un sirviente invisible y sin voluntad que puede realizar tareas sencillas bajo tus órdenes. Tiene límites estrictos de fuerza, distancia y combate; admite ritual.",
- "witch_bolt": "Realizas un ataque mágico a distancia: si impacta, causa 2d12 de daño de relámpago. Mientras mantengas la concentración puedes causar 1d12 de daño adicional con una acción adicional cada turno, incluso si el ataque inicial falló. Termina si el objetivo sale de alcance o gana cobertura total.",
  "alter_self": "Mediante concentración alteras tu cuerpo: adaptación acuática, cambio de apariencia o armas naturales. Puedes cambiar la modalidad mientras dura el conjuro.",
  "arcane_lock": "Cierras mágicamente una puerta, ventana, cofre o entrada tocada hasta que se disipe el efecto. Puedes establecer contraseñas y autorizados; exige material de oro consumido.",
- "arcane_vigor": "Mediante una acción adicional gastas uno o dos dados de golpe que aún conserves. Recuperas tantos PG como la suma de los dados tirados más tu modificador de la característica para lanzar conjuros (Inteligencia si eres Mago). Los dados quedan gastados; con ranuras superiores puedes usar más dados.",
  "augury": "Consulta presagios sobre una acción concreta que planeas realizar pronto. La respuesta es favorable, desfavorable, mixta o incierta; múltiples usos alteran su fiabilidad. Ritual.",
  "blindness_deafness": "Una criatura a distancia realiza una salvación de Constitución. Si falla queda Cegada o Ensordecida, según lo elegido, y puede volver a salvarse al final de cada turno.",
  "blur": "Concentración que hace tu imagen borrosa. Los ataques contra ti tienen desventaja salvo cuando el atacante te percibe con sentidos que ignoren este efecto.",
- "cloud_of_daggers": "Creas una zona pequeña llena de cuchillas giratorias, mantenida por concentración. Una criatura recibe daño cortante al entrar en el área o permanecer en ella en los momentos especificados.",
  "continual_flame": "Creas una llama ilusoria de luz sobre un objeto. No desprende calor ni consume combustible; puede extinguirse por disipación y requiere material costoso consumido.",
- "crown_of_madness": "Una criatura humanoide que falle una salvación de Sabiduría queda hechizada y puede verse obligada a atacar a otras criaturas cercanas. Requiere concentración y atención continuada del lanzador.",
  "darkness": "Creas una esfera de oscuridad mágica que bloquea la visión ordinaria y parte de la visión en la oscuridad. Puedes centrarla en un objeto; requiere concentración.",
  "darkvision": "Una criatura tocada obtiene visión en la oscuridad a una distancia indicada por el conjuro durante ocho horas, sin concentración.",
  "detect_thoughts": "Concentración para leer pensamientos superficiales de criaturas cercanas o sondear más profundamente, con salvaciones y consecuencias. También puedes localizar mentes bajo condiciones concretas.",
@@ -94,7 +85,6 @@ const descriptions:Record<string,string>={
  "mirror_image": "Creas tres duplicados que se mueven contigo durante un minuto sin concentración. Cada vez que un ataque te impacta, tiras 1d6 por cada duplicado restante; si cualquiera muestra 3 o más, el ataque destruye un duplicado en vez de dañarte. Las criaturas con Visión verdadera, Visión ciega o Cegadas no se ven engañadas.",
  "misty_step": "Acción adicional: te teletransportas a un espacio desocupado que puedas ver dentro del alcance, llevándote el equipo que portes.",
  "nystuls_magic_aura": "Alteras el aura mágica de un objetivo para engañar efectos de detección y determinadas comprobaciones mágicas. Puede mantenerse a largo plazo renovándolo.",
- "phantasmal_force": "Una criatura que falle salvación de Inteligencia percibe un fenómeno ilusorio solo para ella. Puede reaccionar a él y sufrir efectos psíquicos mientras el lanzador concentre; examinarlo permite descubrirlo.",
  "ray_of_enfeeblement": "Una criatura realiza una salvación de Constitución. Si la supera, tiene desventaja en su próximo ataque antes del inicio de tu siguiente turno; si falla, tiene desventaja en pruebas d20 basadas en Fuerza y resta 1d8 a sus tiradas de daño durante la concentración. Repite la salvación al final de cada turno.",
  "rope_trick": "Una cuerda crea una entrada hacia un pequeño espacio extradimensional que puede alojar criaturas. Desde fuera la entrada es difícil de percibir y lo que está dentro no puede atacar a través de ella.",
  "scorching_ray": "Disparas tres rayos de fuego con ataques mágicos a distancia separados. Puedes distribuirlos entre varios objetivos; cada impacto inflige daño de fuego.",
@@ -123,17 +113,6 @@ const dice:Record<string,readonly SpellDice[]>={
    "formula": "1d10"
   }
  ],
- "mind_sliver": [
-  {
-   "label": "Daño psíquico",
-   "formula": "1d6"
-  },
-  {
-   "label": "Penalización a salvación",
-   "formula": "1d4",
-   "scales": false
-  }
- ],
  "poison_spray": [
   {
    "label": "Daño de veneno",
@@ -150,28 +129,6 @@ const dice:Record<string,readonly SpellDice[]>={
   {
    "label": "Daño de relámpago",
    "formula": "1d8"
-  }
- ],
- "thunderclap": [
-  {
-   "label": "Daño de trueno",
-   "formula": "1d6"
-  }
- ],
- "toll_the_dead": [
-  {
-   "label": "Daño base",
-   "formula": "1d8"
-  },
-  {
-   "label": "Daño con PG perdidos",
-   "formula": "1d12"
-  }
- ],
- "blade_ward": [
-  {
-   "label": "Penalización a ataques",
-   "formula": "1d4"
   }
  ],
  "burning_hands": [
@@ -220,22 +177,6 @@ const dice:Record<string,readonly SpellDice[]>={
    "formula": "2d8"
   }
  ],
- "witch_bolt": [
-  {
-   "label": "Impacto de relámpago",
-   "formula": "2d12"
-  },
-  {
-   "label": "Daño posterior",
-   "formula": "1d12"
-  }
- ],
- "cloud_of_daggers": [
-  {
-   "label": "Daño cortante",
-   "formula": "4d4"
-  }
- ],
  "dragons_breath": [
   {
    "label": "Daño elemental",
@@ -276,12 +217,6 @@ const dice:Record<string,readonly SpellDice[]>={
    "formula": "2d6"
   }
  ],
- "phantasmal_force": [
-  {
-   "label": "Daño psíquico",
-   "formula": "2d8"
-  }
- ],
  "mirror_image": [
   {
    "label": "Tirar un duplicado",
@@ -294,16 +229,6 @@ const dice:Record<string,readonly SpellDice[]>={
    "formula": "1d8"
   }
  ],
- "arcane_vigor": [
-  {
-   "label": "Usar un dado de golpe",
-   "formula": "1d6"
-  },
-  {
-   "label": "Usar dos dados de golpe",
-   "formula": "2d6"
-  }
- ],
  "shatter": [
   {
    "label": "Daño de trueno",
@@ -311,8 +236,8 @@ const dice:Record<string,readonly SpellDice[]>={
   }
  ]
 };
-const attacks=new Set(["chill_touch", "chromatic_orb", "fire_bolt", "ice_knife", "melfs_acid_arrow", "ray_of_frost", "ray_of_sickness", "scorching_ray", "shocking_grasp", "witch_bolt"]);
-const scaling=new Set(["acid_splash", "chill_touch", "fire_bolt", "mind_sliver", "poison_spray", "ray_of_frost", "shocking_grasp", "thunderclap", "toll_the_dead"]);
+const attacks=new Set(["chill_touch", "chromatic_orb", "fire_bolt", "ice_knife", "melfs_acid_arrow", "ray_of_frost", "ray_of_sickness", "scorching_ray", "shocking_grasp"]);
+const scaling=new Set(["acid_splash", "chill_touch", "fire_bolt", "poison_spray", "ray_of_frost", "shocking_grasp"]);
 const source:Record<string,Partial<WizardSpellRule>>={
  "acid_splash": {
   "sourcePage": 239,
@@ -320,13 +245,6 @@ const source:Record<string,Partial<WizardSpellRule>>={
   "range": "60 feet",
   "components": "V, S",
   "duration": "Instantaneous"
- },
- "blade_ward": {
-  "sourcePage": 247,
-  "castingTime": "Action",
-  "range": "Self",
-  "components": "V, S",
-  "duration": "Concentration, up to 1 minute"
  },
  "chill_touch": {
   "sourcePage": 249,
@@ -355,13 +273,6 @@ const source:Record<string,Partial<WizardSpellRule>>={
   "range": "120 feet",
   "components": "V, S"
  },
- "friends": {
-  "sourcePage": 277,
-  "castingTime": "Action",
-  "range": "10 feet",
-  "components": "S, M (some makeup)",
-  "duration": "Concentration, up to 1 minute"
- },
  "light": {
   "sourcePage": 292,
   "castingTime": "Action",
@@ -388,13 +299,6 @@ const source:Record<string,Partial<WizardSpellRule>>={
   "castingTime": "Action",
   "range": "120 feet",
   "components": "S, M (a copper wire)",
-  "duration": "1 round"
- },
- "mind_sliver": {
-  "sourcePage": 298,
-  "castingTime": "Action",
-  "range": "60 feet",
-  "components": "V",
   "duration": "1 round"
  },
  "minor_illusion": {
@@ -429,20 +333,6 @@ const source:Record<string,Partial<WizardSpellRule>>={
   "sourcePage": 316,
   "castingTime": "Action",
   "range": "Touch",
-  "components": "V, S",
-  "duration": "Instantaneous"
- },
- "thunderclap": {
-  "sourcePage": 333,
-  "castingTime": "Action",
-  "range": "Self",
-  "components": "S",
-  "duration": "Instantaneous"
- },
- "toll_the_dead": {
-  "sourcePage": 334,
-  "castingTime": "Action",
-  "range": "60 feet",
   "components": "V, S",
   "duration": "Instantaneous"
  },
@@ -663,13 +553,6 @@ const source:Record<string,Partial<WizardSpellRule>>={
   "components": "V, S, M (a bit of string and of wood)",
   "duration": "1 hour"
  },
- "witch_bolt": {
-  "sourcePage": 343,
-  "castingTime": "Action",
-  "range": "60 feet",
-  "components": "V, S, M (a twig struck by lightning)",
-  "duration": "Concentration, up to 1 minute"
- },
  "alter_self": {
   "sourcePage": 239,
   "castingTime": "Action",
@@ -683,13 +566,6 @@ const source:Record<string,Partial<WizardSpellRule>>={
   "range": "Touch",
   "components": "V, S, M (polvo de oro de 25+ po; se consume)",
   "duration": "Until dispelled"
- },
- "arcane_vigor": {
-  "sourcePage": 242,
-  "castingTime": "Bonus Action",
-  "range": "Self",
-  "components": "V, S",
-  "duration": "Instantaneous"
  },
  "augury": {
   "sourcePage": 244,
@@ -712,26 +588,12 @@ const source:Record<string,Partial<WizardSpellRule>>={
   "components": "V",
   "duration": "Concentration , up to 1 minute"
  },
- "cloud_of_daggers": {
-  "sourcePage": 251,
-  "castingTime": "Action",
-  "range": "60 feet",
-  "components": "V, S, M (a sliver of glass)",
-  "duration": "Concentration, up to 1 minute"
- },
  "continual_flame": {
   "sourcePage": 256,
   "castingTime": "Action",
   "range": "Touch",
   "components": "V, S, M (polvo de rubí de 50+ po; se consume)",
   "duration": "Until dispelled"
- },
- "crown_of_madness": {
-  "sourcePage": 259,
-  "castingTime": "Action",
-  "range": "120 feet",
-  "components": "V, S",
-  "duration": "Concentration, up to 1 minute"
  },
  "darkness": {
   "sourcePage": 260,
@@ -878,13 +740,6 @@ const source:Record<string,Partial<WizardSpellRule>>={
   "range": "Touch",
   "components": "V, S, M (a small square of silk)",
   "duration": "24 hours"
- },
- "phantasmal_force": {
-  "sourcePage": 304,
-  "castingTime": "Action",
-  "range": "60 feet",
-  "components": "V, S, M (a bit of fleece)",
-  "duration": "Concentration, up to 1 minute"
  },
  "ray_of_enfeeblement": {
   "sourcePage": 311,

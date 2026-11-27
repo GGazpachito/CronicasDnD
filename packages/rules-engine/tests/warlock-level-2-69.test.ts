@@ -16,7 +16,7 @@ const starter:GuidedWarlockInput={
 };
 const levelTwo={
  invocations:['pact_of_blade','agonizing_blast','eldritch_spear'] as const,
- cantripIds:['eldritch_blast','prestidigitation'],preparedIds:['hex','charm_person','armor_of_agathys'],level2HitDieRoll:5
+ cantripIds:['eldritch_blast','prestidigitation'],preparedIds:['hex','charm_person','unseen_servant'],level2HitDieRoll:5
 };
 
 describe('Brujo nivel 2 y gestiones comunes (paso 69)',()=>{
@@ -45,13 +45,13 @@ describe('Brujo nivel 2 y gestiones comunes (paso 69)',()=>{
   expect(upgraded.input.pactWeaponId).toBeUndefined();
   expect(upgraded.state.familiarForm).toBeNull();
   expect(()=>advanceWarlockToLevelTwo(starter,initialWarlockOneState(starter),{
-   ...levelTwo,cantripIds:['friends','mage_hand']
+   ...levelTwo,cantripIds:['chill_touch','mage_hand']
   })).toThrow(/solo puedes sustituir un truco/);
   expect(()=>advanceWarlockToLevelTwo(starter,initialWarlockOneState(starter),{
-   ...levelTwo,preparedIds:['bane','hex','armor_of_agathys']
+   ...levelTwo,preparedIds:['bane','hex','unseen_servant']
   })).not.toThrow();
   expect(()=>advanceWarlockToLevelTwo(starter,initialWarlockOneState(starter),{
-   ...levelTwo,preparedIds:['bane','witch_bolt','armor_of_agathys']
+   ...levelTwo,preparedIds:['bane','ray_of_enfeeblement','unseen_servant']
   })).toThrow(/sustituir un conjuro/);
  });
  it('Astucia mágica restaura una sola ranura y su uso no se restablece con descanso corto',()=>{
@@ -69,11 +69,11 @@ describe('Brujo nivel 2 y gestiones comunes (paso 69)',()=>{
   expect(()=>warlockMagicalCunning(initialWarlockOneState(starter),1)).toThrow();
   expect(()=>toggleWarlockPactSlot(state,2,2)).toThrow();
  });
- it('Lecciones de los Primeros aplica Duro y rechaza dotes de origen repetidas',()=>{
+ it('Lecciones de los Primeros admite Ataque salvaje del SRD y rechaza dotes repetidas',()=>{
   const next=advanceWarlockToLevelTwo(starter,initialWarlockOneState(starter),{
-   ...levelTwo,invocations:['pact_of_blade','lessons_of_the_first_ones','agonizing_blast'],lessonsFeat:'tough'
+   ...levelTwo,invocations:['pact_of_blade','lessons_of_the_first_ones','agonizing_blast'],lessonsFeat:'savage_attacker'
   });
-  expect(calculateWarlockOne(next.input).maximumHitPoints).toBe(21);
+  expect(calculateWarlockOne(next.input).maximumHitPoints).toBe(17);
   const human:GuidedWarlockInput={...starter,species:'human',humanSkill:'perception',humanFeat:'alert',humanSize:'medium'};
   expect(()=>advanceWarlockToLevelTwo(human,initialWarlockOneState(human),{
    ...levelTwo,invocations:['pact_of_blade','lessons_of_the_first_ones','agonizing_blast'],lessonsFeat:'alert'

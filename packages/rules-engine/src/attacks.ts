@@ -117,7 +117,7 @@ export function calculateWeaponAttack(
   if(!sheet||sheet.classId!=='fighter'||sheet.ruleset!=='dnd-2024'||sheet.level<1||sheet.level>20)throw new RangeError('Hoja de Guerrero 2024 nivel 1–20 requerida');
   if(!isWeapon(weaponId))throw new RangeError('Arma desconocida');
   const styles:readonly FightingStyleId[]=typeof style==='string'?[style]:style;
-  if(!Array.isArray(styles)||styles.length<1||styles.length>(sheet.level>=7?2:1)||new Set(styles).size!==styles.length||styles.some(s=>!['archery','blind_fighting','defense','dueling','great_weapon_fighting','interception','protection','thrown_weapon_fighting','two_weapon_fighting','unarmed_fighting'].includes(s)))throw new RangeError('Estilos de combate desconocidos, duplicados o no desbloqueados');
+  if(!Array.isArray(styles)||styles.length<1||styles.length>(sheet.level>=7?2:1)||new Set(styles).size!==styles.length||styles.some(s=>!['archery','defense','great_weapon_fighting','two_weapon_fighting'].includes(s)))throw new RangeError('Estilos de combate desconocidos, duplicados o no desbloqueados');
   if(!Array.isArray(masteries)||masteries.length!==(sheet.level>=16?6:sheet.level>=10?5:sheet.level>=4?4:3)||new Set(masteries).size!==(sheet.level>=16?6:sheet.level>=10?5:sheet.level>=4?4:3)||masteries.some(x=>!isWeapon(x)))throw new RangeError('Maestrías de Guerrero inválidas para su nivel');
   if(!options||typeof options!=='object'||Array.isArray(options))throw new RangeError('Opciones de ataque inválidas');
   for(const key of Object.keys(options))if(!['ability','thrown','twoHanded','lightExtraAttack','otherWeaponHeld','adjacentEnemy','advantage','conditionAdvantage','conditionDisadvantage','conditionD20Penalty','targetDistanceFeet','tacticalMastery'].includes(key))throw new RangeError('Opción de ataque desconocida');
@@ -152,8 +152,6 @@ export function calculateWeaponAttack(
   if(styles.includes('archery')&&w.kind==='ranged')attackBonus+=2;
   attackBonus+=options.conditionD20Penalty??0;
   let damageModifier=options.lightExtraAttack&&!styles.includes('two_weapon_fighting')?Math.min(0,modifier):modifier;
-  if(styles.includes('dueling')&&w.kind==='melee'&&!twoHanded&&!options.otherWeaponHeld&&!thrown)damageModifier+=2;
-  if(styles.includes('thrown_weapon_fighting')&&thrown)damageModifier+=2;
   if(options.lightExtraAttack)notes.push('Confirma que el ataque adicional está permitido por Ligera y que utilizas otra arma.');
   if(styles.includes('great_weapon_fighting')&&w.kind==='melee'&&twoHanded&&(w.twoHanded||w.versatileSides))notes.push('Combate con arma a dos manos: cada dado de daño del arma con resultado 1 o 2 se trata como 3.');
   if(weaponId==='lance'&&twoHanded)notes.push('La lanza de caballería puede manejarse con una mano estando montado: este prototipo no modela ese caso.');

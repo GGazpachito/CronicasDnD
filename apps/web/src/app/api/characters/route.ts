@@ -29,7 +29,7 @@ export async function POST(request:Request){
     const row=await db().character.create({data:{
       name:snap.input.name.trim(),level:snap.input.level,ruleset:snap.ruleset,
       characterClass:snap.schemaVersion===4?'warlock':snap.schemaVersion===3?'wizard':'fighter',
-      schemaVersion:snap.schemaVersion,rulesVersion:'phb-2024-srd-5.2.1',
+      schemaVersion:snap.schemaVersion,rulesVersion:'srd-5.2.1',
       selection:snap as unknown as Prisma.InputJsonValue,
     },select:{id:true,name:true,level:true,characterClass:true,revision:true,updatedAt:true}});
     return Response.json({character:row},{status:201,headers:{'Cache-Control':'no-store'}});

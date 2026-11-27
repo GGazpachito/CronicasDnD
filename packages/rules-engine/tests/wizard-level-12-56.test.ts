@@ -23,14 +23,14 @@ function to9(){
  const eight=prepareWizardLevelUp(seven.input,seven.state,{newSpellIds:['arcane_eye','wall_of_fire'],preparedIds:[...seven.input.preparedIds,'arcane_eye'],level8Improvement:{mode:'two_ones',first:'intelligence',second:'constitution'}});
  return prepareWizardLevelUp(eight.input,eight.state,{newSpellIds:['cone_of_cold','telekinesis'],preparedIds:[...eight.input.preparedIds,'cone_of_cold','telekinesis'],evokerLevelFiveSpellId:'wall_of_force'});
 }
-function to10(){const nine=to9();return prepareWizardLevelUp(nine.input,nine.state,{newSpellIds:['hold_monster','geas'],preparedIds:[...nine.input.preparedIds,'hold_monster'],newCantripId:'mind_sliver'});}
+function to10(){const nine=to9();return prepareWizardLevelUp(nine.input,nine.state,{newSpellIds:['hold_monster','geas'],preparedIds:[...nine.input.preparedIds,'hold_monster'],newCantripId:'poison_spray'});}
 function to11(){const ten=to10();return prepareWizardLevelUp(ten.input,ten.state,{newSpellIds:['chain_lightning','disintegrate'],preparedIds:[...ten.input.preparedIds,'chain_lightning'],evokerLevelSixSpellId:'sunbeam'});}
 
 describe('Actualización 56: Mago nivel 12',()=>{
  it('11→12 aplica la mejora de característica y conserva las ranuras gastadas',()=>{
   const eleven=to11();
   const marked=toggleWizardSlotMark(eleven.state,0,6);
-  const result=prepareWizardLevelUp(eleven.input,marked,{newSpellIds:['arcane_gate','circle_of_death'],preparedIds:[...eleven.input.preparedIds],level12Improvement:{mode:'plus_two',first:'wisdom'}});
+  const result=prepareWizardLevelUp(eleven.input,marked,{newSpellIds:['globe_of_invulnerability','circle_of_death'],preparedIds:[...eleven.input.preparedIds],level12Improvement:{mode:'plus_two',first:'wisdom'}});
   expect(result.input.level).toBe(12);
   expect(result.input.level12Improvement).toEqual({mode:'plus_two',first:'wisdom'});
   expect(result.input.spellbookIds).toHaveLength(28);
@@ -43,14 +43,14 @@ describe('Actualización 56: Mago nivel 12',()=>{
  });
  it('rechaza mejoras ausentes, anticipadas y superiores a 20',()=>{
   const eleven=to11();
-  const options={newSpellIds:['arcane_gate','circle_of_death'] as [string,string],preparedIds:[...eleven.input.preparedIds]};
+  const options={newSpellIds:['globe_of_invulnerability','circle_of_death'] as [string,string],preparedIds:[...eleven.input.preparedIds]};
   expect(()=>prepareWizardLevelUp(eleven.input,eleven.state,options)).toThrow();
   expect(()=>prepareWizardLevelUp(eleven.input,eleven.state,{...options,level12Improvement:{mode:'plus_two',first:'intelligence'}})).toThrow();
   expect(()=>calculateGuidedWizard({...eleven.input,level12Improvement:{mode:'plus_two',first:'wisdom'}})).toThrow();
  });
  it('12→11 retira solo las dos elecciones recientes y la mejora, conserva el daño y los recursos',()=>{
   const eleven=to11();
-  const twelve=prepareWizardLevelUp(eleven.input,eleven.state,{newSpellIds:['arcane_gate','circle_of_death'],preparedIds:[...eleven.input.preparedIds],level12Improvement:{mode:'two_ones',first:'wisdom',second:'dexterity'}});
+  const twelve=prepareWizardLevelUp(eleven.input,eleven.state,{newSpellIds:['globe_of_invulnerability','circle_of_death'],preparedIds:[...eleven.input.preparedIds],level12Improvement:{mode:'two_ones',first:'wisdom',second:'dexterity'}});
   const old={...twelve.state,hitPointsCurrent:twelve.state.hitPointsCurrent-5};
   const down=previewWizardLevelDown(twelve.input,old);
   expect(down.snapshot.input.level).toBe(11);

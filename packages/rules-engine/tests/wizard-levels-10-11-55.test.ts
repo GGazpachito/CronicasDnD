@@ -23,13 +23,13 @@ function to9(){
  const eight=prepareWizardLevelUp(seven.input,seven.state,{newSpellIds:['arcane_eye','wall_of_fire'],preparedIds:[...seven.input.preparedIds,'arcane_eye'],level8Improvement:{mode:'two_ones',first:'intelligence',second:'constitution'}});
  return prepareWizardLevelUp(eight.input,eight.state,{newSpellIds:['cone_of_cold','telekinesis'],preparedIds:[...eight.input.preparedIds,'cone_of_cold','telekinesis'],evokerLevelFiveSpellId:'wall_of_force'});
 }
-function to10(){const nine=to9();return prepareWizardLevelUp(nine.input,nine.state,{newSpellIds:['hold_monster','geas'],preparedIds:[...nine.input.preparedIds,'hold_monster'],newCantripId:'mind_sliver'});}
+function to10(){const nine=to9();return prepareWizardLevelUp(nine.input,nine.state,{newSpellIds:['hold_monster','geas'],preparedIds:[...nine.input.preparedIds,'hold_monster'],newCantripId:'poison_spray'});}
 function to11(){const ten=to10();return prepareWizardLevelUp(ten.input,ten.state,{newSpellIds:['chain_lightning','disintegrate'],preparedIds:[...ten.input.preparedIds,'chain_lightning'],evokerLevelSixSpellId:'sunbeam'});}
 
 describe('Actualización 55: Mago Evocación niveles 10 y 11',()=>{
  it('incorpora las 22 opciones de conjuros de nivel 6 y fichas legibles con dados cuando corresponden',()=>{
-  expect(WIZARD_LEVEL_SIX_SPELLS).toHaveLength(22);
-  expect(WIZARD_SPELL_CATALOG.filter(s=>s.level===6)).toHaveLength(22);
+  expect(WIZARD_LEVEL_SIX_SPELLS).toHaveLength(19);
+  expect(WIZARD_SPELL_CATALOG.filter(s=>s.level===6)).toHaveLength(19);
   expect(WIZARD_SPELL_RULES.length).toBeGreaterThanOrEqual(217);
   expect(new Set(WIZARD_SPELL_RULES.map(s=>s.id)).size).toBe(WIZARD_SPELL_RULES.length);
   for(const s of WIZARD_LEVEL_SIX_SPELLS){
@@ -41,13 +41,13 @@ describe('Actualización 55: Mago Evocación niveles 10 y 11',()=>{
   expect(wizardSpellRule('chain_lightning')?.rolls[0]?.formula).toBe('10d8');
   expect(wizardSpellRule('disintegrate')?.rolls[0]?.formula).toBe('10d6+40');
   expect(wizardSpellRule('drawmijs_instant_summons')?.ritual).toBe(true);
-  expect(wizardSpellRule('summon_fiend')?.rolls).toHaveLength(0);
+  expect(wizardSpellRule('true_seeing')?.rolls).toHaveLength(0);
  });
  it('9→10 concede quinto truco, 15 preparados, una segunda ranura de nivel 5 y Evocación Potenciada',()=>{
   const nine=to9(),ten=to10(),view=calculateGuidedWizard(ten.input);
   expect(ten.input.level).toBe(10);
   expect(ten.input.cantripIds).toHaveLength(5);
-  expect(ten.input.cantripIds.includes('mind_sliver')).toBe(true);
+  expect(ten.input.cantripIds.includes('poison_spray')).toBe(true);
   expect(ten.input.preparedIds).toHaveLength(15);
   expect(ten.state.magic.slots.maximum.slice(0,6)).toEqual([4,3,3,3,2,0]);
   expect(view.abilityModifiers.intelligence).toBe(5);
@@ -60,8 +60,8 @@ describe('Actualización 55: Mago Evocación niveles 10 y 11',()=>{
   const nine=to9();const choices={newSpellIds:['hold_monster','geas'] as [string,string],preparedIds:[...nine.input.preparedIds,'hold_monster']};
   expect(()=>prepareWizardLevelUp(nine.input,nine.state,choices)).toThrow();
   expect(()=>prepareWizardLevelUp(nine.input,nine.state,{...choices,newCantripId:'fire_bolt'})).toThrow();
-  expect(()=>prepareWizardLevelUp(nine.input,nine.state,{...choices,newCantripId:'mind_sliver',evokerLevelSixSpellId:'sunbeam'})).toThrow();
-  expect(()=>prepareWizardLevelUp(nine.input,nine.state,{...choices,newCantripId:'mind_sliver',level4Improvement:{mode:'plus_two',first:'wisdom'}})).toThrow();
+  expect(()=>prepareWizardLevelUp(nine.input,nine.state,{...choices,newCantripId:'poison_spray',evokerLevelSixSpellId:'sunbeam'})).toThrow();
+  expect(()=>prepareWizardLevelUp(nine.input,nine.state,{...choices,newCantripId:'poison_spray',level4Improvement:{mode:'plus_two',first:'wisdom'}})).toThrow();
  });
  it('10→11 concede 16 preparados, ranura de nivel 6 y regalo de Evocación independiente',()=>{
   const eleven=to11();
@@ -81,7 +81,7 @@ describe('Actualización 55: Mago Evocación niveles 10 y 11',()=>{
   expect(()=>prepareWizardLevelUp(ten.input,ten.state,{...choice,evokerLevelSixSpellId:'disintegrate'})).toThrow();
   expect(()=>prepareWizardLevelUp(ten.input,ten.state,{...choice,evokerLevelSixSpellId:'fireball'})).toThrow();
   expect(()=>prepareWizardLevelUp(ten.input,ten.state,{...choice,evokerLevelSixSpellId:'sunbeam',newCantripId:'light'})).toThrow();
-  const nine=to9();expect(()=>prepareWizardLevelUp(nine.input,nine.state,{newSpellIds:['chain_lightning','geas'],preparedIds:[...nine.input.preparedIds,'geas'],newCantripId:'mind_sliver'})).toThrow();
+  const nine=to9();expect(()=>prepareWizardLevelUp(nine.input,nine.state,{newSpellIds:['chain_lightning','geas'],preparedIds:[...nine.input.preparedIds,'geas'],newCantripId:'poison_spray'})).toThrow();
  });
  it('retroceso 11→10 conserva quinto truco y elimina solo lo ganado en 11',()=>{
   const eleven=to11();const down=previewWizardLevelDown(eleven.input,eleven.state);

@@ -10,9 +10,9 @@ const one={classId:'warlock' as const,level:1 as const,name:'Infernal 7',backgro
  assignedAbilities:{strength:8,dexterity:14,constitution:13,intelligence:10,wisdom:12,charisma:15},
  increaseMode:'two_plus_one' as const,plusTwoAbility:'charisma' as const,plusOneAbility:'wisdom' as const,warlockSkills:['arcana','deception'] as const,
  equipmentChoice:'equipment' as const,cantripIds:['eldritch_blast','prestidigitation'],preparedIds:['hex','charm_person'],invocations:['pact_of_blade'] as const,pactWeaponId:'sickle' as const};
-const two=advanceWarlockToLevelTwo(one,initialWarlockOneState(one),{invocations:['pact_of_blade','agonizing_blast','eldritch_spear'],cantripIds:one.cantripIds,preparedIds:['hex','charm_person','armor_of_agathys'],level2HitDieRoll:5});
+const two=advanceWarlockToLevelTwo(one,initialWarlockOneState(one),{invocations:['pact_of_blade','agonizing_blast','eldritch_spear'],cantripIds:one.cantripIds,preparedIds:['hex','charm_person','unseen_servant'],level2HitDieRoll:5});
 const three=advanceWarlockToLevelThree(two.input,two.state,{subclassId:'fiend',invocations:two.input.invocations,cantripIds:two.input.cantripIds,preparedIds:[...two.input.preparedIds,'misty_step'],level3HitDieRoll:5});
-const four=advanceWarlockToLevelFour(three.input,three.state,{invocations:three.input.invocations,cantripIds:[...three.input.cantripIds,'friends'],preparedIds:[...three.input.preparedIds,'hold_person'],level4HitDieRoll:5,level4Improvement:{mode:'plus_two',first:'charisma'}});
+const four=advanceWarlockToLevelFour(three.input,three.state,{invocations:three.input.invocations,cantripIds:[...three.input.cantripIds,'chill_touch'],preparedIds:[...three.input.preparedIds,'hold_person'],level4HitDieRoll:5,level4Improvement:{mode:'plus_two',first:'charisma'}});
 const five=advanceWarlockToLevelFive(four.input,four.state,{invocations:['pact_of_blade','agonizing_blast','eldritch_spear','thirsting_blade','eldritch_smite'],cantripIds:four.input.cantripIds,preparedIds:[...four.input.preparedIds,'counterspell'],level5HitDieRoll:5});
 const six=advanceWarlockToLevelSix(five.input,five.state,{invocations:five.input.invocations,cantripIds:five.input.cantripIds,preparedIds:[...five.input.preparedIds,'fly'],level6HitDieRoll:5});
 const choices={invocations:[...six.input.invocations,'whispers_of_the_grave'] as const,cantripIds:six.input.cantripIds,preparedIds:[...six.input.preparedIds,'blight'],level7HitDieRoll:5};
@@ -29,7 +29,7 @@ describe('Actualización 76: Brujo nivel 7 · magia de nivel 4 y sexto don',()=>
   expect(collectWarlockTraits(seven.input,sheet).traits.find(t=>t.id==='warlock:fiend_patron')?.details).toContain('Escudo de fuego (nivel 4)');
  });
  it('reutiliza exactamente las fichas originales del Mago y listas por clase',()=>{
-  expect(WARLOCK_LEVEL_FOUR_SPELLS).toHaveLength(6);expect(WARLOCK_FIEND_LEVEL_SEVEN_SPELLS).toHaveLength(2);
+  expect(WARLOCK_LEVEL_FOUR_SPELLS).toHaveLength(5);expect(WARLOCK_FIEND_LEVEL_SEVEN_SPELLS).toHaveLength(2);
   for(const spell of [...WARLOCK_LEVEL_FOUR_SPELLS,...WARLOCK_FIEND_LEVEL_SEVEN_SPELLS]){
    expect(spell).toBe(wizardSpellRule(spell.id));expect(warlockSpellIsShared(spell.id)).toBe(true);
   }

@@ -75,7 +75,7 @@ export default function WizardLevelUpWizard({input,state,mode,onConfirm,onCancel
  const spellOptions=WIZARD_SPELL_CATALOG.filter(spell=>availablePrepared.has(spell.id)&&matches(spell));
  const nextCore=wizardCoreStatistics(next,current.abilityScores);
  const previousCore=wizardCoreStatistics(input.level,current.abilityScores);
- const hpBonus=(input.species==='dwarf'?1:0)+(input.humanFeat==='tough'?2:0);
+ const hpBonus=(input.species==='dwarf'?1:0);
  const estimatedHpGain=nextCore.maximumHitPoints-previousCore.maximumHitPoints+hpBonus;
  const projected=choices.result?calculateGuidedWizard(choices.result.input):null;
  function setMode(mode:'plus_two'|'two_ones'){
