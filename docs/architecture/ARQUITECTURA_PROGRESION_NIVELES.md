@@ -1,6 +1,8 @@
-# Arquitectura normativa: ventanas de subida y bajada de nivel (actualizada en paso 79)
+# Arquitectura normativa: ventanas de subida y bajada de nivel (actualizada en paso 89)
 
 > **CONTRATO OBLIGATORIO DE UI Y REGLAS PARA TODAS LAS CLASES.** Este documento complementa `ESTRUCTURA_HOJA_COMUN.md`. Ninguna clase nueva debe fabricar sus propios contenedores de progreso, pasos, botones ni estilos. Debe integrar componentes compartidos con un adaptador de reglas de clase.
+
+**Estándar de creación y edición, ajuste 88.2:** además de compartir esta progresión, todas las clases deben usar `CharacterCreationDialog` con `wizard-editor panel` y `wizard-editor-grid`: cabecera, identidad/origen y características/competencias en dos columnas adaptables, luego secciones específicas, formulario desplazable y un único «Guardar elecciones». El editor no se incrusta en Principal, no dispone de pasos exclusivos por clase y no aplica cambios al cancelar. El botón de `CharacterHeader` debe decir **«Subir de nivel»**. Véase [contrato completo](ARQUITECTURA_MODULAR_SRD.md#estándar-obligatorio-de-incorporación-de-clases-ratificado-en-los-pasos-882-y-89).
 
 **A partir del paso 84:** las elecciones expuestas por cualquier subida/bajada de nivel pertenecen al [catálogo permitido del programa base SRD y los futuros módulos activados](ARQUITECTURA_MODULAR_SRD.md). El marco visual y el historial reversible no cambian al instalar un módulo: únicamente se amplían opciones, requisitos y datos desde el registro de contenido. La ausencia de un módulo no debe borrar una selección histórica.
 
@@ -49,7 +51,7 @@ Ejemplos: Mago aprende dos conjuros de libro por nivel y prepara conforme a prog
 | --- | --- | --- | --- |
 | Guerrero | d10 | 6 | `levelHitPointRolls` (array de d10 naturales, uno por nivel 2..N) |
 | Mago | d6 | 4 | `levelHitPointRolls` (array de d6 naturales, uno por nivel 2..N) |
-| Brujo | d8 | 5 | `level2HitDieRoll` a `level15HitDieRoll` (hasta nivel 15), uno por nivel adicional |
+| Brujo | d8 | 5 | `level2HitDieRoll` a `level16HitDieRoll` (hasta nivel 16), uno por nivel adicional |
 
 El selector muestra «Promedio» o «Tirada 1dX». Al elegir la segunda opción se lanza el dado; es posible repetir hasta confirmar. Cuando se elige promedio se almacena el valor fijo equivalente. No guardar la cadena de modo visual como sustituto del resultado; en ambos casos se guarda el **número de dado elegido**. No aplicar el dado dos veces al confirmar. No modificar el valor al cambiar de pestaña ni al restaurar el guardado.
 
@@ -99,6 +101,8 @@ Importante para Brujo: en guardados antiguos de nivel 2 no existe un historial d
 
 **Desde 14→15 (paso 87):** mantiene las tres etapas y la hoja común. Desbloquea una **novena invocación** (puede elegir **Vista de bruja**, visión verdadera de 30 pies, y sustituir como máximo una de las ocho anteriores), un **decimotercer conjuro ordinario preparado** (conserva al menos once de doce), y el tercer **Arcanum místico, de nivel 8**, exclusivamente de la lista del Brujo SRD 5.2.1. Conjuros disponibles: Confusión mental, Semiplano, Dominar monstruo, Elocuencia y Palabra de poder: aturdir. Los tres Arcanum tienen gastos independientes; solo se puede sustituir uno de los Arcanum anteriores (6 o 7) durante la subida. Permanecen competencia +5, cuatro trucos, tres ranuras de nivel 5 y Arrojar al infierno. El descenso **15→14** elimina el Arcanum de nivel 8 y la novena invocación, restaura las elecciones anteriores y conserva los recursos compatibles con daño acumulado. Se mantiene el esquema de guardado versión 4; prueba `warlock-level-15-87.test.ts`.
 
+**Desde 15→16 (paso 89):** el mismo asistente compartido con las mismas tres etapas incorpora la **cuarta dote Mejora de característica** del Brujo (+2 a una o +1 a dos distintas, máximo 20), sin un componente modal adicional. El jugador elige media 5 o 1d8 mediante `LevelUpHitPointsPicker`. El motor aplica las cuatro mejoras sucesivas (niveles 4, 8, 12 y 16) y recalcula retroactivamente PG, salvaciones, habilidades, CD y ataques afectados. Se mantienen **nueve invocaciones, cuatro trucos, trece preparados ordinarios, tres ranuras de Pacto de nivel 5 y tres Arcanum (niveles 6, 7 y 8)**; puede sustituir como máximo una invocación, un truco, un preparado y **uno de los tres Arcanum**, respetando catálogos SRD y prerrequisitos. Los gastos no se regeneran al subir; se preservan también Arrojar al infierno, estado de compañeros, equipo e inspiración. `level16Improvement`, `level16HitDieRoll` y `level16History` permiten regresar **16→15** recuperando las elecciones exactas, retirando solo la cuarta mejora y el último d8, conservando el daño compatible y todos los recursos que existían en nivel 15. El guardado sigue en versión 4 y se prueba en `warlock-level-16-89.test.ts`. Las demás dotes generales que figuran en el SRD quedan pendientes de modelar como alternativa real; no se mostrarán en el selector hasta tener motor y pruebas.
+
 ## E. Checklist obligatorio antes de entregar una nueva clase/subclase
 
 - [ ] Usa `CharacterHeader` con `onLevelUp` / `onLevelDown` y no crea controles duplicados.
@@ -110,5 +114,6 @@ Importante para Brujo: en guardados antiguos de nivel 2 no existe un historial d
 - [ ] Guardados antiguos sin tiradas registradas continúan cargando; al subir se rellenan las medias anteriores.
 - [ ] Al bajar se recorta el historial de PG y se ajustan recursos conservando daño y usos compatibles.
 - [ ] Comparación visual con Guerrero/Mago/Brujo, ratón, teclado, móvil; pruebas de progresión, lint y build.
+- [ ] Misma creación/edición modal de dos columnas y mismo ciclo de borrador, cancelar, guardar y volver a Principal de `CharacterCreationDialog` para todas las clases; nunca conservar un editor de nivel heredado.
 
 **Para el TFG:** decisión deliberada de separar componentes compartidos de presentación, políticas de cada clase (motor) y datos históricos persistidos. La uniformidad se consigue por reutilización de código, no intentando igualar capturas con CSS separado.

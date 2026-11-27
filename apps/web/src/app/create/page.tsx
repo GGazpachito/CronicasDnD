@@ -7,7 +7,7 @@ export default function CreatePage(){
    <div className="front-action-grid">
     <Link className="front-action-card" href="/fighter?new=1"><span className="front-action-symbol" aria-hidden="true">⚔</span><h2>Guerrero</h2><p>Clase y Campeón disponibles hasta nivel 20. Editor completo, equipo y recursos.</p><strong>Crear Guerrero</strong></Link>
     <Link className="front-action-card" href="/wizard?new=1"><span className="front-action-symbol" aria-hidden="true">✧</span><h2>Mago</h2><p>Progresión hasta nivel 20, con tradición de Evocación, hechizos y guardado completo.</p><strong>Crear Mago</strong></Link>
-    <Link className="front-action-card" href="/warlock?new=1"><span className="front-action-symbol" aria-hidden="true">✺</span><h2>Brujo</h2><p>Progresión disponible hasta nivel 15. Invocaciones, Magia de Pacto y Patrón Infernal a partir del nivel 3.</p><strong>Crear Brujo</strong></Link>
+    <Link className="front-action-card" href="/warlock?new=1"><span className="front-action-symbol" aria-hidden="true">✺</span><h2>Brujo</h2><p>Progresión disponible hasta nivel 16. Invocaciones, Magia de Pacto y Patrón Infernal a partir del nivel 3.</p><strong>Crear Brujo</strong></Link>
    </div>
   </div>
  </main>;

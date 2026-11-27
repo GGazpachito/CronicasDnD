@@ -20,7 +20,7 @@ Referencias oficiales: [SRD 5.2.1](https://www.dndbeyond.com/srd), [PDF inglés]
 
 | Área | Base SRD que implementa el proyecto | Exclusión aplicada en el paso 84 |
 | --- | --- | --- |
-| Clases y subclases | Guerrero/Campeón 1–20, Mago/Evocador 1–20, Brujo/Patrón Infernal 1–15 (actualización 87) | No se añaden otras subclases del PHB |
+| Clases y subclases | Guerrero/Campeón 1–20, Mago/Evocador 1–20, Brujo/Patrón Infernal 1–16 (actualización 89) | No se añaden otras subclases del PHB |
 | Origen | Humano, elfo, enano, mediano; Acólito, Criminal, Erudito y Soldado | No se añaden especies ni trasfondos externos |
 | Dotes de origen | Alerta, Iniciado en la Magia, Ataque salvaje, Competente | Artesano, Sanador, Afortunado, Músico, Peleador de taberna, Duro |
 | Estilos de combate | Tiro con arco, Defensa, Combate con arma a dos manos, Combate con dos armas | Combate a ciegas, Duelo, Intercepción, Protección, Combate arrojadizo, Combate sin armas |
@@ -62,6 +62,22 @@ flowchart TD
 **Contrato de creación y edición, actualización 88:** toda clase presente o futura ofrece sus elecciones iniciales dentro de `CharacterCreationDialog`, un `<dialog>` accesible y separado de las siete pestañas de la hoja. La ficha comienza oculta mientras no se han confirmado las elecciones; al confirmar, se muestra la pestaña Principal. Editar abre el mismo marco con los valores actuales y permite cancelar restaurando las elecciones anteriores. Ninguna clase debe incrustar su editor en Principal ni modificar elecciones de subidas anteriores desde ese editor. El botón común `CharacterHeader` dice «Subir de nivel» y abre el asistente de progresión específico de la clase, siempre dentro de `LevelUpDialogFrame`. El botón «Guardar elecciones» confirma solamente el borrador de la ficha en memoria; la persistencia en PostgreSQL se sigue ejecutando explícitamente con `SaveLoadPanel`. La hoja y el motor de reglas no requieren cambiar al incorporar módulos autorizados.
 
 **Convención visual ratificada tras el ajuste 88.2:** el formulario interno de toda clase se construye con `wizard-editor panel`, una cabecera de clase y las rejillas adaptables `wizard-editor-grid`. Se muestra primero identidad y origen frente a características y competencias; después aparecen opciones propias de clase, conjuros y equipo según proceda. No se utilizan navegaciones por pasos particulares dentro de la creación: todo el formulario es desplazable y termina en el único botón «Guardar elecciones» del marco común. Las diferencias de reglas cambian los campos, no la jerarquía ni el comportamiento del editor.
+
+### Estándar obligatorio de incorporación de clases (ratificado en los pasos 88.2 y 89)
+
+Toda clase nueva —o refactorización de una existente— cumplirá **dos contratos distintos, complementarios y compartidos**:
+
+| Operación | Contenedor único | Contrato de interacción | Responsabilidad propia de clase |
+| --- | --- | --- | --- |
+| Crear personaje | `CharacterCreationDialog` + `wizard-editor panel` y `wizard-editor-grid` | Ventana separada de la ficha, formulario desplazable de dos columnas en escritorio, una en móvil, guardar/cancelar | Catálogos permitidos, elecciones iniciales, validación y cálculo |
+| Editar creación | El mismo `CharacterCreationDialog`, precargado | Se trabaja sobre borrador; cancelar conserva lo anterior; guardar aplica y muestra Principal | Campos y prerrequisitos de las elecciones de origen |
+| Subir de nivel | `LevelUpDialogFrame` + `LevelUpHitPointsPicker` | Novedades → elecciones → confirmación; solo el último paso modifica el estado | Progresión SRD, competencias, hechizos, invocaciones y PG |
+| Bajar de nivel | `LevelDownDialog` + `LevelDownSummary` | Vista previa de pérdidas, cambios y conservación; requiere confirmación explícita | Historial reversible, opciones previas y recursos compatibles |
+| Consultar personaje | `SharedPrincipalSheet`, `CharacterHeader`, pestañas compartidas | La ficha es de **consulta, tiradas y recursos**, no un formulario permanente de creación | Paneles de rasgos y acciones exclusivas de clase dentro de las pestañas |
+
+**Invariantes verificables para cada clase:** mismo orden visual de identidad/origen y características/competencias; ninguna segunda barra de navegación propia en creación; mismas etiquetas «Guardar elecciones» y «Subir de nivel»; cancelación sin aplicar borradores; validación **también en el motor**; inventario, compañeros y recursos conservados al editar o progresar; persistencia explícita separada en `SaveLoadPanel`; misma adaptación responsive; ausencia de estilos/diálogos alternativos de Guerrero, Mago, Brujo o clases futuras.
+
+El adaptador de clase solo suministra **datos permitidos, componentes de elecciones específicos y funciones puras de cálculo/validación**. No puede redefinir el ciclo de vida ni el marco modal común. Las fichas o módulos autorizados adicionales se integrarán en los mismos resolutores de catálogo y asistentes, sin introducir nuevas formas de crear, editar o subir de nivel. Las pruebas de aceptación deben recorrer crear → cancelar → editar → guardar → subir → bajar → serializar → restaurar, para **cada clase**.
 
 **Persistencia:** registrar el identificador lógico y la versión de origen de cada opción adquirida; no duplicar fichas enteras. Las decisiones de progresión y los datos manuales del jugador siempre viven separados del catálogo.
 

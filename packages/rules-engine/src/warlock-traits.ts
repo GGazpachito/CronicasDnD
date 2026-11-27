@@ -76,6 +76,13 @@ export function collectWarlockTraits(input:GuidedWarlockInput,sheet:CalculatedWa
    summary:choice.mode==='plus_two'?`+2 a ${names[choice.first]}`:`+1 a ${names[choice.first]} y +1 a ${names[choice.second??choice.first]}`,
    explanation:'Tercera mejora acumulada con las de niveles 4 y 8. Los modificadores, conjuros, ataques y PG se recalculan con las características finales.',automation:'calculated',details:['Máximo 20. Otras dotes generales podrán añadirse en futuras fases.']});
  }
+ if(input.level>=16&&input.level16Improvement){
+  const choice=input.level16Improvement;
+  const names:Record<string,string>={strength:'Fuerza',dexterity:'Destreza',constitution:'Constitución',intelligence:'Inteligencia',wisdom:'Sabiduría',charisma:'Carisma'};
+  add({id:'warlock:ability_score_improvement_16',title:'Mejora de característica',group:'feats',source:'Brujo · nivel 16',level:16,
+   summary:choice.mode==='plus_two'?`+2 a ${names[choice.first]}`:`+1 a ${names[choice.first]} y +1 a ${names[choice.second??choice.first]}`,
+   explanation:'Cuarta mejora de característica acumulada con las de niveles 4, 8 y 12. La hoja recalcula atributos, tiradas, CD y PG pasivos.',automation:'calculated',details:['Máximo 20. Las otras dotes generales del SRD podrán incorporarse en una actualización posterior.']});
+ }
  for(const invocation of input.invocations){
   const info=WARLOCK_INVOCATIONS[invocation];
   add({id:`warlock:invocation:${invocation}`,title:info.name,group:'class',source:'Invocación sobrenatural',level:info.minLevel,

@@ -105,10 +105,12 @@ export type WarlockLevelTwelveHistory=WarlockLevelElevenHistory;
 export type WarlockLevelThirteenHistory=WarlockLevelTwelveHistory&Readonly<{mysticArcanum7Id:typeof WARLOCK_SEVENTH_LEVEL_IDS[number]}>;
 /** Nivel 14 previo a la novena invocación y al tercer Arcanum. */
 export type WarlockLevelFourteenHistory=WarlockLevelThirteenHistory;
+/** Configuración previa al cuarto aumento de característica (15→16). */
+export type WarlockLevelFifteenHistory=WarlockLevelFourteenHistory&Readonly<{mysticArcanum8Id:typeof WARLOCK_EIGHTH_LEVEL_IDS[number]}>;
 export const WARLOCK_FIEND_DAMAGE_TYPES={acid:'Ácido',bludgeoning:'Contundente',cold:'Frío',fire:'Fuego',lightning:'Relámpago',necrotic:'Necrótico',piercing:'Perforante',poison:'Veneno',psychic:'Psíquico',radiant:'Radiante',slashing:'Cortante',thunder:'Trueno'} as const;
 export type WarlockFiendDamageType=keyof typeof WARLOCK_FIEND_DAMAGE_TYPES;
 export type GuidedWarlockInput=Readonly<{
- classId:'warlock';level:1|2|3|4|5|6|7|8|9|10|11|12|13|14|15;name:string;profile?:CharacterProfile;
+ classId:'warlock';level:1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16;name:string;profile?:CharacterProfile;
  background:BackgroundId;species:SpeciesId;assignedAbilities:AbilityScores;
  abilityGenerationMethod?:AbilityGenerationMethod;
  companions?:readonly CompanionSheet[];
@@ -171,6 +173,10 @@ export type GuidedWarlockInput=Readonly<{
  mysticArcanum8Id?:typeof WARLOCK_EIGHTH_LEVEL_IDS[number];
  level15HitDieRoll?:number;
  level15History?:WarlockLevelFourteenHistory;
+ /** Nivel 16: dote Mejora de característica y dado de golpe d8. */
+ level16Improvement?:FighterAbilityImprovement;
+ level16HitDieRoll?:number;
+ level16History?:WarlockLevelFifteenHistory;
  /** Dote de origen escogida mediante Lecciones de los Primeros (subconjunto implementado). */
  lessonsFeat?:'alert'|'savage_attacker';
  pactWeaponId?:WeaponId;
@@ -211,7 +217,7 @@ export type WarlockOneState=Readonly<{
  manualDeathMarks?:Readonly<{successes:readonly [boolean,boolean,boolean];failures:readonly [boolean,boolean,boolean]}>;
 }>;
 export type CalculatedWarlockOne=Readonly<{
- level:1|2|3|4|5|6|7|8|9|10|11|12|13|14|15;name:string;abilityScores:AbilityScores;
+ level:GuidedWarlockInput['level'];name:string;abilityScores:AbilityScores;
  abilityModifiers:ReturnType<typeof abilityModifiers>;
  proficiencyBonus:2|3|4|5;skillBonuses:ReturnType<typeof calculateSkillBonuses>;
  savingThrowBonuses:ReturnType<typeof calculateSavingThrows>;
@@ -228,9 +234,9 @@ export function warlockInputForPreview(input:GuidedWarlockInput):GuidedWarlockIn
  return input.name.trim()?input:{...input,name:'Brujo provisional'};
 }
 export function calculateWarlockOne(input:GuidedWarlockInput,state?:Pick<WarlockOneState,'mageArmorActive'>):CalculatedWarlockOne{
- if(!input||input.classId!=='warlock'||![1,2,3,4,5,6,7,8,9,10,11,12,13,14,15].includes(input.level))throw new RangeError('Solo se admite Brujo de niveles 1 a 15');
+ if(!input||input.classId!=='warlock'||![1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16].includes(input.level))throw new RangeError('Solo se admite Brujo de niveles 1 a 16');
  /** Las reconstrucciones de niveles anteriores no heredan elecciones futuras. */
- const earlier={...input,mysticArcanum8Id:undefined,level15HitDieRoll:undefined,level15History:undefined};
+ const earlier={...input,mysticArcanum8Id:undefined,level15HitDieRoll:undefined,level15History:undefined,level16Improvement:undefined,level16HitDieRoll:undefined,level16History:undefined};
  if(typeof input.name!=='string'||!input.name.trim()||input.name.length>120)throw new RangeError('Introduce el nombre del Brujo');
  const bg=BACKGROUNDS[input.background];
  if(!bg||!Object.hasOwn(SPECIES_NAMES,input.species))throw new RangeError('Origen no disponible');
@@ -283,6 +289,11 @@ export function calculateWarlockOne(input:GuidedWarlockInput,state?:Pick<Warlock
  if(input.level>=15){
   if(!input.mysticArcanum8Id||!(WARLOCK_EIGHTH_LEVEL_IDS as readonly string[]).includes(input.mysticArcanum8Id))throw new RangeError('El Arcanum de nivel 8 debe elegirse del catálogo SRD del Brujo');
   if(input.level15HitDieRoll!==undefined&&(!Number.isInteger(input.level15HitDieRoll)||input.level15HitDieRoll<1||input.level15HitDieRoll>8))throw new RangeError('El dado de golpe de nivel 15 debe valer entre 1 y 8');
+ }
+ if(input.level<16&&(input.level16Improvement!==undefined||input.level16HitDieRoll!==undefined||input.level16History!==undefined))throw new RangeError('Mejora e historial de nivel 16 prematuros');
+ if(input.level>=16){
+  scores=applyFighterAbilityImprovement(scores,input.level16Improvement!,16);
+  if(input.level16HitDieRoll!==undefined&&(!Number.isInteger(input.level16HitDieRoll)||input.level16HitDieRoll<1||input.level16HitDieRoll>8))throw new RangeError('El dado de golpe de nivel 16 debe valer entre 1 y 8');
  }
  if(!Array.isArray(input.warlockSkills)||input.warlockSkills.length!==2||new Set(input.warlockSkills).size!==2||
   input.warlockSkills.some(s=>!WARLOCK_SKILL_OPTIONS.includes(s)||(bg.skills as readonly string[]).includes(s)))
@@ -438,7 +449,7 @@ export function calculateWarlockOne(input:GuidedWarlockInput,state?:Pick<Warlock
    mysticArcanum6Id:history.mysticArcanum6Id,mysticArcanum7Id:history.mysticArcanum7Id,
    lessonsFeat:history.lessonsFeat,pactWeaponId:history.pactWeaponId,tomeCantripIds:history.tomeCantripIds,tomeRitualIds:history.tomeRitualIds});
  }
- if(input.level===15){
+ if(input.level>=15){
   const history=input.level15History;
   if(!history||!Array.isArray(history.invocations)||!Array.isArray(history.cantripIds)||!Array.isArray(history.preparedIds)||
    !(WARLOCK_SIXTH_LEVEL_IDS as readonly string[]).includes(history.mysticArcanum6Id)||
@@ -448,6 +459,20 @@ export function calculateWarlockOne(input:GuidedWarlockInput,state?:Pick<Warlock
    Object.keys(history).some(k=>!['invocations','cantripIds','preparedIds','mysticArcanum6Id','mysticArcanum7Id','lessonsFeat','pactWeaponId','tomeCantripIds','tomeRitualIds','mageArmorActive','tomePresent','familiarForm','familiarName','familiarInvestmentMovement','giftOfDepthsUsed','darkOnesOwnLuckUsed','fiendishResilienceType','fiendishResiliencePending'].includes(k)))throw new RangeError('Historial de nivel 14 no válido');
   calculateWarlockOne({...earlier,level:14,invocations:history.invocations,cantripIds:history.cantripIds,preparedIds:history.preparedIds,
    mysticArcanum6Id:history.mysticArcanum6Id,mysticArcanum7Id:history.mysticArcanum7Id,
+   lessonsFeat:history.lessonsFeat,pactWeaponId:history.pactWeaponId,tomeCantripIds:history.tomeCantripIds,tomeRitualIds:history.tomeRitualIds});
+ }
+ if(input.level===16){
+  const history=input.level16History;
+  if(!history||!Array.isArray(history.invocations)||!Array.isArray(history.cantripIds)||!Array.isArray(history.preparedIds)||
+   !(WARLOCK_SIXTH_LEVEL_IDS as readonly string[]).includes(history.mysticArcanum6Id)||
+   !(WARLOCK_SEVENTH_LEVEL_IDS as readonly string[]).includes(history.mysticArcanum7Id)||
+   !(WARLOCK_EIGHTH_LEVEL_IDS as readonly string[]).includes(history.mysticArcanum8Id)||
+   typeof history.mageArmorActive!=='boolean'||typeof history.tomePresent!=='boolean'||typeof history.familiarName!=='string'||
+   (history.familiarForm!==null&&!(typeof history.familiarForm==='string'&&Object.hasOwn(WARLOCK_FAMILIARS,history.familiarForm)))||
+   Object.keys(history).some(k=>!['invocations','cantripIds','preparedIds','mysticArcanum6Id','mysticArcanum7Id','mysticArcanum8Id','lessonsFeat','pactWeaponId','tomeCantripIds','tomeRitualIds','mageArmorActive','tomePresent','familiarForm','familiarName','familiarInvestmentMovement','giftOfDepthsUsed','darkOnesOwnLuckUsed','fiendishResilienceType','fiendishResiliencePending'].includes(k)))throw new RangeError('Historial de nivel 15 no válido');
+  calculateWarlockOne({...input,level:15,level16Improvement:undefined,level16HitDieRoll:undefined,level16History:undefined,
+   invocations:history.invocations,cantripIds:history.cantripIds,preparedIds:history.preparedIds,
+   mysticArcanum6Id:history.mysticArcanum6Id,mysticArcanum7Id:history.mysticArcanum7Id,mysticArcanum8Id:history.mysticArcanum8Id,
    lessonsFeat:history.lessonsFeat,pactWeaponId:history.pactWeaponId,tomeCantripIds:history.tomeCantripIds,tomeRitualIds:history.tomeRitualIds});
  }
  if(input.invocations.includes('lessons_of_the_first_ones')){
@@ -487,6 +512,7 @@ export function calculateWarlockOne(input:GuidedWarlockInput,state?:Pick<Warlock
   (input.level>=13?Math.max(1,(input.level13HitDieRoll??5)+mods.constitution):0)+
   (input.level>=14?Math.max(1,(input.level14HitDieRoll??5)+mods.constitution):0)+
   (input.level>=15?Math.max(1,(input.level15HitDieRoll??5)+mods.constitution):0)+
+  (input.level>=16?Math.max(1,(input.level16HitDieRoll??5)+mods.constitution):0)+
   (input.species==='dwarf'?input.level:0);
  const proficiency=input.level>=13?5:input.level>=9?4:input.level>=5?3:2;
  return {
@@ -675,7 +701,7 @@ export function validateWarlockCharacterSnapshot(raw:unknown):WarlockCharacterSn
  if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new RangeError('Guardado de Brujo inválido');
  const value=raw as Record<string,unknown>;
  if(value.schemaVersion!==4||value.ruleset!=='dnd-2024'||Object.keys(value).some(k=>!['schemaVersion','ruleset','input','warlockState'].includes(k)))throw new RangeError('Versión o estructura del Brujo no compatible');
-const allowed=['companions','abilityGenerationMethod','classId','level','name','profile','background','species','assignedAbilities','increaseMode','plusTwoAbility','plusOneAbility','warlockSkills','humanSkill','humanFeat','humanSize','elfLineage','equipmentChoice','backgroundEquipment','inventoryActions','cantripIds','preparedIds','invocations','pactWeaponId','tomeCantripIds','tomeRitualIds','level2HitDieRoll','level3HitDieRoll','level4HitDieRoll','level4Improvement','level4History','level5HitDieRoll','level5History','level6HitDieRoll','level6History','level7HitDieRoll','level7History','level8HitDieRoll','level8Improvement','level8History','level9HitDieRoll','level9History','level10HitDieRoll','level10History','mysticArcanum6Id','level11HitDieRoll','level11History','level12Improvement','level12HitDieRoll','level12History','mysticArcanum7Id','level13HitDieRoll','level13History','level14HitDieRoll','level14History','mysticArcanum8Id','level15HitDieRoll','level15History','subclassId','level3History','lessonsFeat'];
+const allowed=['companions','abilityGenerationMethod','classId','level','name','profile','background','species','assignedAbilities','increaseMode','plusTwoAbility','plusOneAbility','warlockSkills','humanSkill','humanFeat','humanSize','elfLineage','equipmentChoice','backgroundEquipment','inventoryActions','cantripIds','preparedIds','invocations','pactWeaponId','tomeCantripIds','tomeRitualIds','level2HitDieRoll','level3HitDieRoll','level4HitDieRoll','level4Improvement','level4History','level5HitDieRoll','level5History','level6HitDieRoll','level6History','level7HitDieRoll','level7History','level8HitDieRoll','level8Improvement','level8History','level9HitDieRoll','level9History','level10HitDieRoll','level10History','mysticArcanum6Id','level11HitDieRoll','level11History','level12Improvement','level12HitDieRoll','level12History','mysticArcanum7Id','level13HitDieRoll','level13History','level14HitDieRoll','level14History','mysticArcanum8Id','level15HitDieRoll','level15History','level16Improvement','level16HitDieRoll','level16History','subclassId','level3History','lessonsFeat'];
  if(!value.input||typeof value.input!=='object'||Array.isArray(value.input)||Object.keys(value.input as Record<string,unknown>).some(k=>!allowed.includes(k)))throw new RangeError('Elecciones de Brujo con campos desconocidos');
  let input:GuidedWarlockInput;
  try{const json=JSON.stringify(value.input);if(json.length>120000)throw new Error();input=JSON.parse(json) as GuidedWarlockInput;}catch{throw new RangeError('Elecciones de Brujo demasiado grandes');}

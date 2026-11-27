@@ -6,7 +6,7 @@ CrónicasDnD es una aplicación web en desarrollo para crear, actualizar y gesti
 
 - Guerrero y subclase Campeón: progresión de niveles 1 a 20.
 - Mago y subclase Evocador: progresión de niveles 1 a 20.
-- Brujo y Patrón Infernal: progresión implementada hasta nivel 15 (Arcanum místico de nivel 8 y novena invocación).
+- Brujo y Patrón Infernal: progresión implementada hasta nivel 16 (cuarta Mejora de característica, tres Arcanum místicos y nueve invocaciones).
 - Hoja de personaje compartida, equipo, conjuros, tiradas, recursos, guardado y carga de personajes.
 - Creación y edición inicial de las tres clases mediante un diálogo modal reutilizable. La hoja se muestra tras confirmar las elecciones; los cambios posteriores de nivel se realizan desde «Subir de nivel».
 - Bestiario y fichas de compañeros con datos reutilizables.
