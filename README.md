@@ -63,4 +63,4 @@ Este proyecto es independiente y no está afiliado ni respaldado por Wizards of 
 
 ## Estado de la documentación
 
-La auditoría de contenido está descrita en [`docs/implementation/PASO_84_AUDITORIA_SRD_Y_ARQUITECTURA_MODULAR.md`](docs/implementation/PASO_84_AUDITORIA_SRD_Y_ARQUITECTURA_MODULAR.md). Las notas de implementación registran los avances y las limitaciones conocidos para su posible utilización en la memoria del TFG.
+La auditoría de contenido está descrita en [`docs/implementation/PASO_84_AUDITORIA_SRD_Y_ARQUITECTURA_MODULAR.md`](docs/implementation/PASO_84_AUDITORIA_SRD_Y_ARQUITECTURA_MODULAR.md). Las notas de implementación registran los avances y las limitaciones conocidos.
