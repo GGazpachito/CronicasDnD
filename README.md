@@ -17,6 +17,8 @@ La actualización 84 realizó una auditoría para limitar el **catálogo activo 
 
 La actualización 88 unificó las ventanas de creación y edición, retiró los paneles heredados y la vista técnica duplicada del Guerrero y separó las elecciones iniciales de la progresión. «Guardar elecciones» aplica la ficha localmente; el guardado persistente en PostgreSQL sigue siendo explícito desde la hoja.
 
+El ajuste 88.2 completó la uniformidad visual: Guerrero utiliza ahora el mismo formulario desplazable de dos columnas que Mago y Brujo, con secciones comunes de origen, características y competencias y apartados específicos de combate y equipo. Ya no existe un navegador de cinco pasos exclusivo de Guerrero.
+
 El proyecto no es un servicio público de producción terminado. En concreto, la API de guardado utiliza una base de datos local y no se ofrece como una plataforma multiusuario con autenticación o controles de acceso completos.
 
 ## Requisitos

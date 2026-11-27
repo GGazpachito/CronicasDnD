@@ -51,7 +51,6 @@ export default function Home(){
   const router=useRouter();
   const routeMode=useCharacterRouteMode();
   const pendingSaveNavigation=useRef(false);
-  const [step,setStep]=useState(0);
   const [activeTab,setActiveTab]=useState<SheetTab>("principal");
   const [editorOpen,setEditorOpen]=useState(false);
   const [creationConfirmed,setCreationConfirmed]=useState(false);
@@ -205,7 +204,6 @@ export default function Home(){
     const game=saved.backgroundEquipment?.gamingSet??'dice_set';setSoldierGamingSet(game);
     const key=[newStarter,saved.background,newBackgroundPack,saved.background==='soldier'&&newBackgroundPack==='a'?game:''].join(':');
     setInventoryEdits({key,actions:[...(saved.inventoryActions??[])]});
-    setStep(0);
   }
   const sheet=output.result?.sheet;
   const sessionCheck=useMemo(()=>{
@@ -260,7 +258,6 @@ export default function Home(){
   const humanCandidates=SKILLS.filter(s=>!taken.includes(s));
   const elfCandidates=(['insight','perception','survival'] as const).filter(s=>!taken.includes(s));
   const setSkillAt=(slot:number,skill:Skill)=>setFighterSkills(prev=>prev.map((s,i)=>i===slot?skill:s));
-  const STEPS=['Identidad','Origen','Características','Competencias','Equipo'];
   function selectSlot(values:string[], setter:(v:string[])=>void,index:number,next:string){setter(values.map((s,i)=>i===index?next:s));}
   function magicFields(title:string,list:SpellListId,ability:SpellAbility,cantrips:string[],spell:string,actions:{setAbility:(v:SpellAbility)=>void;setCantrips:(v:string[])=>void;setSpell:(v:string)=>void}){
     return <div className="magic-fields"><div className="section-label"><h3>{title}</h3><span>{SPELL_LISTS[list].label}</span></div>
@@ -273,10 +270,9 @@ export default function Home(){
   function changePackage(id:StartingPackageId){setStarter(id);}
   function changeMastery(index:number,value:WeaponId){setMasteries(prev=>prev.map((old,i)=>i===index?value:old));}
   // El mismo diálogo sirve para crear y editar; ninguna pestaña muestra el formulario.
-  function openEditorAt(targetStep:number){
+  function openEditor(){
     if(!editorOpen)editorBackup.current={input,adventure};
     setEditorOpen(true);
-    setStep(targetStep);
     setActiveTab('principal');
   }
   function cancelEditor(){
@@ -301,7 +297,7 @@ export default function Home(){
         background={bg.name}
         species={SPECIES_NAMES[species]}
         valid={Boolean(output.result&&!sessionCheck.outOfSync)}
-        onEdit={()=>openEditorAt(0)}
+        onEdit={openEditor}
         onLevelUp={level<20?()=>setLevelWizardOpen(true):undefined}
         onLevelDown={level>1?()=>setLevelDownOpen(true):undefined}
       />
@@ -315,25 +311,16 @@ export default function Home(){
         validate={validateCharacterSnapshot} onLoad={loadSavedSnapshot}
         normalize={saved=>makeCharacterSnapshot(saved.input,saved.adventure)}
         onPendingChange={pending=>{pendingSaveNavigation.current=pending;}}/></div>
-      {creationConfirmed&&<CharacterTabs activeTab={activeTab} onChange={setActiveTab}/>}
-      <section id="sheet-panel-principal" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-principal" hidden={activeTab!=='principal'}>
-        {creationConfirmed&&<><div className="sheet-section-heading"><div><span className="eyebrow">PÁGINA PRINCIPAL</span><h2>Tu hoja de personaje</h2><p>Valores calculados por el motor, tiradas manuales y gestión directa del estado de partida.</p></div></div>
-      <PrincipalOverview result={output.result} error={output.error} input={input} adventure={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onAdventureChange={setAdventure} onEdit={openEditorAt}/></>}
       {editorVisible&&<CharacterCreationDialog characterClass="Guerrero" isNew={!creationConfirmed} valid={Boolean(output.result&&(!sessionCheck.outOfSync||editorSynchronization))} error={output.error??(sessionCheck.outOfSync&&!editorSynchronization?'No se pueden reconciliar estos cambios con la sesión actual. Revisa tus elecciones.':'')} onSave={saveEditor} onCancel={cancelEditor}>
-      {editorSynchronization&&<p className="info-line" role="status">Al guardar, los PG de la sesión se sincronizarán con el nuevo máximo, conservando el daño sufrido y los recursos gastados. Puedes cancelar sin modificar la partida.</p>}
-      <nav className="wizard-tabs" aria-label="Pasos de creación">{STEPS.map((s,i)=><button type="button" key={s} className={step===i?'active':''} aria-current={step===i?'step':undefined} onClick={()=>setStep(i)}><span>{String(i+1).padStart(2,'0')}</span>{s}</button>)}</nav>
-      <div className="workspace">
-        <aside id="character-editor" className="editor panel">
-          <div className="panel-heading"><div><span className="eyebrow">PASO {step+1} DE {STEPS.length}</span><h2>{STEPS[step]}</h2></div><span className="step-marker">MVP</span></div>
-          {step===0&&<>
+      <section className="wizard-editor panel" aria-label="Creación y edición de Guerrero">
+        <div className="panel-heading"><div><span className="eyebrow">DATOS DEL PERSONAJE · NIVEL {level}</span><h2>Opciones de Guerrero</h2><p>Elige origen, características, competencias, estilo de combate y equipo.</p></div></div>
+        {editorSynchronization&&<p className="info-line" role="status">Al guardar, los PG de la sesión se sincronizarán con el nuevo máximo, conservando el daño sufrido y los recursos gastados. Puedes cancelar sin modificar la partida.</p>}
+        <div className="wizard-editor-grid">
+          <div>
+            <div className="section-label"><h3>Identidad y origen</h3><span>Datos iniciales</span></div>
             <label className="field"><span>Nombre del personaje</span><input value={name} maxLength={120} onChange={e=>setName(e.target.value)}/></label>
             <p className="muted-note">Guerrero · nivel {level}. La progresión se realiza exclusivamente desde «Subir de nivel» en la cabecera, mediante el asistente compartido.</p>
             {level>=3&&<div className="info-line">Subclase: Campeón. Próximo nivel: {level===20?'nivel máximo':level+1}.</div>}
-            {output.error&&<p className="save-error" role="alert">La hoja actual de nivel {level} tiene un error que impide la progresión o el guardado: {output.error}</p>}
-            {sessionCheck.outOfSync&&<p className="save-error" role="alert">Nivel {level} sin sincronizar: han cambiado los PG máximos o el estado de partida. Al intentar subir se solicitará confirmar la sincronización sin borrar la sesión.</p>}
-            {levelMessage&&<p className="level-stepper-message" role="alert">{levelMessage}</p>}
-          </>}
-          {step===1&&<>
             <label className="field"><span>Trasfondo</span><select value={background} onChange={e=>onBackground(e.target.value as BackgroundId)}>{Object.entries(BACKGROUNDS).map(([id,b])=><option key={id} value={id}>{b.name}</option>)}</select></label>
             <div className="origin-detail"><strong>Dote: {originFeatName(bg.feat)}</strong><small>Competencias: {bg.skills.map(s=>SKILL_NAMES[s as Skill]).join(', ')}</small><small>Herramienta: {background==='soldier'?GAMING_SETS[soldierGamingSet]:bg.tool}</small></div>
             {background==='soldier'&&<label className="field"><span>Competencia con juego de azar</span><select value={soldierGamingSet} onChange={e=>setSoldierGamingSet(e.target.value as GamingSetId)}>{Object.entries(GAMING_SETS).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label>}
@@ -351,35 +338,46 @@ export default function Home(){
             {species==='elf'&&<><label className="field"><span>Linaje élfico</span><select value={lineage} onChange={e=>setLineage(e.target.value as ElfLineage)}><option value="drow">Drow</option><option value="high_elf">Alto elfo</option><option value="wood_elf">Elfo de los bosques</option></select></label><label className="field"><span>Característica para conjuros del linaje</span><select value={elfSpell} onChange={e=>setElfSpell(e.target.value as typeof elfSpell)}>{(['intelligence','wisdom','charisma'] as const).map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label></>}
             {species==='dwarf'&&<div className="info-line">Robustez enana: +1 PG máximo por nivel (automatizado).</div>}
             {species==='halfling'&&<div className="info-line">Mediano: tamaño Pequeño y 30 pies de velocidad. En Rasgos encontrarás Suerte, Valentía, Agilidad de mediano y Sigilo natural; sus efectos situacionales se gestionan manualmente.</div>}
-          </>}
-          {step===2&&<>
+          </div>
+          <div>
             <div className="section-label"><h3>Características iniciales</h3><span>Tres métodos</span></div>
             <AbilityScoreMethodPicker method={abilityGenerationMethod} scores={scores} onChange={(method,nextScores)=>{setAbilityGenerationMethod(method);setScores(nextScores);}}/>
             <div className="divider"/><div className="section-label"><h3>Mejoras del trasfondo</h3></div>
             <label className="field"><span>Distribución</span><select value={mode} onChange={e=>setMode(e.target.value as typeof mode)}><option value="two_plus_one">+2 y +1 a características distintas</option><option value="three_ones">+1 a las tres características</option></select></label>
             {mode==='two_plus_one'&&<><label className="field"><span>Característica que recibe +2</span><select value={two} onChange={e=>setTwo(e.target.value as Ability)}>{allowed.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label><label className="field"><span>Característica que recibe +1</span><select value={one} onChange={e=>setOne(e.target.value as Ability)}>{allowed.map(a=><option key={a} value={a}>{NAMES[a]}</option>)}</select></label></>}
             <p className="muted-note">Opciones del trasfondo: {allowed.map(a=>NAMES[a]).join(', ')}.</p>
-          </>}
-          {step===3&&<>
+            <div className="divider"/><div className="section-label"><h3>Competencias de Guerrero</h3><span>Elige dos</span></div>
             <p className="muted-note">El Guerrero elige dos habilidades. El trasfondo ya concede dos competencias adicionales.</p>
             {([0,1] as const).map(i=><label key={i} className="field"><span>Habilidad del Guerrero {i+1}</span><select value={fighterSkills[i]} onChange={e=>setSkillAt(i,e.target.value as Skill)}>{validSkills(background).map(s=><option key={s} value={s}>{SKILL_NAMES[s]}</option>)}</select></label>)}
             {species==='human'&&<label className="field"><span>Habilidad adicional del Humano</span><select value={humanSkill} onChange={e=>setHumanSkill(e.target.value as Skill)}>{[humanSkill,...humanCandidates].filter((s,i,arr)=>arr.indexOf(s)===i).map(s=><option key={s} value={s}>{SKILL_NAMES[s]}</option>)}</select></label>}
             {species==='elf'&&<label className="field"><span>Sentidos agudos (Elfo)</span><select value={elfSkill} onChange={e=>setElfSkill(e.target.value as typeof elfSkill)}>{[elfSkill,...elfCandidates].filter((s,i,arr)=>arr.indexOf(s)===i).map(s=><option key={s} value={s}>{SKILL_NAMES[s]}</option>)}</select></label>}
             <div className="origin-detail"><strong>Salvaciones del Guerrero</strong><small>Fuerza y Constitución</small></div>
-          </>}
-          {step===4&&<>
+          </div>
+        </div>
+        <div className="divider"/>
+        <div className="wizard-editor-grid">
+          <div>
+            <div className="section-label"><h3>Estilo de combate</h3><span>Elección de clase</span></div>
             <label className="field"><span>Estilo de combate del Guerrero</span><select value={style} onChange={e=>{const chosen=e.target.value as FightingStyleId;setStyle(chosen);if(chosen===additionalStyle)setAdditionalStyle('');}}>{Object.entries(FIGHTING_STYLES).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label>
             <div className="info-line">{(style==='defense'||level>=7&&additionalStyle==='defense')?'Defensa: +1 a CA mientras llevas armadura. Aplicado automáticamente.':'Los estilos de ataque se calculan en Principal. Las decisiones tácticas corresponden al jugador y al director.'}</div>
             {level>=7&&additionalStyle&&<p className="muted-note">Estilo adicional del Campeón: {FIGHTING_STYLES[additionalStyle]}. Elegido durante la progresión de nivel.</p>}
+          </div>
+          <div>
             <div className="section-label"><h3>Maestrías iniciales</h3><span>3 tipos distintos</span></div>
             {Array.from({length:3},(_,i)=>i).map(i=><label key={i} className="field"><span>Arma dominada {i+1}</span><select value={masteries[i]} onChange={e=>changeMastery(i,e.target.value as WeaponId)}>{Object.entries(WEAPONS).map(([id,data])=><option key={id} value={id}>{data.name} · {data.mastery}</option>)}</select></label>)}
             {masteries.length>3&&<p className="muted-note">Maestrías ganadas al subir de nivel: {masteries.slice(3).map(id=>WEAPONS[id].name).join(', ')}. Su elección permanece en el asistente de progresión.</p>}
             <p className="muted-note">Las maestrías deben ser distintas. Las nuevas elecciones de nivel se realizan desde «Subir de nivel». Puedes elegir armas aunque aún no las poseas; sus ataques y propiedades se consultan en Principal.</p>
-            <div className="divider"/>
+          </div>
+        </div>
+        <div className="divider"/>
+        <div className="wizard-editor-grid">
+          <div>
+            <div className="section-label"><h3>Equipo inicial de clase</h3><span>Guerrero</span></div>
             <label className="field"><span>Equipo inicial de clase</span><select value={starter} onChange={e=>changePackage(e.target.value as StartingPackageId)}>{Object.entries(FIGHTER_PACKAGES).map(([id,pack])=><option key={id} value={id}>{pack.label}</option>)}</select></label>
             <div className="origin-detail"><strong>{FIGHTER_PACKAGES[starter].gold} po · Equipo de clase</strong>{FIGHTER_PACKAGES[starter].items.map((it,i)=><small key={i}>{it.quantity} × {it.name}</small>)}{starter==='c'&&<small>Sin objetos. La compra de equipo se añadirá después.</small>}</div>
             <div className="info-line">El equipo inicial se añade al inventario. Las compras, el botín y los cambios de equipo se gestionan después desde la pestaña Equipo.</div>
-            <div className="divider"/>
+          </div>
+          <div>
             <div className="section-label"><h3>Equipo del trasfondo</h3><span>{bg.name}</span></div>
             <label className="field"><span>Opción del trasfondo</span><select value={backgroundPackage} onChange={e=>setBackgroundPackage(e.target.value as BackgroundPackageId)}><option value="a">A · Objetos y monedas</option><option value="b">B · 50 piezas de oro, sin objetos</option></select></label>
             <div className="origin-detail"><strong>{BACKGROUND_PACKAGES[background][backgroundPackage].gold} po · Trasfondo</strong>
@@ -388,15 +386,21 @@ export default function Home(){
               {backgroundPackage==='b'&&<small>Sin objetos de trasfondo; la competencia con herramientas se conserva.</small>}
             </div>
             <p className="muted-note">El oro y los objetos del trasfondo se suman a los de clase. Si cambias un paquete, se reinicia el historial de operaciones del inventario.</p>
-          </>}
-          <div className="wizard-actions"><button type="button" disabled={step===0} onClick={()=>setStep(x=>Math.max(0,x-1))}>Anterior</button><button type="button" disabled={step===STEPS.length-1} onClick={()=>setStep(x=>Math.min(STEPS.length-1,x+1))}>Siguiente</button></div>
-          <div className="editor-footnote">Las elecciones iniciales se aplicarán juntas al guardar. El progreso posterior se modifica exclusivamente desde los asistentes de nivel.</div>
-        </aside>
-      </div>
+          </div>
+        </div>
+        {output.error&&<p className="error" role="alert">{output.error}</p>}
+        {sessionCheck.outOfSync&&!editorSynchronization&&<p className="warning" role="alert">La sesión actual no se puede sincronizar con estas elecciones. Revisa el origen o los PG antes de guardar.</p>}
+        {levelMessage&&<p className="muted-note" role="status">{levelMessage}</p>}
+        <p className="editor-footnote">Las elecciones iniciales se aplican juntas al guardar. La progresión de nivel se gestiona exclusivamente desde «Subir de nivel».</p>
+      </section>
       </CharacterCreationDialog>}
+      {creationConfirmed&&<CharacterTabs activeTab={activeTab} onChange={setActiveTab}/>}
+      <section id="sheet-panel-principal" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-principal" hidden={activeTab!=='principal'}>
+        {creationConfirmed&&<><div className="sheet-section-heading"><div><span className="eyebrow">PÁGINA PRINCIPAL</span><h2>Tu hoja de personaje</h2><p>Valores calculados por el motor, tiradas manuales y gestión directa del estado de partida.</p></div></div>
+        <PrincipalOverview result={output.result} error={output.error} input={input} adventure={sessionCheck.state} outOfSync={sessionCheck.outOfSync} onAdventureChange={setAdventure} onEdit={openEditor}/></>}
       </section>
       <section id="sheet-panel-rasgos" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-rasgos" hidden={activeTab!=='rasgos'}>
-        <TraitsPanel input={input} result={output.result} error={output.error} onEdit={openEditorAt}/>
+        <TraitsPanel input={input} result={output.result} error={output.error} onEdit={openEditor}/>
       </section>
       <section id="sheet-panel-equipo" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-equipo" hidden={activeTab!=='equipo'}>
         <EquipmentPanel
@@ -407,19 +411,19 @@ export default function Home(){
           onInventoryAction={transact}
           onUndo={undoTransaction}
           onReset={resetTransactions}
-          onEdit={()=>openEditorAt(4)}
+          onEdit={openEditor}
           onOpenAttacks={()=>setActiveTab('principal')}
         />
       </section>
       <section id="sheet-panel-hechizos" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-hechizos" hidden={activeTab!=='hechizos'}>
         <SharedSpellsLayout spellClass="Guerrero" description="La magia de origen no concede ranuras de clase.">
-          <FighterSpellLibrary result={output.result} error={output.error} mode="normal" onEditOrigin={()=>openEditorAt(1)}/>
+          <FighterSpellLibrary result={output.result} error={output.error} mode="normal" onEditOrigin={openEditor}/>
         </SharedSpellsLayout>
       </section>
       <section id="sheet-panel-personaje" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-personaje" hidden={activeTab!=='personaje'}>
         <CharacterProfilePanel key={profileLoadRevision} profile={profile} onChange={setProfile} name={name}
           species={SPECIES_NAMES[species]}
-          background={bg.name} characterClass="Guerrero" level={level} onEditIdentity={()=>openEditorAt(0)}/>
+          background={bg.name} characterClass="Guerrero" level={level} onEditIdentity={openEditor}/>
       </section>
       <section id="sheet-panel-companions" className="sheet-tab-panel" role="tabpanel" aria-labelledby="sheet-tab-companions" hidden={activeTab!=='companions'}>
         <SharedCompanionsPanel companions={companions} onChange={setCompanions}/>
