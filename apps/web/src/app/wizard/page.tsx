@@ -1,7 +1,8 @@
 'use client';
 
-import {useMemo,useRef,useState} from 'react';
+import {useEffect,useMemo,useRef,useState} from 'react';
 import Link from 'next/link';
+import {useRouter} from 'next/navigation';
 import CharacterTabs,{type SheetTab} from '../../components/CharacterTabs';
 import SaveLoadPanel from '../../components/SaveLoadPanel';
 import TraitsPanel from '../../components/TraitsPanel';
@@ -30,6 +31,8 @@ import {WIZARD_SPELL_CATALOG} from '../../../../../packages/rules-engine/src/wiz
 import {wizardSpellRule} from '../../../../../packages/rules-engine/src/wizard-spell-details';
 import {nextMagicInstanceId,type InventoryAction,equippedArmor,INVENTORY_NAMES} from '../../../../../packages/rules-engine/src/inventory';
 import CharacterHeader from '../../components/CharacterHeader';
+import CharacterCreationDialog from '../../components/CharacterCreationDialog';
+import useCharacterRouteMode from '../../components/useCharacterRouteMode';
 import CharacterProfilePanel from '../../components/CharacterProfilePanel';
 import SharedPrincipalSheet from '../../components/SharedPrincipalSheet';
 import {type Ability} from '../../../../../packages/rules-engine/src/abilities';
@@ -59,11 +62,17 @@ const defaultInput:GuidedWizardInput={classId:'wizard',level:1,name:'',backgroun
 const options=<T extends string>(choices:readonly T[],label:(v:T)=>string)=>choices.map(x=><option key={x} value={x}>{label(x)}</option>);
 const signed=(n:number)=>n>=0?`+${n}`:String(n);
 export default function WizardPage(){
+ const router=useRouter();
+ const routeMode=useCharacterRouteMode();
  const pendingSaveNavigation=useRef(false);
  const [input,setInput]=useState<GuidedWizardInput>(defaultInput);
  const [state,setState]=useState<WizardLevelOneState>(()=>initialWizardOneState(wizardInputForPreview(defaultInput)));
  const [tab,setTab]=useState<SheetTab>('principal');
- const [editing,setEditing]=useState(true);
+ const [editing,setEditing]=useState(false);
+ const [creationConfirmed,setCreationConfirmed]=useState(false);
+ const editorVisible=editing||(!creationConfirmed&&routeMode==='creation');
+ const loadingFromLink=routeMode==='existing';
+ const editorBackup=useRef<{input:GuidedWizardInput;state:WizardLevelOneState}|null>(null);
  const [levelUpOpen,setLevelUpOpen]=useState(false);
  const [levelDownOpen,setLevelDownOpen]=useState(false);
  const [masteryRestOpen,setMasteryRestOpen]=useState(false);
@@ -87,6 +96,21 @@ export default function WizardPage(){
   if(!computed.sheet)return null;
   try{return makeWizardCharacterSnapshot(input,state);}catch{return null;}
  },[input,state,computed.sheet]);
+ // Las elecciones del origen pueden cambiar los PG máximos. En la creación y
+ // edición se conserva el daño sufrido y se ajusta automáticamente el máximo.
+ const lastEditorMaximum=useRef<number|null>(null);
+ useEffect(()=>{
+  if(!editorVisible){lastEditorMaximum.current=null;return;}
+  if(!computed.sheet)return;
+  const maximum=computed.sheet.maximumHitPoints;
+  const before=lastEditorMaximum.current;
+  lastEditorMaximum.current=maximum;
+  if(before===null||before===maximum)return;
+  setState(previous=>{
+   const hitPointsCurrent=previous.hitPointsCurrent===before?maximum:Math.min(previous.hitPointsCurrent,maximum);
+   return hitPointsCurrent===previous.hitPointsCurrent?previous:{...previous,hitPointsCurrent};
+  });
+ },[editorVisible,computed.sheet]);
  const levelDownAssessment=useMemo(()=>{
   if(!levelDownOpen)return {preview:null,error:''};
   try{return {preview:previewWizardLevelDown(input,state),error:''};}
@@ -191,16 +215,27 @@ export default function WizardPage(){
  }
  function undoInventory(){patch({inventoryActions:(input.inventoryActions??[]).slice(0,-1)});setError('');}
  function resetInventory(){patch({inventoryActions:[]});setError('');}
+ function openEditor(){editorBackup.current={input,state};setEditing(true);}
+ function cancelEditor(){
+  if(!creationConfirmed){router.push('/create');return;}
+  if(editorBackup.current){setInput(editorBackup.current.input);setState(editorBackup.current.state);}
+  editorBackup.current=null;setEditing(false);setError('');
+ }
+ function saveEditor(){
+  if(!actualSnapshot)return;
+  editorBackup.current=null;setCreationConfirmed(true);setEditing(false);setTab('principal');setError('');
+ }
  function restore(snapshot:ReturnType<typeof validateWizardCharacterSnapshot>){
-  setInput(snapshot.input);setState(snapshot.wizardState);setProfileRevision(n=>n+1);setEditing(false);setLevelUpOpen(false);setLevelDownOpen(false);setMasteryRestOpen(false);setOverchannelResult('');setOverchannelConfirmed(false);setSpellRecallResult('');setShortRestNotice('');setTab('principal');setError('');
+  setInput(snapshot.input);setState(snapshot.wizardState);setProfileRevision(n=>n+1);setCreationConfirmed(true);editorBackup.current=null;setEditing(false);setLevelUpOpen(false);setLevelDownOpen(false);setMasteryRestOpen(false);setOverchannelResult('');setOverchannelConfirmed(false);setSpellRecallResult('');setShortRestNotice('');setTab('principal');setError('');
  }
  return <main className="app-shell wizard-page">
   <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CrónicasDnD</strong><span>Mago · D&D 2024</span></div></div><Link href="/" className="wizard-class-link" onNavigate={(event:{preventDefault:()=>void})=>{if(pendingSaveNavigation.current&&!window.confirm("Tienes cambios sin guardar. ¿Descartarlos y volver al menú?"))event.preventDefault();}}>Menú de personajes</Link></header>
   <div className="content">
    <p className="sheet-release-note">CLASE · MAGO NIVEL {input.level} · SRD 5.2.1</p>
+   {creationConfirmed&&<>
    <CharacterHeader name={input.name} portraitDataUrl={input.profile?.portraitDataUrl} level={input.level}
      background={background.name} species={SPECIES_NAMES[input.species]} className="Mago" subclass={input.level>=3?'Evocación':undefined} valid={Boolean(actualSnapshot)}
-     onEdit={()=>setEditing(true)}
+     onEdit={openEditor}
       onLevelUp={input.level<20&&actualSnapshot?()=>{setLevelUpOpen(true);setEditing(false);}:undefined}
      onLevelDown={input.level>1&&actualSnapshot?()=>setLevelDownOpen(true):undefined}/>
    <p className="wizard-progression-hint">{input.level>=20?'Progresión del Mago completada: nivel 20. Conjuros de firma disponibles.':input.level>=19?'Beneficio épico obtenido. Próxima etapa: nivel 20.':input.level>=18?'Maestría de conjuros disponible. Próxima etapa: nivel 19.':`Próxima subida disponible: Mago de nivel ${input.level+1}.`}</p>
@@ -213,10 +248,11 @@ export default function WizardPage(){
      }}/>} 
   {levelUpOpen&&<WizardLevelUpWizard input={input} state={state} mode={mode} onCancel={()=>setLevelUpOpen(false)} onConfirm={next=>{setInput(next.input);setState(next.state);setLevelUpOpen(false);setOverchannelResult('');setOverchannelConfirmed(false);setSpellRecallResult('');setShortRestNotice('');setEditing(false);setTab('principal');setError('');}}/>}
   {masteryRestOpen&&sheet&&<WizardMasteryRestDialog input={input} spellAttackBonus={sheet.spellAttackBonus} mode={mode} onCancel={()=>setMasteryRestOpen(false)} onConfirm={finishLongRest}/>}
-  <SaveLoadPanel characterClass="wizard" snapshot={actualSnapshot} validate={validateWizardCharacterSnapshot} onLoad={restore}
+   </>}
+  <div className="character-sheet-content" hidden={!creationConfirmed&&!loadingFromLink}><SaveLoadPanel characterClass="wizard" snapshot={creationConfirmed?actualSnapshot:null} validate={validateWizardCharacterSnapshot} onLoad={restore}
      normalize={saved=>makeWizardCharacterSnapshot(saved.input,saved.wizardState)}
-     onPendingChange={pending=>{pendingSaveNavigation.current=pending;}}/>
-   {editing&&<section className="wizard-editor panel" aria-label="Creación de Mago">
+     onPendingChange={pending=>{pendingSaveNavigation.current=pending;}}/></div>
+   {editorVisible&&<CharacterCreationDialog characterClass="Mago" isNew={!creationConfirmed} valid={Boolean(actualSnapshot)} error={computed.error} onSave={saveEditor} onCancel={cancelEditor}><section className="wizard-editor panel" aria-label="Creación de Mago">
     <div className="panel-heading"><div><span className="eyebrow">DATOS DEL PERSONAJE · NIVEL {input.level}</span><h2>Opciones de Mago</h2><p>Elige origen, características, competencias, trucos y libro de conjuros.</p></div></div>
     <div className="wizard-editor-grid">
      <div>
@@ -249,11 +285,11 @@ export default function WizardPage(){
     {input.level>1&&<p className="muted-note">Los conjuros obtenidos al subir de nivel se muestran en Hechizos; esta sección inicial no los modifica.</p>}
     {computed.error&&<p className="error" role="alert">{computed.error}</p>}
     {sheet&&!actualSnapshot&&<p className="warning">{!input.name.trim()?'Introduce el nombre del personaje para habilitar el guardado.':'Revisa el estado de partida antes de guardar. Si has reducido los PG máximos, utiliza «Ajustar PG» en Principal.'}</p>}
-   </section>}
-   <CharacterTabs activeTab={tab} onChange={setTab}/>
+   </section></CharacterCreationDialog>}
+   {creationConfirmed&&<><CharacterTabs activeTab={tab} onChange={setTab}/>
    <section id="sheet-panel-principal" role="tabpanel" aria-labelledby="sheet-tab-principal" hidden={tab!=='principal'} className="sheet-tab-panel">
     <div className="sheet-section-heading"><div><span className="eyebrow">PÁGINA PRINCIPAL</span><h2>Tu hoja de personaje</h2><p>Valores calculados, tiradas manuales y estado de partida. La misma estructura para todas las clases.</p></div></div>
-    {!sheet?<section className="overview-unavailable panel" role="alert"><h3>Revisa las elecciones de creación</h3><p>{computed.error}</p><button type="button" onClick={()=>setEditing(true)}>Editar personaje</button></section>:<SharedPrincipalSheet
+    {!sheet?<section className="overview-unavailable panel" role="alert"><h3>Revisa las elecciones de creación</h3><p>{computed.error}</p><button type="button" onClick={openEditor}>Editar personaje</button></section>:<SharedPrincipalSheet
       abilityScores={sheet.abilityScores} abilityModifiers={sheet.abilityModifiers} proficiencyBonus={wizardProgression(input.level,input.level>=3?'evoker':undefined).proficiencyBonus}
       skillBonuses={sheet.skillBonuses} savingThrowBonuses={sheet.savingThrowBonuses}
       trainedSkills={new Set<Skill>(sheet.skillProficiencies)} trainedSaves={new Set<Ability>(['intelligence','wisdom'])}
@@ -275,11 +311,11 @@ export default function WizardPage(){
     />}
    </section>
    <section id="sheet-panel-rasgos" role="tabpanel" aria-labelledby="sheet-tab-rasgos" hidden={tab!=='rasgos'} className="sheet-tab-panel">
-    <TraitsPanel collection={sheet?collectWizardTraits(input,sheet):undefined} error={computed.error} onEdit={()=>setEditing(true)}/>
+    <TraitsPanel collection={sheet?collectWizardTraits(input,sheet):undefined} error={computed.error} onEdit={openEditor}/>
    </section>
    <section id="sheet-panel-equipo" role="tabpanel" aria-labelledby="sheet-tab-equipo" hidden={tab!=='equipo'} className="sheet-tab-panel">
     <EquipmentPanel inventory={sheet?.inventory??null} error={computed.error} outOfSync={false} actionCount={input.inventoryActions?.length??0}
-      onInventoryAction={transact} onUndo={undoInventory} onReset={resetInventory} onEdit={()=>{setEditing(true);setTab('principal');}}
+      onInventoryAction={transact} onUndo={undoInventory} onReset={resetInventory} onEdit={openEditor}
       onOpenAttacks={()=>setTab('principal')}/>
     <p className="overview-panel-note">El Mago no tiene competencia con armaduras ni escudos. Equiparlos puede impedir lanzar conjuros hasta obtener la formación adecuada.</p>
    </section>
@@ -340,10 +376,10 @@ export default function WizardPage(){
      <button type="button" disabled={!memorizeOld||!memorizeNew} onClick={memorize}>Confirmar cambio tras descanso corto</button>
     </fieldset>}
     <p className="muted-note">Rombo marcado = disponible; vacío = gastado. Preparar, aprender o tirar dados no lanza conjuros ni consume ranuras.</p></SharedSpellsLayout></section>
-   <section id="sheet-panel-personaje" role="tabpanel" aria-labelledby="sheet-tab-personaje" hidden={tab!=='personaje'} className="sheet-tab-panel"><CharacterProfilePanel key={profileRevision} profile={input.profile??EMPTY_CHARACTER_PROFILE} name={input.name} species={SPECIES_NAMES[input.species]} background={background.name} characterClass="Mago" level={input.level} onChange={profile=>patch({profile})} onEditIdentity={()=>setEditing(true)}/></section>
+   <section id="sheet-panel-personaje" role="tabpanel" aria-labelledby="sheet-tab-personaje" hidden={tab!=='personaje'} className="sheet-tab-panel"><CharacterProfilePanel key={profileRevision} profile={input.profile??EMPTY_CHARACTER_PROFILE} name={input.name} species={SPECIES_NAMES[input.species]} background={background.name} characterClass="Mago" level={input.level} onChange={profile=>patch({profile})} onEditIdentity={openEditor}/></section>
    <section id="sheet-panel-companions" role="tabpanel" aria-labelledby="sheet-tab-companions" hidden={tab!=='companions'} className="sheet-tab-panel"><SharedCompanionsPanel companions={input.companions??[]} onChange={companions=>patch({companions})}/></section>
    <section id="sheet-panel-combate" role="tabpanel" aria-labelledby="sheet-tab-combate" hidden={tab!=='combate'} className="sheet-tab-panel"><SheetPlaceholder eyebrow="COMBATE · DESARROLLO FUTURO" title="Coming Soon" description="La interfaz de combate llegará más adelante. Mientras tanto, realiza tiradas desde Principal y gestiona las ranuras desde Hechizos; los turnos y objetivos siguen en manos de los jugadores." actionLabel="Volver a Principal" onAction={()=>setTab('principal')}/></section>
-   <footer className="footer">Hoja compartida · Mago nivel {input.level} · Guardado manual en PostgreSQL.</footer>
+   <footer className="footer">Hoja compartida · Mago nivel {input.level} · Guardado manual en PostgreSQL.</footer></>}
   </div>
  </main>;
 }

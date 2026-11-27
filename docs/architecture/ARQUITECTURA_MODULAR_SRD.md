@@ -59,6 +59,8 @@ flowchart TD
 
 **Vista:** formularios, fichas de criaturas y asistentes consumen únicamente opciones resueltas para la cuenta actual. No hacen supuestos de que un libro esté instalado ni codifican un repertorio exclusivo de una clase.
 
+**Contrato de creación y edición, actualización 88:** toda clase presente o futura ofrece sus elecciones iniciales dentro de `CharacterCreationDialog`, un `<dialog>` accesible y separado de las siete pestañas de la hoja. La ficha comienza oculta mientras no se han confirmado las elecciones; al confirmar, se muestra la pestaña Principal. Editar abre el mismo marco con los valores actuales y permite cancelar restaurando las elecciones anteriores. Ninguna clase debe incrustar su editor en Principal ni modificar elecciones de subidas anteriores desde ese editor. El botón común `CharacterHeader` dice «Subir de nivel» y abre el asistente de progresión específico de la clase, siempre dentro de `LevelUpDialogFrame`. El botón «Guardar elecciones» confirma solamente el borrador de la ficha en memoria; la persistencia en PostgreSQL se sigue ejecutando explícitamente con `SaveLoadPanel`. La hoja y el motor de reglas no requieren cambiar al incorporar módulos autorizados.
+
 **Persistencia:** registrar el identificador lógico y la versión de origen de cada opción adquirida; no duplicar fichas enteras. Las decisiones de progresión y los datos manuales del jugador siempre viven separados del catálogo.
 
 **Procedencia y derechos:** cada paquete debe declarar su título, versión, URL de fuente, licencia, declaración de derechos, dependencias y categorías. `content-packs.ts` define el contrato preliminar. Este metadato **no constituye** por sí mismo autorización de uso: las licencias y los archivos deben revisarse antes de publicarse.

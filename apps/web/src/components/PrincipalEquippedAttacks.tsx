@@ -132,10 +132,10 @@ function EquippedWeaponCard({choice,sheet,inventory,martial,combat,circumstanceM
   </article>;
 }
 
-export default function PrincipalEquippedAttacks({sheet,inventory,martial,combat,circumstanceMode,criticalDamage,onCriticalDamageChange,onOpenAdvanced}:Readonly<{
+export default function PrincipalEquippedAttacks({sheet,inventory,martial,combat,circumstanceMode,criticalDamage,onCriticalDamageChange}:Readonly<{
   sheet:CalculatedFighterSheet;inventory:InventoryState|null;martial:MartialChoices|undefined;
   combat:CombatState|null;circumstanceMode:D20Mode;criticalDamage:boolean;
-  onCriticalDamageChange:(checked:boolean)=>void;onOpenAdvanced:()=>void;
+  onCriticalDamageChange:(checked:boolean)=>void;
 }>){
   const choices=inventory?equippedWeaponChoices(inventory):[];
   return <section className="overview-panel panel overview-equipped-attacks" aria-label="Armas equipadas y tiradas">
@@ -151,6 +151,5 @@ export default function PrincipalEquippedAttacks({sheet,inventory,martial,combat
         choice={choice} sheet={sheet} inventory={inventory} martial={martial} combat={combat}
         circumstanceMode={circumstanceMode} criticalDamage={criticalDamage}/>)}</div>}
     <p className="overview-panel-note">Ventaja/desventaja: usa los botones generales de «Tiradas de d20». El crítico global duplica solo los dados de daño; los críticos naturales se reconocen por arma. Estas tiradas son independientes del combate: no gastan munición, acciones ni recursos y no registran impactos. La CA del objetivo, posiciones y otros efectos tácticos se resuelven con el DM.</p>
-    <button className="overview-link" type="button" onClick={onOpenAdvanced}>Abrir panel de ataques avanzado</button>
   </section>;
 }

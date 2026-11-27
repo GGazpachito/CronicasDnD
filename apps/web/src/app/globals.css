@@ -180,15 +180,28 @@
 .sheet-preview-metrics>div{border:1px solid #384b5c;border-radius:10px;background:#162330;padding:12px;min-width:0;display:flex;flex-direction:column;gap:6px}
 .sheet-preview-metrics span{color:var(--muted);font-size:11px}
 .sheet-preview-metrics strong{font-size:16px;overflow-wrap:anywhere}
-.legacy-tools{margin:0 0 21px;padding:17px 20px}
-.legacy-tools>summary{cursor:pointer;font-weight:750;display:flex;justify-content:space-between;align-items:center;gap:12px;list-style:none;color:var(--gold)}
-.legacy-tools>summary span{font-size:11px;color:var(--muted);font-weight:400}
-.legacy-tools>summary:before{content:"▸";color:var(--gold)}
-.legacy-tools[open]>summary:before{content:"▾"}
-.legacy-tools-content{padding-top:19px}
-.legacy-tools-content>.panel{margin-top:0}
+/* Creación y edición compartidas: un diálogo modal independiente de la hoja. */
+.character-creation-dialog{width:min(1080px,calc(100vw - 32px));max-width:1080px;max-height:min(92dvh,1050px);padding:0;border:1px solid #9d8056;border-radius:18px;background:#182432;color:var(--text);box-shadow:0 28px 90px #000c;overflow:hidden}
+.character-creation-dialog::backdrop{background:#060d18dd;backdrop-filter:blur(5px)}
+.character-creation-frame{display:flex;flex-direction:column;max-height:min(92dvh,1050px)}
+.character-creation-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:22px;padding:23px 28px 18px;border-bottom:1px solid #3d4d60;background:linear-gradient(145deg,#263747,#192534)}
+.character-creation-heading h2{font:700 clamp(24px,3vw,31px)/1.2 Georgia,serif;margin:7px 0}
+.character-creation-heading p{color:var(--muted);font-size:13px;margin:0}
+.character-creation-close{flex-shrink:0;font-size:27px;min-width:42px;min-height:42px}
+.character-creation-body{padding:24px 28px;overflow-y:auto;overscroll-behavior:contain;min-height:0}
+.character-creation-body .wizard-editor{padding:0;margin:0;border:0;background:transparent;box-shadow:none}
+.character-creation-body .wizard-editor .panel-heading{margin-bottom:18px}
+.character-creation-body .workspace{display:block}
+.character-creation-body .workspace>.editor{width:100%;max-width:none}
+.character-creation-footer{padding:17px 28px;border-top:1px solid #3d4d60;display:flex;align-items:center;justify-content:space-between;gap:20px;background:#202d3d}
+.character-creation-status{font-size:12px;display:flex;flex-direction:column;gap:4px}
+.character-creation-status small{color:var(--muted)}
+.character-creation-actions{display:flex;gap:10px;flex-shrink:0}
+.character-creation-actions .primary{border-color:#bf9a62;background:#977244;color:#fff}
+.character-sheet-content[hidden]{display:none!important}
+@media(max-width:680px){.character-creation-dialog{width:calc(100vw - 12px);max-height:97dvh}.character-creation-frame{max-height:97dvh}.character-creation-heading{padding:16px}.character-creation-body{padding:15px}.character-creation-footer{padding:13px;flex-direction:column;align-items:stretch}.character-creation-actions{justify-content:flex-end;flex-wrap:wrap}}
 @media(max-width:950px){.sheet-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}.character-header{flex-wrap:wrap}.character-header-actions{width:100%;justify-content:flex-start}}
-@media(max-width:600px){.character-header{padding:17px;gap:13px}.character-portrait{width:59px;height:67px;font-size:29px}.character-identity{flex-basis:calc(100% - 80px)}.character-identity p{font-size:11px}.character-header-actions{display:grid;grid-template-columns:1fr 1fr}.sheet-tabs{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:16px 0}.sheet-tab{min-height:49px;font-size:12px;padding:8px}.sheet-section-heading h2{font-size:23px}.sheet-placeholder{padding:20px}.sheet-preview-metrics{grid-template-columns:1fr}.legacy-tools{padding:15px}.legacy-tools>summary{font-size:12px}}
+@media(max-width:600px){.character-header{padding:17px;gap:13px}.character-portrait{width:59px;height:67px;font-size:29px}.character-identity{flex-basis:calc(100% - 80px)}.character-identity p{font-size:11px}.character-header-actions{display:grid;grid-template-columns:1fr 1fr}.sheet-tabs{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:16px 0}.sheet-tab{min-height:49px;font-size:12px;padding:8px}.sheet-section-heading h2{font-size:23px}.sheet-placeholder{padding:20px}.sheet-preview-metrics{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.sheet-tab{scroll-behavior:auto}}
 
 /* Actualización 37: portada de consulta, sin estado propio ni nuevos cálculos de reglas. */

@@ -35,7 +35,7 @@ export default function CharacterHeader({ name, portraitDataUrl, level, backgrou
       <div className="character-header-actions">
         <button type="button" onClick={onEdit}>Editar personaje</button>
         <button type="button" onClick={onLevelDown} disabled={!onLevelDown} title={!onLevelDown?"No se puede bajar del nivel 1":undefined}>Bajar un nivel</button>
-        <button type="button" className="primary" onClick={onLevelUp} disabled={!onLevelUp} title={!onLevelUp?"Subida de nivel pendiente de implementación para esta clase o nivel":undefined}>{onLevelUp?"Gestionar nivel":"Progresión próximamente"}</button>
+        <button type="button" className="primary" onClick={onLevelUp} disabled={!onLevelUp} title={!onLevelUp?"Subida de nivel pendiente de implementación para esta clase o nivel":undefined}>Subir de nivel</button>
       </div>
     </section>
   );

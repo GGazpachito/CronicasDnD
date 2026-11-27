@@ -8,11 +8,14 @@ CrónicasDnD es una aplicación web en desarrollo para crear, actualizar y gesti
 - Mago y subclase Evocador: progresión de niveles 1 a 20.
 - Brujo y Patrón Infernal: progresión implementada hasta nivel 15 (Arcanum místico de nivel 8 y novena invocación).
 - Hoja de personaje compartida, equipo, conjuros, tiradas, recursos, guardado y carga de personajes.
+- Creación y edición inicial de las tres clases mediante un diálogo modal reutilizable. La hoja se muestra tras confirmar las elecciones; los cambios posteriores de nivel se realizan desde «Subir de nivel».
 - Bestiario y fichas de compañeros con datos reutilizables.
 - Motor de reglas en TypeScript separado de la interfaz Next.js.
 - Persistencia local con PostgreSQL y Prisma.
 
 La actualización 84 realizó una auditoría para limitar el **catálogo activo del programa base al SRD 5.2.1**. El diseño de futuros módulos ampliables se documenta en [`docs/architecture/ARQUITECTURA_MODULAR_SRD.md`](docs/architecture/ARQUITECTURA_MODULAR_SRD.md); la activación de módulos por usuario **aún no está implementada**.
+
+La actualización 88 unificó las ventanas de creación y edición, retiró los paneles heredados y la vista técnica duplicada del Guerrero y separó las elecciones iniciales de la progresión. «Guardar elecciones» aplica la ficha localmente; el guardado persistente en PostgreSQL sigue siendo explícito desde la hoja.
 
 El proyecto no es un servicio público de producción terminado. En concreto, la API de guardado utiliza una base de datos local y no se ofrece como una plataforma multiusuario con autenticación o controles de acceso completos.
 
@@ -63,4 +66,4 @@ Este proyecto es independiente y no está afiliado ni respaldado por Wizards of 
 
 ## Estado de la documentación
 
-La auditoría de contenido está descrita en [`docs/implementation/PASO_84_AUDITORIA_SRD_Y_ARQUITECTURA_MODULAR.md`](docs/implementation/PASO_84_AUDITORIA_SRD_Y_ARQUITECTURA_MODULAR.md). Las notas de implementación registran los avances y las limitaciones conocidos.
+La auditoría de contenido está descrita en [`docs/implementation/PASO_84_AUDITORIA_SRD_Y_ARQUITECTURA_MODULAR.md`](docs/implementation/PASO_84_AUDITORIA_SRD_Y_ARQUITECTURA_MODULAR.md). Las notas de implementación registran los avances y las limitaciones conocidos para su posible utilización en la memoria del TFG.

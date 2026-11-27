@@ -24,11 +24,10 @@ type Props = {
   outOfSync: boolean;
   onAdventureChange: (state: AdventureState) => void;
   onEdit: (step: number) => void;
-  onOpenTools: (target: "attacks" | "resources") => void;
 };
 
 /** Lectura pura de la misma hoja calculada y la misma sesión que usa el editor. */
-export default function PrincipalOverview({ result, error, input, adventure, outOfSync, onAdventureChange, onEdit, onOpenTools }: Props) {
+export default function PrincipalOverview({ result, error, input, adventure, outOfSync, onAdventureChange, onEdit }: Props) {
   // Solo resultados efímeros de tiradas. Ninguna característica, PG o recurso se duplica aquí.
   const [circumstanceMode, setCircumstanceMode] = useState<D20Mode>("normal");
   const [criticalDamage, setCriticalDamage] = useState(false);
@@ -103,7 +102,7 @@ export default function PrincipalOverview({ result, error, input, adventure, out
       <p className="overview-panel-note">Marca o desmarca manualmente. Los marcadores no aplican reglas automáticas.</p>
     </section>
     <SharedInspirationPanel checked={current?.combat.heroicInspiration===true} disabled={!current} onChange={checked=>{runAdventureAction({type:checked?'gain_heroic_inspiration':'spend_heroic_inspiration'});}}>
-      {sheet.features.includes('champion_heroic_warrior')&&<p className="overview-panel-note">Guerrero heroico: la inspiración se recupera al iniciar tu turno mediante el panel de turnos.</p>}
+      {sheet.features.includes('champion_heroic_warrior')&&<p className="overview-panel-note">Guerrero heroico: al comenzar tu turno sin inspiración, puedes recuperarla. Marca manualmente su disponibilidad aquí.</p>}
     </SharedInspirationPanel>
   </>;
   return <>
@@ -120,8 +119,8 @@ export default function PrincipalOverview({ result, error, input, adventure, out
       hitDiceDescription={`Dados: ${diceLeft??"—"}/${sheet.hitDice.total} d${sheet.hitDice.die}`}
       mode={circumstanceMode} onModeChange={setCircumstanceMode}
       attacksContent={<PrincipalEquippedAttacks sheet={sheet} inventory={inventory??null} martial={input.martial} combat={current?.combat??null}
-        circumstanceMode={circumstanceMode} criticalDamage={criticalDamage} onCriticalDamageChange={setCriticalDamage} onOpenAdvanced={()=>onOpenTools("attacks")}/>}
-      resourcesContent={<PrincipalResourceControls state={current} sheet={sheet} onAction={runAdventureAction} onOpenTools={()=>onOpenTools("resources")} onError={setActionError}/>}
+        circumstanceMode={circumstanceMode} criticalDamage={criticalDamage} onCriticalDamageChange={setCriticalDamage}/>}
+      resourcesContent={<PrincipalResourceControls state={current} sheet={sheet} onAction={runAdventureAction} onError={setActionError}/>}
       footerContent={footer}
       warningContent={<>{actionError&&<div className="overview-action-message is-error" role="alert">{actionError}</div>}{actionNote&&!outOfSync&&<div className="overview-action-message" role="status">{actionNote} Guarda los cambios en «Mis personajes» cuando quieras conservarlos.</div>}</>}
     />

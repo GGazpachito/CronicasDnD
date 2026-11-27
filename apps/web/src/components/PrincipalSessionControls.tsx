@@ -112,9 +112,9 @@ export function PrincipalHealthControls({ state, sheet, onAction, onError }: Hea
   </div>;
 }
 
-type ResourceProps = SessionProps & { onOpenTools: () => void; onError: (message: string) => void };
+type ResourceProps = SessionProps & { onError: (message: string) => void };
 
-export function PrincipalResourceControls({ state, sheet, onAction, onOpenTools, onError }: ResourceProps) {
+export function PrincipalResourceControls({ state, sheet, onAction, onError }: ResourceProps) {
   const [d10, setD10] = useState(6);
   const ready = Boolean(state);
   const conscious = ready && state!.fighter.hitPoints.current > 0 && !state!.survival?.death.dead;
@@ -138,25 +138,7 @@ export function PrincipalResourceControls({ state, sheet, onAction, onOpenTools,
       {surge && <button type="button" disabled={!conscious || (state?.fighter.resources.action_surge?.current ?? 0) === 0} onClick={() => onAction({ type: "action_surge" })}>Gastar Acción súbita</button>}
     </div>
     <p className="overview-panel-note">La tirada del d10 no gasta el recurso. Pulsa «Usar Segundo aliento» para aplicar la curación. El movimiento táctico y las acciones del turno siguen siendo decisiones del jugador.</p>
-    {indomitable && <p className="overview-panel-note">Indomable requiere una salvación fallida y su repetición: utiliza el panel completo para no eludir esas reglas.</p>}
-    <button className="overview-link" type="button" onClick={onOpenTools}>Descansos, Indomable y más recursos</button>
+    {indomitable && <p className="overview-panel-note">Indomable requiere una salvación fallida y su repetición. Resuelve la tirada con el DM; el registro manual avanzado se añadirá en la fase de combate.</p>}
   </section>;
 }
 
-export function PrincipalInspirationControls({ state, sheet, onAction }: SessionProps) {
-  const inspiration = state?.combat.heroicInspiration === true;
-  return <section className="overview-panel panel overview-inspiration-panel" aria-label="Inspiración heroica">
-    <h3>Inspiración heroica</h3>
-    <label className={`overview-inspiration-toggle${inspiration?" is-active":""}${!state?" is-disabled":""}`}>
-      <input type="checkbox" checked={inspiration} disabled={!state}
-        onChange={event=>onAction({type:event.target.checked?"gain_heroic_inspiration":"spend_heroic_inspiration"})}/>
-      <span className="overview-inspiration-symbol" aria-hidden="true">✦</span>
-      <span className="overview-inspiration-label"><strong>{!state?"Partida no disponible":inspiration?"Inspiración disponible":"Sin inspiración"}</strong>
-        <small>{inspiration?"Marcada · pulsa para gastar":"Márcala cuando la consigas"}</small></span>
-      <span className="overview-inspiration-check" aria-hidden="true">{inspiration?"✓":""}</span>
-    </label>
-    <p className="overview-panel-note">El jugador o DM decide cuándo se recibe. Al gastarla, repite el dado y usa el nuevo resultado. No se lanza automáticamente.</p>
-    {sheet.features.includes("champion_heroic_warrior") && <p className="overview-panel-note">Guerrero heroico: la inspiración se recupera al iniciar tu turno mediante el panel de turnos existente.</p>}
-    <p className="overview-panel-note">Resistencias e inmunidades: resumen pendiente de integración.</p>
-  </section>;
-}
