@@ -6,7 +6,7 @@
 
 ## Propósito y separación de responsabilidades
 
-El menú principal de CRÓNICAS presenta **Crear personaje / Cargar personaje / Bestiario**. El Bestiario es una página independiente (`/bestiary`) que consulta un catálogo único de bloques de criaturas. Se conserva la arquitectura común de las siete pestañas de cada clase.
+El menú principal de CrónicasDnD presenta **Crear personaje / Cargar personaje / Bestiario**. El Bestiario es una página independiente (`/bestiary`) que consulta un catálogo único de bloques de criaturas. Se conserva la arquitectura común de las siete pestañas de cada clase.
 
 | Capa | Archivo | Responsabilidad |
 | --- | --- | --- |

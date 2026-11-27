@@ -1,6 +1,6 @@
-# CRÓNICAS · Editor de personajes compatible con 5E
+# CrónicasDnD · Editor de personajes compatible con 5E
 
-CRÓNICAS es una aplicación web en desarrollo para crear, actualizar y gestionar personajes de juego de rol con reglas de quinta edición revisadas en 2024. Su objetivo es funcionar como una **hoja de personaje digital**: calcula los valores derivados y permite realizar tiradas, mientras que las decisiones narrativas, las acciones y el desarrollo de la partida siguen en manos de los jugadores y de quien dirige la mesa.
+CrónicasDnD es una aplicación web en desarrollo para crear, actualizar y gestionar personajes de juego de rol con reglas de quinta edición revisadas en 2024. Su objetivo es funcionar como una **hoja de personaje digital**: calcula los valores derivados y permite realizar tiradas, mientras que las decisiones narrativas, las acciones y el desarrollo de la partida siguen en manos de los jugadores y de quien dirige la mesa.
 
 ## Estado actual
 
@@ -55,9 +55,9 @@ pnpm lint
 
 ## Atribuciones y derechos
 
-Parte del contenido de reglas utilizado por CRÓNICAS procede del **System Reference Document 5.2.1 (SRD 5.2.1)**, que Wizards of the Coast LLC publica bajo **Creative Commons Atribución 4.0 Internacional (CC-BY-4.0)**. La atribución íntegra requerida y la explicación de las adaptaciones están en [`NOTICE.md`](NOTICE.md) y son accesibles también desde la página **Atribuciones y licencias** de la aplicación (`/atribuciones`).
+Parte del contenido de reglas utilizado por CrónicasDnD procede del **System Reference Document 5.2.1 (SRD 5.2.1)**, que Wizards of the Coast LLC publica bajo **Creative Commons Atribución 4.0 Internacional (CC-BY-4.0)**. La atribución íntegra requerida y la explicación de las adaptaciones están en [`NOTICE.md`](NOTICE.md) y son accesibles también desde la página **Atribuciones y licencias** de la aplicación (`/atribuciones`).
 
-La licencia CC-BY-4.0 se aplica al **material del SRD**, no automáticamente a todo el código, los recursos visuales o las dependencias de CRÓNICAS. Por ahora, el código propio **no se ofrece bajo una licencia general de software de código abierto**: publicar el repositorio para consulta no concede por sí mismo permisos generales de reproducción, modificación o redistribución. Una licencia de software separada puede acordarse y añadirse posteriormente.
+La licencia CC-BY-4.0 se aplica al **material del SRD**, no automáticamente a todo el código, los recursos visuales o las dependencias de CrónicasDnD. Por ahora, el código propio **no se ofrece bajo una licencia general de software de código abierto**: publicar el repositorio para consulta no concede por sí mismo permisos generales de reproducción, modificación o redistribución. Una licencia de software separada puede acordarse y añadirse posteriormente.
 
 Este proyecto es independiente y no está afiliado ni respaldado por Wizards of the Coast. La arquitectura modular prevista no constituye una autorización para distribuir material procedente de libros comerciales ajenos al SRD.
 

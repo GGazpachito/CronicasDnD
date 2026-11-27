@@ -250,7 +250,7 @@ export default function WarlockPage(){
  const mysticArcanum7Panel=input.level>=13&&arcanum7Spell?<div className="overview-record"><span><strong>Arcanum místico · nivel 7</strong><small>{arcanum7Spell.name} · {state.mysticArcanum7Used?'uso agotado':'1 uso disponible'} / descanso largo. Independiente del Arcanum de nivel 6 y de las ranuras.</small></span><button type="button" disabled={Boolean(state.mysticArcanum7Used)} onClick={useMysticArcanum7}>{state.mysticArcanum7Used?'Usado':'Marcar lanzamiento de Arcanum'}</button><WizardSpellDetails spell={arcanum7Spell} characterLevel={input.level} spellAttackBonus={sheet?.spellAttackBonus??2} mode={mode}/></div>:null;
 
  return <main className="app-shell wizard-page">
-  <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Brujo · D&D 2024</span></div></div><Link href="/" className="wizard-class-link">Menú de personajes</Link></header>
+  <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CrónicasDnD</strong><span>Brujo · D&D 2024</span></div></div><Link href="/" className="wizard-class-link">Menú de personajes</Link></header>
   <div className="content">
    <p className="sheet-release-note">CLASE · BRUJO NIVEL {input.level} · SRD 5.2.1</p>
    <CharacterHeader name={input.name} portraitDataUrl={input.profile?.portraitDataUrl} level={input.level} background={background.name} species={SPECIES_NAMES[input.species]} className="Brujo" valid={Boolean(snapshot)} onEdit={()=>setEditing(true)}

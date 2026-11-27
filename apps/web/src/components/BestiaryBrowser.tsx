@@ -17,7 +17,7 @@ export default function BestiaryBrowser({initialId}:Readonly<{initialId?:string}
  const visible=BESTIARY_ENTRIES.filter(entry=>(filter==='todos'||entry.category===filter)&&(!needle||[entry.name,entry.sheet.creatureType,entry.sheet.challengeRating].some(value=>value.toLocaleLowerCase('es').includes(needle))));
  const selected=visible.find(entry=>entry.id===selectedId)??visible[0];
  return <main className="app-shell bestiary-page">
-  <header className="topbar"><Link href="/" className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Volver al menú principal</span></div></Link><div className="status"><span className="status-dot"/> Archivo de criaturas</div></header>
+  <header className="topbar"><Link href="/" className="brand"><span className="brand-mark">D20</span><div><strong>CrónicasDnD</strong><span>Volver al menú principal</span></div></Link><div className="status"><span className="status-dot"/> Archivo de criaturas</div></header>
   <div className="bestiary-content">
    <div className="bestiary-page-heading"><div><span className="eyebrow">ARCHIVO DE CRIATURAS · D&D 2024</span><h1>Bestiario</h1><p>La fuente de referencia única para las fichas de familiares y futuras bestias, monstruos y enemigos. Aquí puedes consultar estadísticas y realizar tiradas, sin modificar los datos originales.</p></div><Link href="/" className="overview-link">← Menú principal</Link></div>
    <div className="bestiary-layout">

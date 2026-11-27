@@ -195,7 +195,7 @@ export default function WizardPage(){
   setInput(snapshot.input);setState(snapshot.wizardState);setProfileRevision(n=>n+1);setEditing(false);setLevelUpOpen(false);setLevelDownOpen(false);setMasteryRestOpen(false);setOverchannelResult('');setOverchannelConfirmed(false);setSpellRecallResult('');setShortRestNotice('');setTab('principal');setError('');
  }
  return <main className="app-shell wizard-page">
-  <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Mago · D&D 2024</span></div></div><Link href="/" className="wizard-class-link" onNavigate={(event:{preventDefault:()=>void})=>{if(pendingSaveNavigation.current&&!window.confirm("Tienes cambios sin guardar. ¿Descartarlos y volver al menú?"))event.preventDefault();}}>Menú de personajes</Link></header>
+  <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CrónicasDnD</strong><span>Mago · D&D 2024</span></div></div><Link href="/" className="wizard-class-link" onNavigate={(event:{preventDefault:()=>void})=>{if(pendingSaveNavigation.current&&!window.confirm("Tienes cambios sin guardar. ¿Descartarlos y volver al menú?"))event.preventDefault();}}>Menú de personajes</Link></header>
   <div className="content">
    <p className="sheet-release-note">CLASE · MAGO NIVEL {input.level} · SRD 5.2.1</p>
    <CharacterHeader name={input.name} portraitDataUrl={input.profile?.portraitDataUrl} level={input.level}

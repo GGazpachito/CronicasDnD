@@ -1,4 +1,4 @@
-# Contrato de arquitectura visual: hoja de personaje CRÓNICAS (actualización 78)
+# Contrato de arquitectura visual: hoja de personaje CrónicasDnD (actualización 78)
 
 > **DOCUMENTO NORMATIVO PARA TODAS LAS CLASES.** Antes de implementar otra clase o subclase, mantener este contrato. Si un módulo cambia, actualizar el componente común, sus adaptadores y este documento en el mismo cambio. Nunca reproducir bloques JSX específicos de otra clase mediante copia de código.
 

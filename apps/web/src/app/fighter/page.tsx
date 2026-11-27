@@ -318,7 +318,7 @@ export default function Home(){
     window.requestAnimationFrame(()=>document.getElementById(target==="attacks"?"existing-attacks-panel":"existing-play-tools")?.scrollIntoView({behavior:"smooth",block:"start"}));
   }
   return <main className="app-shell">
-    <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Hoja digital · D&D 2024</span></div></div><div className="status"><Link href="/" className="wizard-class-link" onNavigate={event=>{if(pendingSaveNavigation.current&&!window.confirm("Tienes cambios sin guardar. ¿Descartarlos y volver al menú?"))event.preventDefault();}}>Menú de personajes</Link><span className="status-dot"/> Edición local · Guardado manual</div></header>
+    <header className="topbar"><div className="brand"><span className="brand-mark">D20</span><div><strong>CrónicasDnD</strong><span>Hoja digital · D&D 2024</span></div></div><div className="status"><Link href="/" className="wizard-class-link" onNavigate={event=>{if(pendingSaveNavigation.current&&!window.confirm("Tienes cambios sin guardar. ¿Descartarlos y volver al menú?"))event.preventDefault();}}>Menú de personajes</Link><span className="status-dot"/> Edición local · Guardado manual</div></header>
     <div className="content">
       <p className="sheet-release-note">HOJA DE PERSONAJE · D&D 2024 · GUERRERO</p>
       <CharacterHeader

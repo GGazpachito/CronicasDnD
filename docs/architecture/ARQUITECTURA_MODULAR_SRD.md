@@ -4,7 +4,7 @@
 
 ## 1. Decisión de producto
 
-CRÓNICAS se desarrollará como **editor de personajes D&D 5e 2024 de núcleo estable y contenido ampliable**:
+CrónicasDnD se desarrollará como **editor de personajes D&D 5e 2024 de núcleo estable y contenido ampliable**:
 
 1. **Programa base:** únicamente reglas y materiales publicados en **SRD 5.2.1** bajo Creative Commons Atribución 4.0 Internacional. Este contenido está disponible desde el inicio y no requiere activar expansiones.
 2. **Módulos opcionales:** paquetes identificables, versionados y activables por cuenta que aportan clases, subclases, especies, dotes, conjuros, invocaciones, objetos, monstruos u otras fichas. Cada módulo debe disponer de una base de derechos válida para su distribución.

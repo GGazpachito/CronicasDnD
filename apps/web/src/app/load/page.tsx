@@ -63,7 +63,7 @@ export default function LoadPage(){
   finally{setDeletingId(null);}
  };
  return <main className="app-shell front-page">
-  <header className="topbar"><Link className="wizard-class-link" href="/">← Menú principal</Link><div className="brand"><span className="brand-mark">D20</span><div><strong>CRÓNICAS</strong><span>Personajes guardados</span></div></div></header>
+  <header className="topbar"><Link className="wizard-class-link" href="/">← Menú principal</Link><div className="brand"><span className="brand-mark">D20</span><div><strong>CrónicasDnD</strong><span>Personajes guardados</span></div></div></header>
   <div className="front-content front-load-content"><span className="eyebrow">TU CAMPAÑA</span><h1>Cargar personaje</h1><p>Selecciona un aventurero para abrir su hoja Principal, con sus estadísticas y su progreso guardado.</p>
    <div className="front-list-actions"><button type="button" onClick={()=>void reload()} disabled={loading}>Actualizar lista</button><Link href="/create">Crear otro personaje</Link></div>
    {loading&&<p role="status">Consultando PostgreSQL…</p>}

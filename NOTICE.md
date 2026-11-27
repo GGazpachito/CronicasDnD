@@ -1,4 +1,4 @@
-# Atribuciones y avisos de CRÓNICAS
+# Atribuciones y avisos de CrónicasDnD
 
 ## Contenido procedente del SRD 5.2.1
 
@@ -8,12 +8,12 @@ La declaración anterior es la atribución indicada en la versión oficial espa�
 
 ## Adaptaciones realizadas
 
-CRÓNICAS selecciona, estructura y representa información del SRD como datos y cálculos para una hoja de personaje digital. Incluye traducciones de elementos de la interfaz, cambios de formato, resúmenes y una implementación original de la navegación y las tiradas. Esas adaptaciones no deben entenderse como una versión oficial del SRD ni como un producto patrocinado o avalado por Wizards of the Coast.
+CrónicasDnD selecciona, estructura y representa información del SRD como datos y cálculos para una hoja de personaje digital. Incluye traducciones de elementos de la interfaz, cambios de formato, resúmenes y una implementación original de la navegación y las tiradas. Esas adaptaciones no deben entenderse como una versión oficial del SRD ni como un producto patrocinado o avalado por Wizards of the Coast.
 
 ## Separación de derechos
 
 - **Material del SRD 5.2.1:** se utiliza conforme a CC-BY-4.0 y a la atribución reproducida arriba.
-- **Código y documentación originales de CRÓNICAS:** sus autores mantienen sus derechos. El repositorio puede ser consultado públicamente, pero todavía no se ha concedido una licencia general de reutilización del software.
+- **Código y documentación originales de CrónicasDnD:** sus autores mantienen sus derechos. El repositorio puede ser consultado públicamente, pero todavía no se ha concedido una licencia general de reutilización del software.
 - **Dependencias externas:** conservan sus propias licencias; deben consultarse las condiciones aplicables a cada dependencia.
 - **Módulos futuros:** cada módulo necesitará identificar su procedencia y los derechos de distribución correspondientes. El formato modular no concede derechos sobre contenidos protegidos.
 
