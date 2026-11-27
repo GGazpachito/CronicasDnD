@@ -41,12 +41,15 @@ export const WARLOCK_SIXTH_LEVEL_IDS=[
 ] as const;
 /** Arcanum místico del nivel 13: se reutilizan las cuatro fichas ya existentes del Mago. */
 export const WARLOCK_SEVENTH_LEVEL_IDS=['etherealness','finger_of_death','forcecage','plane_shift'] as const;
+/** Arcanum místico nivel 15: cinco conjuros de nivel 8 del SRD 5.2.1. */
+export const WARLOCK_EIGHTH_LEVEL_IDS=['befuddlement','demiplane','dominate_monster','glibness','power_word_stun'] as const;
 export const WARLOCK_FIEND_LEVEL_SEVEN_IDS=['fire_shield','wall_of_fire'] as const;
 export const WARLOCK_FIEND_THROUGH_LEVEL_FIVE_IDS=[...WARLOCK_FIEND_LEVEL_THREE_IDS,...WARLOCK_FIEND_LEVEL_FIVE_IDS] as const;
 export const WARLOCK_FIEND_ALWAYS_PREPARED_IDS=[...WARLOCK_FIEND_THROUGH_LEVEL_FIVE_IDS,...WARLOCK_FIEND_LEVEL_SEVEN_IDS] as const;
 
 /** Metadatos de conjuros exclusivos o ajenos al listado del Mago; resúmenes originales. */
 export const WARLOCK_UNIQUE_SPELL_RULES:readonly WizardSpellRule[]=[
+ {id:'glibness',name:'Elocuencia',level:8,school:'enchantment',description:'Durante una hora, cuando hagas una prueba de Carisma puedes sustituir el resultado del d20 por 15. La magia que detecta mentiras indica que dices la verdad, independientemente de tus palabras. El jugador decide cuándo aplicar la sustitución.',castingTime:'Acción',range:'Personal',components:'V',duration:'1 hora',attack:false,rolls:[],cantripScales:false},
  {id:'command',name:'Orden imperiosa',level:1,school:'enchantment',description:'Das una orden breve a una criatura que veas y que pueda comprenderte. Si falla su salvación de Sabiduría, intenta cumplirla en su siguiente turno; no puede seguir órdenes directamente dañinas. El jugador y el director resuelven su interpretación.',castingTime:'Action',range:'60 feet',components:'V',duration:'Instantaneous',attack:false,rolls:[],cantripScales:false},
  {id:'enthrall',name:'Cautivar',level:2,school:'enchantment',description:'Intentas captar la atención de las criaturas que elijas dentro del alcance. Cada objetivo realiza una salvación de Sabiduría; los que fallen sufren desventaja en ciertas pruebas de Percepción para observar a otros mientras dure la concentración. El efecto se resuelve durante la partida.',castingTime:'Action',range:'60 feet',components:'V, S',duration:'Concentration, up to 1 minute',attack:false,rolls:[],cantripScales:false},
  {id:'eldritch_blast',name:'Descarga sobrenatural',level:0,school:'evocation',description:'Un rayo de fuerza contra una criatura dentro del alcance. Realiza un ataque de conjuro a distancia; al impactar causa 1d10 de fuerza. A niveles de personaje 5, 11 y 17 obtienes dos, tres y cuatro rayos independientes; cada uno tiene su propia tirada de ataque.',castingTime:'Action',range:'120 feet',components:'V, S',duration:'Instantaneous',attack:true,rolls:[{label:'Daño de un rayo',formula:'1d10',scales:false}],cantripScales:false},
@@ -75,6 +78,7 @@ export const WARLOCK_LEVEL_FOUR_SPELLS:readonly WizardSpellRule[]=WARLOCK_FOURTH
 export const WARLOCK_LEVEL_FIVE_SPELLS:readonly WizardSpellRule[]=WARLOCK_FIFTH_LEVEL_IDS.map(required);
 export const WARLOCK_LEVEL_SIX_SPELLS:readonly WizardSpellRule[]=WARLOCK_SIXTH_LEVEL_IDS.map(required);
 export const WARLOCK_LEVEL_SEVEN_SPELLS:readonly WizardSpellRule[]=WARLOCK_SEVENTH_LEVEL_IDS.map(required);
+export const WARLOCK_LEVEL_EIGHT_SPELLS:readonly WizardSpellRule[]=WARLOCK_EIGHTH_LEVEL_IDS.map(required);
 export const WARLOCK_FIEND_LEVEL_SEVEN_SPELLS:readonly WizardSpellRule[]=WARLOCK_FIEND_LEVEL_SEVEN_IDS.map(required);
 export const WARLOCK_SPELLS_THROUGH_LEVEL_TWO:readonly WizardSpellRule[]=[...WARLOCK_LEVEL_ONE_SPELLS,...WARLOCK_LEVEL_TWO_SPELLS];
 export const WARLOCK_SPELLS_THROUGH_LEVEL_THREE:readonly WizardSpellRule[]=[...WARLOCK_SPELLS_THROUGH_LEVEL_TWO,...WARLOCK_LEVEL_THREE_SPELLS];

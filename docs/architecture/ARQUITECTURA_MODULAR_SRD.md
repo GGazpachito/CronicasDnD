@@ -20,13 +20,13 @@ Referencias oficiales: [SRD 5.2.1](https://www.dndbeyond.com/srd), [PDF inglés]
 
 | Área | Base SRD que implementa el proyecto | Exclusión aplicada en el paso 84 |
 | --- | --- | --- |
-| Clases y subclases | Guerrero/Campeón 1–20, Mago/Evocador 1–20, Brujo/Patrón Infernal 1–14 | No se añaden otras subclases del PHB |
+| Clases y subclases | Guerrero/Campeón 1–20, Mago/Evocador 1–20, Brujo/Patrón Infernal 1–15 (actualización 87) | No se añaden otras subclases del PHB |
 | Origen | Humano, elfo, enano, mediano; Acólito, Criminal, Erudito y Soldado | No se añaden especies ni trasfondos externos |
 | Dotes de origen | Alerta, Iniciado en la Magia, Ataque salvaje, Competente | Artesano, Sanador, Afortunado, Músico, Peleador de taberna, Duro |
 | Estilos de combate | Tiro con arco, Defensa, Combate con arma a dos manos, Combate con dos armas | Combate a ciegas, Duelo, Intercepción, Protección, Combate arrojadizo, Combate sin armas |
 | Beneficios épicos | Pericia en combate; también Recuperación de conjuros y Visión verdadera en Mago | Fortaleza y Velocidad |
 | Conjuros de Mago | **217 conjuros de los niveles 0–9**, mismos identificadores y niveles que la tabla SRD | 25 conjuros extra; véase registro de auditoría |
-| Conjuros de Brujo | Trucos y niveles 1–7 del SRD; talentos e invocaciones según su disponibilidad | 18 referencias de conjuros extra, incluidas tres fichas exclusivas |
+| Conjuros de Brujo | Trucos y niveles 1–8 del SRD (Arcanum nivel 8 desde Brujo 15); invocaciones según disponibilidad | 18 referencias de conjuros extra, incluidas tres fichas exclusivas, retiradas en el paso 84 |
 | Iniciado en la Magia | Listas SRD de Clérigo, Druida y Mago, trucos y conjuros de nivel 1 | Trucos externos de las tres listas |
 | Bestiario | 7 familiares especiales de Pacto de la Cadena y 15 comunes/históricos | Renacuajo slaad |
 | Objetos, armas, armaduras y estado | Catálogos y cálculos declarados en el motor, siempre limitados al SRD | No se deben añadir materiales comerciales sin procedencia y validación |

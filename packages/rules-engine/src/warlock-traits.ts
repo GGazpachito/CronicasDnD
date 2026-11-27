@@ -10,7 +10,7 @@ export function collectWarlockTraits(input:GuidedWarlockInput,sheet:CalculatedWa
  const traits:CharacterTrait[]=[];
  function add(trait:CharacterTrait){traits.push(trait);}
  add({id:'warlock:pact_magic',title:'Magia de Pacto',group:'class',source:'Brujo',level:1,
-  summary:`${input.level>=10?'Cuatro':input.level>=4?'Tres':'Dos'} trucos, ${input.level>=13?'doce':input.level>=11?'once':input.level===1?'dos':input.level===2?'tres':input.level===3?'cuatro':input.level===4?'cinco':input.level===5?'seis':input.level===6?'siete':input.level===7?'ocho':input.level===8?'nueve':'diez'} conjuros preparados ordinarios y ${input.level===1?'una':input.level>=11?'tres':'dos'} ranuras de nivel ${input.level>=9?5:input.level>=7?4:input.level>=5?3:input.level>=3?2:1} recargables tras descansar.`,
+  summary:`${input.level>=10?'Cuatro':input.level>=4?'Tres':'Dos'} trucos, ${input.level>=15?'trece':input.level>=13?'doce':input.level>=11?'once':input.level===1?'dos':input.level===2?'tres':input.level===3?'cuatro':input.level===4?'cinco':input.level===5?'seis':input.level===6?'siete':input.level===7?'ocho':input.level===8?'nueve':'diez'} conjuros preparados ordinarios y ${input.level===1?'una':input.level>=11?'tres':'dos'} ranuras de nivel ${input.level>=9?5:input.level>=7?4:input.level>=5?3:input.level>=3?2:1} recargables tras descansar.`,
   explanation:'Las ranuras se marcan manualmente en Hechizos; los conjuros no se lanzan automáticamente.',automation:'calculated',
   details:[`CD de salvación ${sheet.spellSaveDC}. Ataque mágico ${sheet.spellAttackBonus>=0?'+':''}${sheet.spellAttackBonus}.`,
    'El Brujo recupera todas sus ranuras de Magia de Pacto al terminar un descanso corto o largo.']});
@@ -29,10 +29,14 @@ export function collectWarlockTraits(input:GuidedWarlockInput,sheet:CalculatedWa
   summary:'Elige un segundo secreto del patrón de nivel 7. Puedes lanzarlo una vez por descanso largo sin gastar ranura de Pacto.',
   explanation:'Su uso es independiente del Arcanum de nivel 6, de los doce conjuros preparados ordinarios y de las tres ranuras de Pacto.',automation:'partial',
   details:[`Conjuro seleccionado: ${warlockSpellRule(input.mysticArcanum7Id)?.name??input.mysticArcanum7Id}.`,'Lanzamiento y recuperación tras descanso largo marcados manualmente.']});
+ if(input.level>=15&&input.mysticArcanum8Id)add({id:'warlock:mystic_arcanum_8',title:'Arcanum místico · nivel 8',group:'class',source:'Brujo',level:15,
+  summary:'Tercer secreto del patrón, lanzable una vez por descanso largo sin gastar ranura de Pacto.',
+  explanation:'Este uso es independiente de los Arcanum de niveles 6 y 7. El conjuro no cuenta entre las trece preparaciones ordinarias y su efecto se resuelve en mesa.',automation:'partial',
+  details:[`Conjuro seleccionado: ${warlockSpellRule(input.mysticArcanum8Id)?.name??input.mysticArcanum8Id}.`,'Se restablece exclusivamente con descanso largo.']});
  if(input.level>=3&&input.subclassId==='fiend'){
   add({id:'warlock:fiend_patron',title:'Patrón Infernal',group:'class',source:'Patrón Infernal',level:3,
    summary:`Subclase que concede Bendición del Oscuro y ${input.level>=7?'ocho':input.level>=5?'seis':'cuatro'} conjuros siempre preparados.`,
-   explanation:`Los conjuros del patrón no consumen ninguna de las ${input.level>=13?'doce':input.level>=11?'once':input.level>=9?'diez':input.level>=8?'nueve':input.level>=7?'ocho':input.level>=6?'siete':input.level>=5?'seis':input.level>=4?'cinco':'cuatro'} elecciones ordinarias de Magia de Pacto.`,automation:'calculated',
+   explanation:`Los conjuros del patrón no consumen ninguna de las ${input.level>=15?'trece':input.level>=13?'doce':input.level>=11?'once':input.level>=9?'diez':input.level>=8?'nueve':input.level>=7?'ocho':input.level>=6?'siete':input.level>=5?'seis':input.level>=4?'cinco':'cuatro'} elecciones ordinarias de Magia de Pacto.`,automation:'calculated',
    details:['Manos ardientes (nivel 1)','Orden imperiosa (nivel 1)','Rayo abrasador (nivel 2)','Sugestión (nivel 2)',...(input.level>=5?['Bola de fuego (nivel 3)','Nube apestosa (nivel 3)']:[]),...(input.level>=7?['Escudo de fuego (nivel 4)','Muro de fuego (nivel 4)']:[])]});
   add({id:'warlock:dark_ones_blessing',title:'Bendición del Oscuro',group:'class',source:'Patrón Infernal',level:3,
    summary:`Al reducir a un enemigo a 0 PG, o al hacerlo otra criatura a 10 pies de ti, puedes recibir ${Math.max(1,sheet.abilityModifiers.charisma+input.level)} PG temporales.`,
