@@ -12,7 +12,7 @@ const prior=():GuidedFighterInput=>({
   name:'Aldric',level:5,background:'soldier',species:'human',
   assignedAbilities:{strength:15,dexterity:14,constitution:13,intelligence:10,wisdom:12,charisma:8},
   increaseMode:'two_plus_one',plusTwoAbility:'strength',plusOneAbility:'constitution',
-  fighterSkills:['perception','survival'],humanSkill:'investigation',humanFeat:'tough',humanSize:'medium',
+  fighterSkills:['perception','survival'],humanSkill:'investigation',humanFeat:'alert',humanSize:'medium',
   armor:'chain_mail',shield:false,level4Improvement:{mode:'plus_two',first:'strength'},
   martial:{fightingStyle:'defense',weaponMasteries:['greatsword','flail','javelin','shortsword'],startingPackage:'a'},
   backgroundEquipment:{startingPackage:'a',gamingSet:'dice_set'}
@@ -36,7 +36,7 @@ describe('Paso 28: progresión del Guerrero 6 y Campeón 7',()=>{
     const s=calculateGuidedFighter(at6()).sheet;
     expect(s.abilityScores.strength).toBe(19);
     expect(s.abilityScores.constitution).toBe(16);
-    expect(s.maximumHitPoints).toBe(70); // Con 16, nivel 6, Humano Robusto (+2 PG/nivel): 13 + 5*(6+3+2)=68? se comprueba en la revisión
+    expect(s.maximumHitPoints).toBe(58); // SRD: sin los +2 PG por nivel de la dote Duro excluida.
   });
   it('la mejora de nivel 6 permite +1/+1 y obliga a elegir dos características distintas',()=>{
     const modified={...at6(),level6Improvement:{mode:'two_ones' as const,first:'strength' as const,second:'dexterity' as const}};
@@ -78,11 +78,10 @@ describe('Paso 28: progresión del Guerrero 6 y Campeón 7',()=>{
     expect(hero.sheet.armorClass).toBe(17);
     expect(calculateWeaponAttack(hero.sheet,'shortbow',['archery','defense'],martial.weaponMasteries).attackBonus).toBe(7);
   });
-  it('se combinan Duelo y Armas arrojadizas únicamente donde corresponden',()=>{
-    const i={...at7(),martial:{...at7().martial!,fightingStyle:'dueling' as const,additionalFightingStyle:'thrown_weapon_fighting' as const}};
-    const s=calculateGuidedFighter(i).sheet;
-    const p=calculateWeaponAttack(s,'javelin',['dueling','thrown_weapon_fighting'],i.martial.weaponMasteries,{thrown:true});
-    expect(p.damageModifier).toBe(6); // FUE +4, armas arrojadizas +2; Duelo arrojado no se contabiliza en este motor
+  it('Duelo y Armas arrojadizas no se pueden seleccionar en el núcleo SRD',()=>{
+    const i=at7();const sheet=calculateGuidedFighter(i).sheet;
+    expect(()=>calculateGuidedFighter({...i,martial:{...i.martial!,fightingStyle:'dueling' as never}})).toThrow();
+    expect(()=>calculateWeaponAttack(sheet,'javelin',['dueling','thrown_weapon_fighting'] as never,i.martial!.weaponMasteries,{thrown:true})).toThrow();
   });
   it('el ataque adicional del nivel 5 sigue funcionando en nivel 7 sin consumir otra acción',()=>{
     const hero=calculateGuidedFighter(at7());
@@ -103,7 +102,7 @@ describe('Paso 28: progresión del Guerrero 6 y Campeón 7',()=>{
     const b=calculateGuidedFighter(at6()).sheet;
     const c=calculateGuidedFighter(at7()).sheet;
     expect(b.maximumHitPoints).toBeGreaterThan(a.maximumHitPoints);
-    expect(c.maximumHitPoints).toBe(b.maximumHitPoints+11);
+    expect(c.maximumHitPoints).toBe(b.maximumHitPoints+9);
   });
   it('subir 5→6→7 conserva el daño, recursos gastados, historial y condiciones',()=>{
     const a=calculateGuidedFighter(prior()).sheet;

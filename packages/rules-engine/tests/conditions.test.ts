@@ -15,7 +15,7 @@ const input=():GuidedFighterInput=>({
   name:'Aldric',level:2,background:'soldier',species:'human',
   assignedAbilities:{strength:15,dexterity:14,constitution:13,intelligence:10,wisdom:12,charisma:8},
   increaseMode:'two_plus_one',plusTwoAbility:'strength',plusOneAbility:'constitution',
-  fighterSkills:['perception','survival'],humanSkill:'investigation',humanFeat:'tough',humanSize:'medium',
+  fighterSkills:['perception','survival'],humanSkill:'investigation',humanFeat:'alert',humanSize:'medium',
   armor:'studded_leather',shield:false,
   martial:{fightingStyle:'archery',weaponMasteries:['longbow','scimitar','shortsword'],startingPackage:'b'},
   backgroundEquipment:{startingPackage:'a',gamingSet:'dice_set'},

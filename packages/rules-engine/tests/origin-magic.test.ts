@@ -7,7 +7,7 @@ const base=():GuidedFighterInput=>({
  name:'Aldric',level:1,background:'soldier',species:'human',
  assignedAbilities:{strength:15,dexterity:14,constitution:13,intelligence:10,wisdom:12,charisma:8},
  increaseMode:'two_plus_one',plusTwoAbility:'strength',plusOneAbility:'constitution',
- fighterSkills:['perception','survival'],humanSkill:'investigation',humanFeat:'tough',humanSize:'medium',
+ fighterSkills:['perception','survival'],humanSkill:'investigation',humanFeat:'alert',humanSize:'medium',
  armor:'chain_mail',shield:false,martial:{fightingStyle:'defense',weaponMasteries:['greatsword','flail','javelin'],startingPackage:'a'}
 });
 const druid=()=>({list:'druid' as const,spellcastingAbility:'wisdom' as const,cantrips:['druidcraft','guidance'],level1Spell:'goodberry'});
@@ -52,7 +52,7 @@ describe('Paso 10: selección de conjuros de origen',()=>{
    expect(elfLineageSpells('high_elf',3,'intelligence')[1].id).toBe('detect_magic');
    expect(elfLineageSpells('wood_elf',3,'wisdom')[1].id).toBe('longstrider');
  });
- it('el inventario tiene diez dotes de origen',()=>expect(Object.keys(ORIGIN_FEATS)).toHaveLength(10));
+ it('el inventario base tiene las cuatro dotes de origen del SRD',()=>expect(Object.keys(ORIGIN_FEATS)).toHaveLength(4));
  it('Acólito registra sus tres conjuros con lista de Clérigo',()=>{
    const x=base();const r=calculateGuidedFighter({...x,background:'acolyte',plusTwoAbility:'intelligence',plusOneAbility:'wisdom',backgroundMagicInitiate:cleric()});
    expect(r.spells.map(s=>s.id)).toEqual(['guidance','sacred_flame','bless']);
@@ -84,21 +84,11 @@ describe('Paso 10: selección de conjuros de origen',()=>{
  it('Humano Competente rechaza habilidades que ya conoce',()=>{
    const x=base();expect(()=>calculateGuidedFighter({...x,humanFeat:'skilled',humanFeatDetails:{skilledProficiencies:['skill:perception','skill:medicine','skill:deception']}})).toThrow(/duplicar/);
  });
- it('Artesano concede 3 competencias de herramientas válidas',()=>{
-   const x=base();const r=calculateGuidedFighter({...x,humanFeat:'crafter',humanFeatDetails:{crafterTools:['carpenters_tools','masons_tools','smiths_tools']}});
-   expect(r.origin.tools).toContain('Herramientas de herrero');
- });
- it('Artesano rechaza herramientas repetidas',()=>{
-   expect(()=>validateHumanOriginFeat('crafter',{crafterTools:['smiths_tools','smiths_tools','potters_tools']},1)).toThrow();
- });
- it('Músico concede tres instrumentos diferentes',()=>{
-   const x=base();const r=calculateGuidedFighter({...x,humanFeat:'musician',humanFeatDetails:{musicianInstruments:['lute','flute','drum']}});
-   expect(r.origin.tools).toContain('Flauta');
- });
- it('Afortunado registra máximo de suerte por competencia sin simular gastos',()=>{
-   const x=base();const r=calculateGuidedFighter({...x,humanFeat:'lucky'});
-   expect(r.origin.luckPointsMaximum).toBe(2);
-   expect(r.pendingAutomation.some(t=>t.includes('Afortunado'))).toBe(true);
+ it('el núcleo rechaza las dotes comerciales Artesano, Músico y Afortunado',()=>{
+   for(const excluded of ['crafter','musician','lucky']){
+     expect(()=>validateHumanOriginFeat(excluded,undefined,1)).toThrow(/desconocida/);
+     expect(()=>calculateGuidedFighter({...base(),humanFeat:excluded as never})).toThrow();
+   }
  });
  it('Elfo del bosque en nivel 3 registra dos conjuros sin inventar slots',()=>{
    const x=base();const r=calculateGuidedFighter({...x,species:'elf',level:3,elfLineage:'wood_elf',elfSenseSkill:'insight',elfSpellAbility:'wisdom'});

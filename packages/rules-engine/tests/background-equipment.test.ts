@@ -6,7 +6,7 @@ const base=():GuidedFighterInput=>({
   name:'Aldric',level:1,background:'soldier',species:'human',
   assignedAbilities:{strength:15,dexterity:14,constitution:13,intelligence:10,wisdom:12,charisma:8},
   increaseMode:'two_plus_one',plusTwoAbility:'strength',plusOneAbility:'constitution',
-  fighterSkills:['perception','survival'],humanSkill:'investigation',humanFeat:'tough',humanSize:'medium',
+  fighterSkills:['perception','survival'],humanSkill:'investigation',humanFeat:'alert',humanSize:'medium',
   armor:'chain_mail',shield:false,
   martial:{fightingStyle:'defense',weaponMasteries:['greatsword','flail','javelin'],startingPackage:'a'},
   backgroundEquipment:{startingPackage:'a',gamingSet:'dice_set'},
@@ -47,7 +47,7 @@ describe('Paso 11: inventario inicial por clase y trasfondo',()=>{
     expect(r.startingInventory?.items.find(i=>i.id==='quarterstaff')?.quantity).toBe(1);
   });
   it('Criminal A concede dos dagas y dos bolsas',()=>{
-    const v=base();const r=calculateGuidedFighter({...v,background:'criminal',plusTwoAbility:'dexterity',plusOneAbility:'constitution',backgroundEquipment:{startingPackage:'a'}});
+    const v=base();const r=calculateGuidedFighter({...v,background:'criminal',plusTwoAbility:'dexterity',plusOneAbility:'constitution',humanFeat:'savage_attacker',backgroundEquipment:{startingPackage:'a'}});
     expect(r.startingInventory?.totalGold).toBe(20);
     expect(r.startingInventory?.items.find(i=>i.id==='dagger')?.quantity).toBe(2);
     expect(r.startingInventory?.items.find(i=>i.id==='pouch')?.quantity).toBe(2);

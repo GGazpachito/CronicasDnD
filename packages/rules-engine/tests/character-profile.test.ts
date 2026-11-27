@@ -11,7 +11,7 @@ function fighter():GuidedFighterInput{
   return {name:'Maelis',level:1,background:'soldier',species:'human',
     assignedAbilities:{strength:15,dexterity:14,constitution:13,intelligence:10,wisdom:12,charisma:8},
     increaseMode:'two_plus_one',plusTwoAbility:'strength',plusOneAbility:'constitution',
-    fighterSkills:['perception','survival'],humanSkill:'investigation',humanFeat:'tough',humanSize:'medium',
+    fighterSkills:['perception','survival'],humanSkill:'investigation',humanFeat:'alert',humanSize:'medium',
     armor:null,shield:false};
 }
 const tinyJpeg='data:image/jpeg;base64,/9j/AAAA';

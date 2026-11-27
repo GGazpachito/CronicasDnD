@@ -11,7 +11,7 @@ function character(species:'human'|'dwarf'='human'):GuidedFighterInput{return {
   assignedAbilities:{strength:15,dexterity:14,constitution:13,intelligence:10,wisdom:12,charisma:8},
   increaseMode:'two_plus_one',plusTwoAbility:'strength',plusOneAbility:'constitution',
   fighterSkills:['perception','survival'],
-  ...(species==='human'?{humanSkill:'investigation' as const,humanFeat:'tough' as const,humanSize:'medium' as const}:{}),
+  ...(species==='human'?{humanSkill:'investigation' as const,humanFeat:'alert' as const,humanSize:'medium' as const}:{}),
   armor:'studded_leather',shield:false,
   martial:{fightingStyle:'archery',weaponMasteries:['longbow','scimitar','shortsword'],startingPackage:'b'},
   backgroundEquipment:{startingPackage:'a',gamingSet:'dice_set'}

@@ -13,7 +13,7 @@ const base=():GuidedFighterInput=>({
   name:'Aldric',level:3,background:'soldier',species:'human',
   assignedAbilities:{strength:15,dexterity:14,constitution:13,intelligence:10,wisdom:12,charisma:8},
   increaseMode:'two_plus_one',plusTwoAbility:'strength',plusOneAbility:'constitution',
-  fighterSkills:['perception','survival'],humanSkill:'investigation',humanFeat:'tough',humanSize:'medium',
+  fighterSkills:['perception','survival'],humanSkill:'investigation',humanFeat:'alert',humanSize:'medium',
   armor:'chain_mail',shield:false,martial:{fightingStyle:'defense',weaponMasteries:['greatsword','flail','javelin'],startingPackage:'a'},
   backgroundEquipment:{startingPackage:'a',gamingSet:'dice_set'}
 });
@@ -43,7 +43,7 @@ describe('Paso 27: progresión del Guerrero 4 y 5',()=>{
   it('+1/+1 permite aumentar Constitución con PG retroactivos',()=>{
     const a=calculateGuidedFighter(at(4,{mode:'two_ones',first:'strength',second:'constitution'})).sheet;
     expect(a.abilityScores.strength).toBe(18);expect(a.abilityScores.constitution).toBe(15);
-    expect(a.maximumHitPoints).toBe(44);
+    expect(a.maximumHitPoints).toBe(36);
     expect(()=>calculateGuidedFighter(at(4,{mode:'two_ones',first:'constitution',second:'constitution'}))).toThrow();
   });
   it('no puede excederse 20 en una mejora de característica',()=>{

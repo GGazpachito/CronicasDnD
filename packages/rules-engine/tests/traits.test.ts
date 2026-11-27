@@ -6,7 +6,7 @@ const base=():GuidedFighterInput=>({
   name:'Aldric',level:1,background:'soldier',species:'human',
   assignedAbilities:{strength:15,dexterity:14,constitution:13,intelligence:10,wisdom:12,charisma:8},
   increaseMode:'two_plus_one',plusTwoAbility:'strength',plusOneAbility:'constitution',
-  fighterSkills:['perception','survival'],humanSkill:'investigation',humanFeat:'tough',
+  fighterSkills:['perception','survival'],humanSkill:'investigation',humanFeat:'alert',
   humanSize:'medium',armor:'chain_mail',shield:false,
 });
 const champion=():GuidedFighterInput=>({...base(),level:7,
@@ -23,7 +23,7 @@ describe('Actualización 40: catálogo de rasgos',()=>{
     expect(traits.filter(t=>t.group==='class').length).toBe(3);
     expect(traits.filter(t=>t.group==='subclass')).toHaveLength(0);
     expect(traits.some(t=>t.id==='species:skillful' && t.automation==='calculated')).toBe(true);
-    expect(traits.some(t=>t.id==='feat:human_feat:tough')).toBe(true);
+    expect(traits.some(t=>t.id==='feat:human_feat:alert')).toBe(true);
     expect(traits.some(t=>t.id==='feat:background:savage_attacker')).toBe(true);
     expect(new Set(traits.map(t=>t.id)).size).toBe(traits.length);
   });
@@ -41,7 +41,7 @@ describe('Actualización 40: catálogo de rasgos',()=>{
     const traits=projection(input).traits;
     expect(traits.find(t=>t.id==='species:dwarven_toughness')?.details[0]).toContain('+1 PG');
     expect(traits.find(t=>t.id==='species:dwarven_resilience')?.automation).toBe('manual');
-    expect(traits.some(t=>t.id==='feat:human_feat:tough')).toBe(false);
+    expect(traits.some(t=>t.id==='feat:human_feat:alert')).toBe(false);
     expect(traits.some(t=>t.id==='species:versatile')).toBe(false);
   });
   it('muestra el linaje élfico sin simular el lanzamiento de hechizos',()=>{
@@ -60,13 +60,13 @@ describe('Actualización 40: catálogo de rasgos',()=>{
       level14Improvement:{mode:'plus_two',first:'charisma'},
       level16Improvement:{mode:'plus_two',first:'intelligence'},
       martial:{...champion().martial!,weaponMasteries:['greatsword','flail','javelin','shortsword','longbow','warhammer']},
-      epicBoon:{id:'speed',ability:'dexterity'},
+      epicBoon:{id:'combat_prowess',ability:'dexterity'},
     };
     const traits=projection(input).traits;
-    expect(traits.filter(t=>t.id==='feat:epic:speed')).toHaveLength(1);
+    expect(traits.filter(t=>t.id==='feat:epic:combat_prowess')).toHaveLength(1);
     expect(traits.filter(t=>t.id==='feature:epic_boon')).toHaveLength(1);
-    expect(traits.some(t=>t.id==='feature:epic_boon_speed')).toBe(false);
-    expect(traits.find(t=>t.id==='feat:epic:speed')?.details).toContain('Velocidad total calculada: 60 pies.');
+    expect(traits.some(t=>t.id==='feature:epic_boon_combat_prowess')).toBe(false);
+    expect(traits.find(t=>t.id==='feat:epic:combat_prowess')?.details).toContain('El uso se registra al confirmar el ataque desde el panel existente.');
     expect(new Set(traits.map(t=>t.id)).size).toBe(traits.length);
   });
   it('mantiene las advertencias pendientes y no altera entradas ni resultados',()=>{

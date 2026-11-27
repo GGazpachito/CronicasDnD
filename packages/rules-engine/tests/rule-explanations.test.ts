@@ -10,7 +10,7 @@ const initial:GuidedFighterInput={
   name:'Aldric',level:1,background:'soldier',species:'human',
   assignedAbilities:{strength:15,dexterity:14,constitution:13,intelligence:10,wisdom:12,charisma:8},
   increaseMode:'two_plus_one',plusTwoAbility:'strength',plusOneAbility:'constitution',
-  fighterSkills:['perception','survival'],humanSkill:'investigation',humanFeat:'tough',humanSize:'medium',
+  fighterSkills:['perception','survival'],humanSkill:'investigation',humanFeat:'alert',humanSize:'medium',
   armor:'chain_mail',shield:false,
   martial:{fightingStyle:'defense',weaponMasteries:['greatsword','flail','javelin'],startingPackage:'a'},
   backgroundEquipment:{startingPackage:'a',gamingSet:'dice_set'},
@@ -23,7 +23,7 @@ function choicesFor(level:number):FighterLevelUpChoices{
     ...(req.improvement?{improvement:{mode:'plus_two' as const,first:improvements[level]}}:{}),
     ...(req.mastery?{newMastery:masteries[level as keyof typeof masteries]}:{}),
     ...(req.additionalStyle?{additionalFightingStyle:'archery' as const}:{}),
-    ...(req.epicBoon?{epicBoon:{id:'speed' as const,ability:'charisma' as const}}:{}),
+    ...(req.epicBoon?{epicBoon:{id:'combat_prowess' as const,ability:'charisma' as const}}:{}),
   };
 }
 
@@ -60,12 +60,12 @@ describe('Actualización 44.1: explicaciones de rasgos compartidas',()=>{
   it('todos los beneficios épicos elegibles tienen descripción, sin confundir el efecto con su activación',()=>{
     for(const id of Object.keys(EPIC_BOONS) as (keyof typeof EPIC_BOONS)[])
       expect(EPIC_BOON_EXPLANATIONS[id].length).toBeGreaterThan(35);
-    expect(EPIC_BOON_EXPLANATIONS.fortitude).toContain('40');
+    expect(EPIC_BOON_EXPLANATIONS.combat_prowess).toContain('impacto');
   });
   it('los rasgos de clase, especie y origen del personaje inicial muestran efectos, no solo su nombre',()=>{
     const traits=collectCharacterTraits(initial,calculateGuidedFighter(initial)).traits;
     for(const trait of traits)expect(trait.explanation,trait.id).toBeTruthy();
-    expect(traits.find(t=>t.id==='feat:human_feat:tough')?.explanation).toContain('PG máximos');
+    expect(traits.find(t=>t.id==='feat:human_feat:alert')?.explanation).toContain('iniciativa');
     expect(traits.find(t=>t.id==='feature:fighting_style')?.details.join(' ')).toContain('Defensa');
   });
   it('también describe los rasgos del enano y el elfo',()=>{
@@ -78,7 +78,7 @@ describe('Actualización 44.1: explicaciones de rasgos compartidas',()=>{
   });
   it('catálogo contiene los rasgos y dotes de origen previstos y no reescribe los valores del personaje',()=>{
     expect(Object.keys(FIGHTER_FEATURE_EXPLANATIONS).length).toBeGreaterThan(15);
-    expect(ORIGIN_FEAT_EXPLANATIONS.healer).toContain('botiquín');
+    expect(ORIGIN_FEAT_EXPLANATIONS.savage_attacker).toContain('dados de daño');
     expect(SPECIES_TRAIT_EXPLANATIONS.trance).toContain('cuatro horas');
     const before=JSON.stringify(initial);
     buildFighterLevelUpCandidate(initial,choicesFor(2));

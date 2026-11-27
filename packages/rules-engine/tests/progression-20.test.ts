@@ -13,7 +13,7 @@ const base:GuidedFighterInput={
   name:'Campeón',level:19,background:'soldier',species:'human',
   assignedAbilities:{strength:15,dexterity:14,constitution:13,intelligence:10,wisdom:12,charisma:8},
   increaseMode:'two_plus_one',plusTwoAbility:'strength',plusOneAbility:'constitution',
-  fighterSkills:['perception','survival'],humanSkill:'investigation',humanFeat:'tough',humanSize:'medium',
+  fighterSkills:['perception','survival'],humanSkill:'investigation',humanFeat:'alert',humanSize:'medium',
   armor:'chain_mail',shield:false,
   level4Improvement:{mode:'plus_two',first:'strength'},
   level6Improvement:{mode:'plus_two',first:'constitution'},
@@ -21,7 +21,7 @@ const base:GuidedFighterInput={
   level12Improvement:{mode:'plus_two',first:'wisdom'},
   level14Improvement:{mode:'plus_two',first:'charisma'},
   level16Improvement:{mode:'plus_two',first:'intelligence'},
-  epicBoon:{id:'speed',ability:'charisma'},
+  epicBoon:{id:'combat_prowess',ability:'charisma'},
   martial:{fightingStyle:'defense',additionalFightingStyle:'archery',weaponMasteries:['greatsword','flail','javelin','shortsword','longbow','warhammer'],startingPackage:'a'},
   backgroundEquipment:{startingPackage:'a',gamingSet:'dice_set'},
 };
@@ -63,7 +63,7 @@ describe('Actualización 35: Guerrero y Campeón nivel 20',()=>{
   });
   it('mantiene el beneficio épico y sus efectos de nivel 19',()=>{
     const old=calculateGuidedFighter(base),next=calculateGuidedFighter(input20);
-    expect(next.sheet.features).toContain('epic_boon_speed');
+    expect(next.sheet.features).toContain('epic_boon_combat_prowess');
     expect(next.origin.speedFeet).toBe(old.origin.speedFeet);
     expect(next.sheet.abilityScores.charisma).toBe(old.sheet.abilityScores.charisma);
     expect(()=>calculateGuidedFighter({...input20,epicBoon:undefined})).toThrow();
@@ -148,7 +148,7 @@ describe('Actualización 35: Guerrero y Campeón nivel 20',()=>{
     expect(restored.adventure.fighter.hitPoints.maximum).toBe(after.maximumHitPoints);
     expect(after.maximumHitPoints-restored.adventure.fighter.hitPoints.current).toBe(15);
     expect(restored.adventure.fighter.resources.action_surge?.current).toBe(1);
-    expect(restored.input.epicBoon?.id).toBe('speed');
+    expect(restored.input.epicBoon?.id).toBe('combat_prowess');
     expect(()=>prepareFighterLevelUp(base,game,{...input20,level:19})).toThrow();
   });
   it('el guardado de nivel 19 rechaza un contador de cuatro ataques de nivel 20',()=>{

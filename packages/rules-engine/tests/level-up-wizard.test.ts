@@ -11,7 +11,7 @@ const base:GuidedFighterInput={
   name:'Aldric',level:1,background:'soldier',species:'human',
   assignedAbilities:{strength:15,dexterity:14,constitution:13,intelligence:10,wisdom:12,charisma:8},
   increaseMode:'two_plus_one',plusTwoAbility:'strength',plusOneAbility:'constitution',
-  fighterSkills:['perception','survival'],humanSkill:'investigation',humanFeat:'tough',humanSize:'medium',
+  fighterSkills:['perception','survival'],humanSkill:'investigation',humanFeat:'alert',humanSize:'medium',
   armor:'chain_mail',shield:false,
   martial:{fightingStyle:'defense',weaponMasteries:['greatsword','flail','javelin'],startingPackage:'a'},
   backgroundEquipment:{startingPackage:'a',gamingSet:'dice_set'},
@@ -30,7 +30,7 @@ function choicesFor(level:number):FighterLevelUpChoices{
     ...(level===7?{additionalFightingStyle:'archery' as const}:{}),
     ...(level===10?{newMastery:'longbow' as const}:{}),
     ...(level===16?{newMastery:'warhammer' as const}:{}),
-    ...(level===19?{epicBoon:{id:'speed' as const,ability:'charisma' as const}}:{}),
+    ...(level===19?{epicBoon:{id:'combat_prowess' as const,ability:'charisma' as const}}:{}),
   };
 }
 function atLevel(target:number):GuidedFighterInput{
@@ -79,7 +79,7 @@ describe('Actualización 44: asistente de subida de nivel',()=>{
   it('no permite aplicar mejoras o beneficios antes de su nivel',()=>{
     expect(()=>buildFighterLevelUpCandidate(base,{improvement:improvementByLevel[4]})).toThrow(/no concede/i);
     expect(()=>buildFighterLevelUpCandidate(atLevel(18),{})).toThrow(/beneficio épico/i);
-    expect(()=>buildFighterLevelUpCandidate(atLevel(18),{epicBoon:{id:'speed',ability:'charisma'}})).not.toThrow();
+    expect(()=>buildFighterLevelUpCandidate(atLevel(18),{epicBoon:{id:'combat_prowess',ability:'charisma'}})).not.toThrow();
   });
   it('no cambia reglas o partidas al construir un borrador y permite descartarlo',()=>{
     const current=atLevel(9),before=JSON.stringify(current);

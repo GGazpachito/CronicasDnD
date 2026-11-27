@@ -8,12 +8,12 @@ const input: GuidedFighterInput = {
   name: 'Aldric', level: 10, background: 'soldier', species: 'human',
   assignedAbilities: { strength: 15, dexterity: 14, constitution: 13, intelligence: 10, wisdom: 12, charisma: 8 },
   increaseMode: 'two_plus_one', plusTwoAbility: 'strength', plusOneAbility: 'constitution',
-  fighterSkills: ['perception', 'survival'], humanSkill: 'investigation', humanFeat: 'tough', humanSize: 'medium',
+  fighterSkills: ['perception', 'survival'], humanSkill: 'investigation', humanFeat: 'alert', humanSize: 'medium',
   armor: 'chain_mail', shield: false,
   level4Improvement: { mode: 'plus_two', first: 'strength' },
   level6Improvement: { mode: 'plus_two', first: 'constitution' },
   level8Improvement: { mode: 'plus_two', first: 'wisdom' },
-  martial: { fightingStyle: 'defense', additionalFightingStyle: 'dueling', weaponMasteries: ['greatsword', 'flail', 'javelin', 'shortsword', 'longsword'], startingPackage: 'a' },
+  martial: { fightingStyle: 'defense', additionalFightingStyle: 'archery', weaponMasteries: ['greatsword', 'flail', 'javelin', 'shortsword', 'longsword'], startingPackage: 'a' },
   backgroundEquipment: { startingPackage: 'a', gamingSet: 'dice_set' },
 };
 const sheet = () => calculateGuidedFighter(input).sheet;

@@ -3,7 +3,7 @@ import { combineStartingInventory, validateBackgroundEquipment } from '../src/ba
 import { initialInventoryState, applyInventoryAction, replayInventory, formatCopper, INVENTORY_PRICES_CP } from '../src/inventory';
 import { calculateGuidedFighter, type GuidedFighterInput } from '../src/guided';
 const starting=()=>combineStartingInventory('a',validateBackgroundEquipment('soldier',{startingPackage:'a',gamingSet:'dice_set'}));
-const base=():GuidedFighterInput=>({name:'Aldric',level:1,background:'soldier',species:'human',assignedAbilities:{strength:15,dexterity:14,constitution:13,intelligence:10,wisdom:12,charisma:8},increaseMode:'two_plus_one',plusTwoAbility:'strength',plusOneAbility:'constitution',fighterSkills:['perception','survival'],humanSkill:'investigation',humanFeat:'tough',humanSize:'medium',armor:'chain_mail',shield:false,martial:{fightingStyle:'defense',weaponMasteries:['greatsword','flail','javelin'],startingPackage:'a'},backgroundEquipment:{startingPackage:'a',gamingSet:'dice_set'}});
+const base=():GuidedFighterInput=>({name:'Aldric',level:1,background:'soldier',species:'human',assignedAbilities:{strength:15,dexterity:14,constitution:13,intelligence:10,wisdom:12,charisma:8},increaseMode:'two_plus_one',plusTwoAbility:'strength',plusOneAbility:'constitution',fighterSkills:['perception','survival'],humanSkill:'investigation',humanFeat:'alert',humanSize:'medium',armor:'chain_mail',shield:false,martial:{fightingStyle:'defense',weaponMasteries:['greatsword','flail','javelin'],startingPackage:'a'},backgroundEquipment:{startingPackage:'a',gamingSet:'dice_set'}});
 
 describe('Paso 12: inventario editable y transacciones',()=>{
   it('inicia con 18 po y la cota de malla equipada',()=>{

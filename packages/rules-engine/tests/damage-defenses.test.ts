@@ -12,7 +12,7 @@ const character=(species:'human'|'dwarf'|'elf'='dwarf'):GuidedFighterInput=>({
   assignedAbilities:{strength:15,dexterity:14,constitution:13,intelligence:10,wisdom:12,charisma:8},
   increaseMode:'two_plus_one',plusTwoAbility:'strength',plusOneAbility:'constitution',
   fighterSkills:['perception','survival'],
-  ...(species==='human'?{humanSkill:'investigation' as const,humanFeat:'tough' as const,humanSize:'medium' as const}:{}),
+  ...(species==='human'?{humanSkill:'investigation' as const,humanFeat:'alert' as const,humanSize:'medium' as const}:{}),
   ...(species==='elf'?{elfLineage:'wood_elf' as const,elfSenseSkill:'insight' as const,elfSpellAbility:'wisdom' as const}:{}),
   armor:'studded_leather',shield:false,
   martial:{fightingStyle:'archery',weaponMasteries:['longbow','scimitar','shortsword'],startingPackage:'b'},
